@@ -1,0 +1,3520 @@
+{
+  "config": {
+    "horaAbertura": "06:00",
+    "diaFechamento": 25,
+    "adminPassword": "Aqamnsqa081%",
+    "disponibilidadeAberta": false,
+    "agendamentoPorParoquia": {
+      "Paróquia São Cristóvão": {}
+    },
+    "coordinatorEnabled": false,
+    "diaAbertura": 20,
+    "disponibilidadeAbertaPorParoquia": {},
+    "escalaPublicada": true,
+    "horaFechamento": "23:59",
+    "escalaPublicadaPorMes": {
+      "Paróquia Santa Rita de Cássia": {
+        "2026-04": true
+      }
+    },
+    "escalaPublicadaPorParoquia": {
+      "Paróquia Santa Rita de Cássia ": false,
+      "Paróquia Santa Rita de Cássia": false,
+      "Paróquia São Cristóvão": false
+    }
+  },
+  "escalaGerada": {
+    "Paróquia Santa Rita de Cássia": {
+      "2026-03-15": {
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Darzi e Irene",
+            "Ana Claudia",
+            "Wilson e Regina",
+            "Vicente",
+            "Gustavo Soares",
+            "Alan Ciocca"
+          ]
+        },
+        "19:00": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Mauricio e Juliana",
+            "Ceine",
+            "Edilson e Valeria",
+            "Antonio Carlos",
+            "Vinicius",
+            "Adolfo"
+          ]
+        },
+        "07:30": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Rodrigo e Eleksandra",
+            "Bete",
+            "Osvaldo e Maria"
+          ]
+        }
+      },
+      "2026-03-14": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "ministros": [
+            "Natanael e Zildene",
+            "Simone",
+            "Taluza",
+            "Silvia",
+            "Sonia"
+          ]
+        }
+      },
+      "2026-04-18": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "limiteManual": 6,
+          "ministros": [
+            "Cristiano e Fabiana",
+            "Rodrigo e Eleksandra",
+            "Lázaro e Tânia"
+          ]
+        }
+      },
+      "2026-04-19": {
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "limiteManual": 8,
+          "ministros": [
+            "Mavii",
+            "Ana Cláudia",
+            "Beatriz",
+            "Wilson e Regina",
+            "Darzi e Irene",
+            "Gustavo Soares"
+          ]
+        },
+        "19:00": {
+          "nome": "Missa de Domingo",
+          "limiteManual": 8,
+          "ministros": [
+            "Adolfo",
+            "Edilson e Valéria",
+            "Alexandre e Priscila",
+            "Vinícius",
+            "Anderson",
+            "Antônio Carlos"
+          ]
+        },
+        "07:30": {
+          "limiteManual": 5,
+          "ministros": [
+            "Alan Ciocca e Ana Neri",
+            "Osvaldo e Maria",
+            "Shyrlei"
+          ],
+          "nome": "Missa de Domingo"
+        }
+      },
+      "2026-04-25": {
+        "19:00": {
+          "ministros": [
+            "Silvia",
+            "Sérgio e Maria Helena",
+            "Alexandre e Priscila",
+            "Júlio e Ana Michele",
+            "Rosa"
+          ],
+          "limiteManual": 8,
+          "nome": "Missa do Crisma"
+        },
+        "17:00": {
+          "limiteManual": 6,
+          "nome": "Missa de Sábado",
+          "ministros": [
+            "Simone",
+            "Alan Ciocca e Ana Neri",
+            "Taluza",
+            "Eliara e Junior"
+          ]
+        }
+      },
+      "2026-03-28": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "ministros": [
+            "Lazaro e Tania",
+            "Cristiano e Fabiana",
+            "Natanael e Zildene"
+          ]
+        }
+      },
+      "2026-04-11": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "limiteManual": 6,
+          "ministros": [
+            "Lázaro e Tânia",
+            "Silvia",
+            "Cristiane",
+            "Maurício e Juliana"
+          ]
+        }
+      },
+      "2026-04-02": {
+        "19:30": {
+          "nome": "Missa A Ceia do Senhor e Lava-Pés",
+          "limiteManual": 10,
+          "ministros": [
+            "Sônia",
+            "Sérgio e Maria Helena",
+            "Darzi e Irene",
+            "Simone",
+            "Luciene",
+            "Vinícius",
+            "Shyrlei",
+            "Rosa"
+          ]
+        }
+      },
+      "2026-04-04": {
+        "19:30": {
+          "limiteManual": 10,
+          "ministros": [
+            "Taluza",
+            "Ana Cláudia",
+            "Alexandre e Priscila",
+            "Antônio Carlos",
+            "Ceine",
+            "Valter e Cristiane",
+            "Vicente",
+            "Shyrlei"
+          ],
+          "nome": "Sábado de Aleluia"
+        }
+      },
+      "2026-03-21": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "ministros": [
+            "Taluza",
+            "Mavi",
+            "Junior e Eliara",
+            "Cristiane",
+            "Luis Gustavo"
+          ]
+        }
+      },
+      "2026-04-05": {
+        "19:00": {
+          "limiteManual": 8,
+          "ministros": [
+            "Anderson",
+            "Rodrigo",
+            "Natanael e Zildene",
+            "Cláudio e Luciene",
+            "Rosa",
+            "Vinícius"
+          ],
+          "nome": "Missa de Domingo"
+        },
+        "07:30": {
+          "limiteManual": 5,
+          "ministros": [
+            "Cleber e Márcia",
+            "Bete",
+            "Júlio e Ana Michele"
+          ],
+          "nome": "Missa de Domingo"
+        },
+        "10:00": {
+          "ministros": [
+            "Wilson e Regina",
+            "Gustavo Soares",
+            "Beatriz",
+            "Sônia",
+            "Teresa",
+            "Rogério e Aline"
+          ],
+          "limiteManual": 8,
+          "nome": "Missa de Domingo"
+        }
+      },
+      "2026-03-27": {
+        "06:30": {
+          "nome": "Missa Penitencial",
+          "ministros": [
+            "Valter e Cristiane"
+          ]
+        }
+      },
+      "2026-03-13": {
+        "19:30": {
+          "nome": "Missa com Benção do Santíssimo",
+          "ministros": [
+            "Alexandre e Priscila",
+            "Luis Gustavo",
+            "Shyrlei"
+          ]
+        },
+        "06:30": {
+          "nome": "Missa Penitencial",
+          "ministros": [
+            "Edilson e Valeria"
+          ]
+        }
+      },
+      "2026-04-03": {
+        "15:00": {
+          "nome": "Celebração da Paixão e Morte do Senhor",
+          "limiteManual": 10,
+          "ministros": [
+            "Maurício e Juliana",
+            "Júlio e Ana Michele",
+            "Osvaldo e Maria",
+            "Teresa",
+            "Doroty",
+            "Rogério e Aline"
+          ]
+        }
+      },
+      "2026-03-07": {
+        "17:00": {
+          "nome": "Missa de Sábado",
+          "ministros": [
+            "Cristiano e Fabiana",
+            "Alexandre e Priscila",
+            "Lazaro e Tania"
+          ]
+        }
+      },
+      "2026-03-22": {
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Teresa",
+            "Rogerio e Aline",
+            "Simone",
+            "Beatriz",
+            "Wilson e Regina",
+            "Gustavo Soares"
+          ]
+        },
+        "07:30": {
+          "ministros": [
+            "Julio e Ana Michele",
+            "Vicente",
+            "Cleber e Marcia"
+          ],
+          "nome": "Missa de Domingo"
+        },
+        "19:00": {
+          "ministros": [
+            "Claudio e Luciene",
+            "Vinicius",
+            "Mauricio e Juliana",
+            "Adolfo",
+            "Edilson e Valeria"
+          ],
+          "nome": "Missa de Domingo"
+        }
+      },
+      "2026-03-29": {
+        "19:00": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Antonio Carlos",
+            "Alan Ciocca",
+            "Ceine",
+            "Sonia",
+            "Alexandre e Priscila",
+            "Sergio e Maria Helena"
+          ]
+        },
+        "07:30": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Cleber e Marcia",
+            "Julio e Ana Michele",
+            "Shyrlei"
+          ]
+        },
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Rogerio e Aline",
+            "Beatriz",
+            "Ana Claudia",
+            "Teresa",
+            "Mavi",
+            "Darzi e Irene"
+          ]
+        }
+      },
+      "2026-03-08": {
+        "10:00": {
+          "ministros": [
+            "Wilson e Regina",
+            "Gustavo Soares",
+            "Darzi e Irene",
+            "Rosa",
+            "Mauricio e Juliana"
+          ],
+          "nome": "Missa de Domingo"
+        },
+        "19:00": {
+          "ministros": [
+            "Adolfo",
+            "Sonia",
+            "Claudio e Luciene",
+            "Junior e Eliara",
+            "Ceine",
+            "Antonio Carlos"
+          ],
+          "nome": "Missa de Domingo"
+        },
+        "07:30": {
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Osvaldo e Maria",
+            "Shyrlei",
+            "Sergio e Maria Helena"
+          ]
+        }
+      },
+      "2026-03-06": {
+        "19:30": {
+          "nome": "Sagrado Coração",
+          "ministros": [
+            "Junior e Eliara",
+            "Silvia",
+            "Luis Gustavo"
+          ]
+        },
+        "06:30": {
+          "ministros": [
+            "Sergio e Maria Helena"
+          ],
+          "nome": "Missa Penitencial"
+        }
+      },
+      "2026-04-12": {
+        "19:00": {
+          "ministros": [
+            "Eliara e Junior",
+            "Edilson e Valéria",
+            "Adolfo",
+            "Antônio Carlos",
+            "Anderson",
+            "Teresa"
+          ],
+          "limiteManual": 8,
+          "nome": "Missa de Domingo"
+        },
+        "07:30": {
+          "ministros": [
+            "Cleber e Márcia",
+            "Osvaldo e Maria",
+            "Bete"
+          ],
+          "limiteManual": 5,
+          "nome": "Missa de Domingo"
+        },
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "limiteManual": 8,
+          "ministros": [
+            "Wilson e Regina",
+            "Darzi e Irene",
+            "Gustavo Soares",
+            "Rogério e Aline",
+            "Sônia"
+          ]
+        }
+      },
+      "2026-04-26": {
+        "10:00": {
+          "nome": "Missa de Domingo",
+          "limiteManual": 8,
+          "ministros": [
+            "Beatriz",
+            "Mavii",
+            "Maurício e Juliana",
+            "Ana Cláudia",
+            "Rogério e Aline",
+            "Teresa"
+          ]
+        },
+        "19:00": {
+          "ministros": [
+            "Ceine",
+            "Edilson e Valéria",
+            "Adolfo",
+            "Cláudio e Luciene",
+            "Antônio Carlos",
+            "Vinícius"
+          ],
+          "limiteManual": 8,
+          "nome": "Missa de Domingo"
+        },
+        "07:30": {
+          "limiteManual": 5,
+          "nome": "Missa de Domingo",
+          "ministros": [
+            "Vicente",
+            "Luís Gustavo",
+            "Cleber e Márcia",
+            "Shyrlei"
+          ]
+        }
+      },
+      "2026-03-20": {
+        "06:30": {
+          "ministros": [
+            "Edilson e Valeria"
+          ],
+          "nome": "Missa Penitencial"
+        }
+      },
+      "2026-04-22": {
+        "19:30": {
+          "limiteManual": 4,
+          "nome": "Missa e Oração da Coroa de Santa Rita",
+          "ministros": [
+            "Vicente",
+            "Mavii",
+            "Luís Gustavo",
+            "Rosa"
+          ]
+        }
+      },
+      "2026-04-17": {
+        "19:30": {
+          "ministros": [
+            "Luís Gustavo",
+            "Shyrlei",
+            "Sônia"
+          ],
+          "limiteManual": 4,
+          "nome": "Missa com Benção do Santíssimo"
+        }
+      }
+    }
+  },
+  "disponibilidades": [
+    {
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 308,
+      "data": "2026-04-02",
+      "modo": "individual",
+      "ministro_id": 11
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-03",
+      "ministro_id": 11,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 309
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "id": 310,
+      "data": "2026-04-04",
+      "modo": "individual",
+      "ministro_id": 11
+    },
+    {
+      "ministro_id": 11,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "id": 311,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "id": 312,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "ministro_id": 11,
+      "data": "2026-04-26",
+      "modo": "individual"
+    },
+    {
+      "id": 313,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "ministro_id": 6,
+      "data": "2026-04-05",
+      "modo": "individual"
+    },
+    {
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 314,
+      "data": "2026-04-11",
+      "modo": "individual",
+      "ministro_id": 6
+    },
+    {
+      "ministro_id": 6,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "id": 315,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "id": 316,
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "ministro_id": 6,
+      "data": "2026-04-04",
+      "modo": "individual"
+    },
+    {
+      "ministro_id": 6,
+      "modo": "individual",
+      "data": "2026-04-02",
+      "id": 317,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30"
+    },
+    {
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 318,
+      "modo": "casal",
+      "data": "2026-04-03",
+      "ministro_id": 32
+    },
+    {
+      "id": 319,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 32,
+      "modo": "casal",
+      "data": "2026-04-02"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-04",
+      "ministro_id": 32,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "id": 320
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-04-11",
+      "modo": "casal",
+      "id": 321,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 32,
+      "modo": "casal",
+      "data": "2026-04-18",
+      "id": 322,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00"
+    },
+    {
+      "data": "2026-04-25",
+      "modo": "casal",
+      "ministro_id": 32,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 323
+    },
+    {
+      "ministro_id": 32,
+      "modo": "casal",
+      "data": "2026-04-12",
+      "id": 324,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "ministro_id": 32,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "id": 325,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "ministro_id": 32,
+      "modo": "casal",
+      "data": "2026-04-26",
+      "id": 326,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 327,
+      "data": "2026-04-02",
+      "modo": "casal",
+      "ministro_id": 40
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-03",
+      "ministro_id": 40,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 328
+    },
+    {
+      "ministro_id": 40,
+      "modo": "casal",
+      "data": "2026-04-09",
+      "id": 329,
+      "nomeMissa": "Sagrado Coração",
+      "horario": "19:30"
+    },
+    {
+      "data": "2026-04-04",
+      "modo": "casal",
+      "ministro_id": 40,
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "id": 330
+    },
+    {
+      "id": 331,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "ministro_id": 40,
+      "modo": "casal",
+      "data": "2026-04-11"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-25",
+      "ministro_id": 40,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 332
+    },
+    {
+      "ministro_id": 40,
+      "modo": "casal",
+      "data": "2026-04-25",
+      "id": 333,
+      "nomeMissa": "Missa do Crisma",
+      "horario": "19:00"
+    },
+    {
+      "ministro_id": 40,
+      "data": "2026-04-05",
+      "modo": "casal",
+      "id": 334,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "id": 335,
+      "modo": "casal",
+      "data": "2026-04-12",
+      "ministro_id": 40
+    },
+    {
+      "id": 336,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "ministro_id": 40,
+      "data": "2026-04-26",
+      "modo": "casal"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-02",
+      "ministro_id": 31,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 337
+    },
+    {
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 338,
+      "data": "2026-04-05",
+      "modo": "casal",
+      "ministro_id": 31
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-12",
+      "ministro_id": 31,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 339
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 340,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "ministro_id": 31
+    },
+    {
+      "id": 341,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 31,
+      "modo": "casal",
+      "data": "2026-04-26"
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 342,
+      "data": "2026-04-02",
+      "modo": "individual",
+      "ministro_id": 15
+    },
+    {
+      "ministro_id": 15,
+      "modo": "individual",
+      "data": "2026-04-03",
+      "id": 343,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00"
+    },
+    {
+      "id": 344,
+      "nomeMissa": "Sagrado Coração",
+      "horario": "19:30",
+      "ministro_id": 15,
+      "modo": "individual",
+      "data": "2026-04-09"
+    },
+    {
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 345,
+      "data": "2026-04-11",
+      "modo": "individual",
+      "ministro_id": 15
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-05",
+      "ministro_id": 22,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 346
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-04-12",
+      "modo": "casal",
+      "id": 347,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 348,
+      "data": "2026-04-19",
+      "modo": "casal",
+      "ministro_id": 22
+    },
+    {
+      "data": "2026-04-12",
+      "modo": "individual",
+      "ministro_id": 7,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 349
+    },
+    {
+      "ministro_id": 7,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "id": 350,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 7,
+      "modo": "individual",
+      "data": "2026-04-26",
+      "id": 351,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "data": "2026-04-02",
+      "modo": "individual",
+      "ministro_id": 17,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 352
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-03",
+      "ministro_id": 17,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 353
+    },
+    {
+      "ministro_id": 17,
+      "modo": "individual",
+      "data": "2026-04-04",
+      "id": 354,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30"
+    },
+    {
+      "id": 355,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "ministro_id": 17,
+      "modo": "individual",
+      "data": "2026-04-25"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 356,
+      "modo": "individual",
+      "data": "2026-04-26",
+      "ministro_id": 17
+    },
+    {
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 357,
+      "modo": "individual",
+      "data": "2026-04-02",
+      "ministro_id": 4
+    },
+    {
+      "ministro_id": 4,
+      "data": "2026-04-04",
+      "modo": "individual",
+      "id": 358,
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia"
+    },
+    {
+      "id": 359,
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração",
+      "ministro_id": 4,
+      "data": "2026-04-09",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-25",
+      "modo": "individual",
+      "ministro_id": 4,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 360
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 361,
+      "modo": "individual",
+      "data": "2026-04-26",
+      "ministro_id": 4
+    },
+    {
+      "id": 362,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "ministro_id": 16,
+      "data": "2026-04-02",
+      "modo": "individual"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-03",
+      "ministro_id": 16,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 363
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-04-09",
+      "modo": "individual",
+      "id": 364,
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração"
+    },
+    {
+      "id": 365,
+      "nomeMissa": "Missa com Benção do Santíssimo",
+      "horario": "19:30",
+      "ministro_id": 16,
+      "modo": "individual",
+      "data": "2026-04-17"
+    },
+    {
+      "id": 366,
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "horario": "19:30",
+      "ministro_id": 16,
+      "modo": "individual",
+      "data": "2026-04-22"
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "id": 367,
+      "data": "2026-04-04",
+      "modo": "individual",
+      "ministro_id": 16
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-04-11",
+      "modo": "individual",
+      "id": 368,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-18",
+      "ministro_id": 16,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 369
+    },
+    {
+      "id": 370,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "ministro_id": 16,
+      "data": "2026-04-25",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-25",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "19:00",
+      "nomeMissa": "Missa do Crisma",
+      "id": 371
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "id": 372,
+      "modo": "individual",
+      "data": "2026-04-05",
+      "ministro_id": 16
+    },
+    {
+      "data": "2026-04-05",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 373
+    },
+    {
+      "id": 374,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "ministro_id": 16,
+      "data": "2026-04-05",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-12",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 375
+    },
+    {
+      "ministro_id": 16,
+      "modo": "individual",
+      "data": "2026-04-12",
+      "id": 376,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "id": 377,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "ministro_id": 16,
+      "data": "2026-04-12",
+      "modo": "individual"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "id": 378,
+      "modo": "individual",
+      "data": "2026-04-19",
+      "ministro_id": 16
+    },
+    {
+      "data": "2026-04-19",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 379
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 380,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "ministro_id": 16
+    },
+    {
+      "data": "2026-04-26",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 381
+    },
+    {
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 382,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "ministro_id": 16
+    },
+    {
+      "data": "2026-04-26",
+      "modo": "individual",
+      "ministro_id": 16,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "id": 383
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-02",
+      "ministro_id": 14,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 384
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-11",
+      "ministro_id": 14,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 385
+    },
+    {
+      "id": 386,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "ministro_id": 14,
+      "data": "2026-04-25",
+      "modo": "individual"
+    },
+    {
+      "ministro_id": 14,
+      "data": "2026-04-25",
+      "modo": "individual",
+      "id": 387,
+      "horario": "19:00",
+      "nomeMissa": "Missa do Crisma"
+    },
+    {
+      "id": 388,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 2,
+      "modo": "individual",
+      "data": "2026-04-02"
+    },
+    {
+      "id": 389,
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "ministro_id": 2,
+      "modo": "individual",
+      "data": "2026-04-03"
+    },
+    {
+      "id": 390,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "ministro_id": 2,
+      "modo": "individual",
+      "data": "2026-04-04"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-11",
+      "ministro_id": 2,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 391
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-18",
+      "ministro_id": 2,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 392
+    },
+    {
+      "ministro_id": 2,
+      "modo": "individual",
+      "data": "2026-04-25",
+      "id": 393,
+      "nomeMissa": "Missa do Crisma",
+      "horario": "19:00"
+    },
+    {
+      "id": 394,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "ministro_id": 2,
+      "data": "2026-04-25",
+      "modo": "individual"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-05",
+      "ministro_id": 2,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 395
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 396,
+      "modo": "individual",
+      "data": "2026-04-12",
+      "ministro_id": 2
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "id": 397,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 398,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "ministro_id": 2
+    },
+    {
+      "id": 399,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 26,
+      "modo": "casal",
+      "data": "2026-04-05"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 400,
+      "modo": "casal",
+      "data": "2026-04-12",
+      "ministro_id": 26
+    },
+    {
+      "id": 401,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 26,
+      "modo": "casal",
+      "data": "2026-04-19"
+    },
+    {
+      "id": 402,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 26,
+      "modo": "casal",
+      "data": "2026-04-26"
+    },
+    {
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 403,
+      "modo": "casal",
+      "data": "2026-04-03",
+      "ministro_id": 26
+    },
+    {
+      "id": 404,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "ministro_id": 30,
+      "data": "2026-04-03",
+      "modo": "casal"
+    },
+    {
+      "modo": "ele",
+      "data": "2026-04-05",
+      "ministro_id": 30,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 405
+    },
+    {
+      "ministro_id": 30,
+      "modo": "casal",
+      "data": "2026-04-11",
+      "id": 406,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00"
+    },
+    {
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 407,
+      "data": "2026-04-18",
+      "modo": "casal",
+      "ministro_id": 30
+    },
+    {
+      "id": 408,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "ministro_id": 30,
+      "modo": "casal",
+      "data": "2026-04-25"
+    },
+    {
+      "data": "2026-04-02",
+      "modo": "casal",
+      "ministro_id": 38,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 409
+    },
+    {
+      "data": "2026-04-03",
+      "modo": "casal",
+      "ministro_id": 38,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "id": 410
+    },
+    {
+      "ministro_id": 38,
+      "modo": "casal",
+      "data": "2026-04-04",
+      "id": 411,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30"
+    },
+    {
+      "ministro_id": 38,
+      "modo": "casal",
+      "data": "2026-04-11",
+      "id": 412,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00"
+    },
+    {
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 413,
+      "modo": "casal",
+      "data": "2026-04-18",
+      "ministro_id": 38
+    },
+    {
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 414,
+      "data": "2026-04-25",
+      "modo": "casal",
+      "ministro_id": 38
+    },
+    {
+      "ministro_id": 38,
+      "data": "2026-04-05",
+      "modo": "casal",
+      "id": 415,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-05",
+      "ministro_id": 38,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 416
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 417,
+      "modo": "casal",
+      "data": "2026-04-12",
+      "ministro_id": 38
+    },
+    {
+      "id": 418,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "ministro_id": 38,
+      "modo": "casal",
+      "data": "2026-04-12"
+    },
+    {
+      "ministro_id": 38,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "id": 419,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "data": "2026-04-19",
+      "modo": "casal",
+      "ministro_id": 38,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 420
+    },
+    {
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 421,
+      "data": "2026-04-26",
+      "modo": "casal",
+      "ministro_id": 38
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-26",
+      "ministro_id": 38,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 422
+    },
+    {
+      "id": 423,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 20,
+      "modo": "individual",
+      "data": "2026-04-02"
+    },
+    {
+      "id": 424,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "ministro_id": 20,
+      "data": "2026-04-03",
+      "modo": "individual"
+    },
+    {
+      "ministro_id": 20,
+      "modo": "individual",
+      "data": "2026-04-09",
+      "id": 425,
+      "nomeMissa": "Sagrado Coração",
+      "horario": "19:30"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-17",
+      "ministro_id": 20,
+      "nomeMissa": "Missa com Benção do Santíssimo",
+      "horario": "19:30",
+      "id": 426
+    },
+    {
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "horario": "19:30",
+      "id": 427,
+      "modo": "individual",
+      "data": "2026-04-22",
+      "ministro_id": 20
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "id": 428,
+      "data": "2026-04-04",
+      "modo": "individual",
+      "ministro_id": 20
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-18",
+      "ministro_id": 20,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 429
+    },
+    {
+      "ministro_id": 20,
+      "modo": "individual",
+      "data": "2026-04-11",
+      "id": 430,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00"
+    },
+    {
+      "id": 431,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "ministro_id": 20,
+      "data": "2026-04-25",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-25",
+      "modo": "individual",
+      "ministro_id": 20,
+      "horario": "19:00",
+      "nomeMissa": "Missa do Crisma",
+      "id": 432
+    },
+    {
+      "ministro_id": 20,
+      "modo": "individual",
+      "data": "2026-04-05",
+      "id": 433,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 434,
+      "data": "2026-04-05",
+      "modo": "individual",
+      "ministro_id": 20
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-12",
+      "ministro_id": 20,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 435
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 436,
+      "data": "2026-04-12",
+      "modo": "individual",
+      "ministro_id": 20
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 437,
+      "modo": "individual",
+      "data": "2026-04-19",
+      "ministro_id": 20
+    },
+    {
+      "ministro_id": 20,
+      "modo": "individual",
+      "data": "2026-04-19",
+      "id": 438,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-26",
+      "ministro_id": 20,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 439
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 440,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "ministro_id": 20
+    },
+    {
+      "ministro_id": 10,
+      "modo": "individual",
+      "data": "2026-04-05",
+      "id": 441,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "ministro_id": 10,
+      "data": "2026-04-12",
+      "modo": "individual",
+      "id": 442,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "id": 443,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 12,
+      "modo": "individual",
+      "data": "2026-04-02"
+    },
+    {
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "id": 444,
+      "data": "2026-04-03",
+      "modo": "individual",
+      "ministro_id": 12
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "id": 445,
+      "data": "2026-04-04",
+      "modo": "individual",
+      "ministro_id": 12
+    },
+    {
+      "ministro_id": 12,
+      "data": "2026-04-05",
+      "modo": "individual",
+      "id": 446,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 12,
+      "modo": "individual",
+      "data": "2026-04-25",
+      "id": 447,
+      "nomeMissa": "Missa do Crisma",
+      "horario": "19:00"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-22",
+      "ministro_id": 12,
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "horario": "19:30",
+      "id": 448
+    },
+    {
+      "data": "2026-04-02",
+      "modo": "casal",
+      "ministro_id": 1,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "id": 449
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-04-03",
+      "modo": "casal",
+      "id": 450,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-04",
+      "ministro_id": 1,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "id": 451
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-22",
+      "ministro_id": 1,
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "horario": "19:30",
+      "id": 452
+    },
+    {
+      "ministro_id": 1,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "id": 453,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa do Crisma",
+      "id": 454,
+      "data": "2026-04-25",
+      "modo": "casal",
+      "ministro_id": 1
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 455,
+      "modo": "casal",
+      "data": "2026-04-26",
+      "ministro_id": 1
+    },
+    {
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 456,
+      "modo": "casal",
+      "data": "2026-04-02",
+      "ministro_id": 23
+    },
+    {
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "horario": "15:00",
+      "id": 457,
+      "modo": "casal",
+      "data": "2026-04-03",
+      "ministro_id": 23
+    },
+    {
+      "id": 458,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "ministro_id": 23,
+      "data": "2026-04-25",
+      "modo": "casal"
+    },
+    {
+      "data": "2026-04-25",
+      "modo": "casal",
+      "ministro_id": 23,
+      "horario": "19:00",
+      "nomeMissa": "Missa do Crisma",
+      "id": 459
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-26",
+      "ministro_id": 23,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "id": 460
+    },
+    {
+      "ministro_id": 23,
+      "modo": "casal",
+      "data": "2026-04-26",
+      "id": 461,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 462,
+      "modo": "casal",
+      "data": "2026-04-26",
+      "ministro_id": 23
+    },
+    {
+      "ministro_id": 23,
+      "data": "2026-04-04",
+      "modo": "casal",
+      "id": 463,
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia"
+    },
+    {
+      "ministro_id": 34,
+      "data": "2026-04-02",
+      "modo": "casal",
+      "id": 464,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés"
+    },
+    {
+      "id": 465,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "ministro_id": 34,
+      "modo": "casal",
+      "data": "2026-04-05"
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-11",
+      "ministro_id": 34,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "id": 466
+    },
+    {
+      "id": 467,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 39,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "ela",
+      "data": "2026-04-02"
+    },
+    {
+      "ministro_id": 39,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-05",
+      "id": 468,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 469,
+      "data": "2026-04-26",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 39
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 21,
+      "data": "2026-04-17",
+      "modo": "individual",
+      "id": 470,
+      "horario": "19:30",
+      "nomeMissa": "Missa com Benção do Santíssimo"
+    },
+    {
+      "id": 471,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 21,
+      "data": "2026-04-18",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-22",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 21,
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "id": 472
+    },
+    {
+      "ministro_id": 21,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-26",
+      "id": 473,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "ministro_id": 21,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-26",
+      "id": 474,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "data": "2026-04-26",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 21,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 475
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-02",
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 476
+    },
+    {
+      "data": "2026-04-03",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 9,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "id": 477
+    },
+    {
+      "id": 478,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-04"
+    },
+    {
+      "id": 479,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-05"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 480,
+      "modo": "individual",
+      "data": "2026-04-05",
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-12",
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 481
+    },
+    {
+      "id": 482,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 9,
+      "data": "2026-04-12",
+      "modo": "individual"
+    },
+    {
+      "ministro_id": 9,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-19",
+      "id": 483,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00"
+    },
+    {
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 484,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 9
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 9,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "id": 485,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "data": "2026-04-26",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 9,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 486
+    },
+    {
+      "id": 487,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "ministro_id": 37,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-02"
+    },
+    {
+      "id": 488,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 37,
+      "data": "2026-04-12",
+      "modo": "casal"
+    },
+    {
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "id": 489,
+      "data": "2026-04-25",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 37
+    },
+    {
+      "ministro_id": 19,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-04",
+      "id": 490,
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "id": 491,
+      "modo": "individual",
+      "data": "2026-04-05",
+      "ministro_id": 19,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "id": 492,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 19,
+      "data": "2026-04-05",
+      "modo": "individual"
+    },
+    {
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "horario": "19:30",
+      "id": 493,
+      "modo": "individual",
+      "data": "2026-04-22",
+      "ministro_id": 19,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "id": 494,
+      "data": "2026-04-26",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 19
+    },
+    {
+      "id": 495,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 19,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-26"
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-02",
+      "modo": "casal",
+      "id": 496,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés"
+    },
+    {
+      "data": "2026-04-03",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "horario": "15:00",
+      "nomeMissa": "Celebração da Paixão e Morte do Senhor",
+      "id": 497
+    },
+    {
+      "id": 498,
+      "horario": "19:30",
+      "nomeMissa": "Sábado de Aleluia",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-04",
+      "modo": "casal"
+    },
+    {
+      "id": 499,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-05",
+      "modo": "casal"
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-11",
+      "modo": "ela",
+      "id": 500,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "id": 501,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30",
+      "ministro_id": 25,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-12"
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "id": 502,
+      "data": "2026-04-22",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-25",
+      "modo": "ela",
+      "id": 503,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "id": 504,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 25,
+      "data": "2026-04-26",
+      "modo": "casal"
+    },
+    {
+      "ministro_id": 28,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-02",
+      "id": 505,
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30"
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 28,
+      "data": "2026-04-11",
+      "modo": "casal",
+      "id": 506,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "id": 507,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 28,
+      "data": "2026-04-18",
+      "modo": "casal"
+    },
+    {
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "horario": "19:30",
+      "id": 508,
+      "modo": "individual",
+      "data": "2026-04-02",
+      "ministro_id": 5,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-05",
+      "ministro_id": 5,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 509
+    },
+    {
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 510,
+      "data": "2026-04-19",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 5
+    },
+    {
+      "id": 511,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 5,
+      "data": "2026-04-26",
+      "modo": "individual"
+    },
+    {
+      "id": 512,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 33,
+      "data": "2026-04-02",
+      "modo": "casal"
+    },
+    {
+      "ministro_id": 33,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-12",
+      "id": 513,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "id": 514,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 33,
+      "data": "2026-04-19",
+      "modo": "casal"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 515,
+      "modo": "casal",
+      "data": "2026-04-26",
+      "ministro_id": 33,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "id": 516,
+      "horario": "19:30",
+      "nomeMissa": "Missa A Ceia do Senhor e Lava-Pés",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 8,
+      "data": "2026-04-02",
+      "modo": "individual"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-04",
+      "ministro_id": 8,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "id": 517
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 8,
+      "data": "2026-04-05",
+      "modo": "individual",
+      "id": 518,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-12",
+      "ministro_id": 8,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 519
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-19",
+      "ministro_id": 8,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 520
+    },
+    {
+      "id": 521,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 8,
+      "data": "2026-04-26",
+      "modo": "individual"
+    },
+    {
+      "data": "2026-04-05",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 27,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "id": 522
+    },
+    {
+      "ministro_id": 27,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-12",
+      "id": 523,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "07:30"
+    },
+    {
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "id": 524,
+      "data": "2026-04-26",
+      "modo": "casal",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 27
+    },
+    {
+      "modo": "casal",
+      "data": "2026-04-04",
+      "ministro_id": 29,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Sábado de Aleluia",
+      "horario": "19:30",
+      "id": 529
+    },
+    {
+      "id": 530,
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 29,
+      "data": "2026-04-18",
+      "modo": "casal"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 531,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "ministro_id": 29,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 532,
+      "modo": "casal",
+      "data": "2026-04-19",
+      "ministro_id": 29,
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "modo": "ele",
+      "data": "2026-04-05",
+      "ministro_id": 24,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 533
+    },
+    {
+      "id": 534,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "ministro_id": 24,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "ele",
+      "data": "2026-04-12"
+    },
+    {
+      "data": "2026-04-19",
+      "modo": "ele",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 24,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 535
+    },
+    {
+      "modo": "ele",
+      "data": "2026-04-26",
+      "ministro_id": 24,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "10:00",
+      "id": 536
+    },
+    {
+      "id": 537,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "ministro_id": 13,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-05"
+    },
+    {
+      "modo": "individual",
+      "data": "2026-04-12",
+      "ministro_id": 13,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00",
+      "id": 538
+    },
+    {
+      "id": 539,
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 13,
+      "data": "2026-04-19",
+      "modo": "individual"
+    },
+    {
+      "ministro_id": 13,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "individual",
+      "data": "2026-04-26",
+      "id": 540,
+      "nomeMissa": "Missa de Domingo",
+      "horario": "19:00"
+    },
+    {
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita",
+      "id": 541,
+      "data": "2026-04-22",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 18
+    },
+    {
+      "data": "2026-04-26",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 18,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 542
+    },
+    {
+      "data": "2026-04-19",
+      "modo": "individual",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 18,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "id": 543
+    },
+    {
+      "id": 544,
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "ministro_id": 35,
+      "data": "2026-04-19",
+      "modo": "casal"
+    },
+    {
+      "id": 545,
+      "nomeMissa": "Missa de Sábado",
+      "horario": "17:00",
+      "ministro_id": 35,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "modo": "casal",
+      "data": "2026-04-25"
+    }
+  ],
+  "paroquias": [
+    {
+      "bairro": "Centro",
+      "nome": "Paróquia Santa Rita de Cássia",
+      "endereco": "Rua São Gonçalo, ",
+      "estado": "SP",
+      "telefone1": "143223-5000",
+      "coordenador": "Alexandre",
+      "numero": "3-54",
+      "email": "santarita@bispadobauru.org.br",
+      "cidade": "Bauru",
+      "id": "1772280333795",
+      "telefone2": "1499115-2878",
+      "cnpj": "44.454.312/0024-37",
+      "telefoneCoordenador": "14997865806",
+      "padre": "Pe. Marcos Eduardo Pavan",
+      "site": "https://santaritabauru.com.br/",
+      "cep": "17015-450"
+    },
+    {
+      "estado": "SP",
+      "telefone1": "143234-6429",
+      "bloqueada": false,
+      "endereco": "Avenida Nossa Senhora de Fátima ",
+      "nome": "Paróquia São Cristóvão",
+      "bairro": "Jardim América",
+      "email": "s.cristovao@terra.com.br",
+      "numero": "15-89",
+      "coordenador": "Josué",
+      "id": "1772281505207",
+      "telefone2": "1499172-7755",
+      "cidade": "Bauru",
+      "padre": "Pe. Adinam Roniere da Silva",
+      "telefoneCoordenador": "14999999999",
+      "site": " www.saocristovaobauru.org.br",
+      "cep": "17017-337",
+      "cnpj": "44.454.312/0027-80"
+    },
+    {
+      "numero": "10-4",
+      "email": "secretariapastoral@pnsg.com.br",
+      "coordenador": "Fernanda e Celiomar",
+      "bloqueada": false,
+      "endereco": "Alameda Cônego Aníbal Di Frância",
+      "estado": "SP",
+      "telefone1": "143239-2599",
+      "bairro": "Parque Vista Alegre",
+      "nome": "Paróquia Nossa Senhora das Graças",
+      "telefoneCoordenador": "14 99113-3422",
+      "padre": "Padre Mário Alves Banderia",
+      "site": "www.pnsg.com.br",
+      "cep": "17020-690",
+      "cnpj": "44.454.312/0021-94",
+      "telefone2": "",
+      "id": "1774922106968",
+      "cidade": "Bauru"
+    }
+  ],
+  "comunhao": [
+    {
+      "bairro": "Centro",
+      "tipoAtendimento": "clinica",
+      "endereco": "Rua XV de Novembro 14-70",
+      "telefoneResponsavel": "14 9 9116-1021",
+      "ministro_nome": "Maria Vitória Carneiro Pollini Carrara Rodrigues",
+      "ministro_id": 18,
+      "nomeIdoso": "Dona Marcelina",
+      "uf": "SP",
+      "responsavel": "Paulo",
+      "dataCadastro": "2026-03-28T17:19:43.871Z",
+      "cidade": "Bauru",
+      "id": 1774718383871,
+      "telefone": "14 9 9116-1021",
+      "idade": "0"
+    },
+    {
+      "ministro_nome": "Luciene Sierra Maximino",
+      "nomeIdoso": "Marta Maria Sbeghen",
+      "ministro_id": 39.5,
+      "uf": "SP",
+      "tipoAtendimento": "individual",
+      "endereco": "Rua Neder Issa, 4-69",
+      "telefoneResponsavel": "-",
+      "bairro": "Vila Guedes de Azevedo",
+      "idade": "0",
+      "telefone": "14 3227-2252",
+      "id": 1774732513421,
+      "dataCadastro": "2026-03-28T21:15:13.421Z",
+      "responsavel": "-",
+      "cidade": "Bauru"
+    },
+    {
+      "tipoAtendimento": "individual",
+      "telefoneResponsavel": "14 9 8135-0446",
+      "endereco": "Rua Saint Martin, 14-31 Apto 21 Ed Ivone BL 1",
+      "idosos": [],
+      "bairro": "Centro",
+      "quantidadeIdosos": 0,
+      "nomeIdoso": "Eunice Rodrigues Conte",
+      "ministro_id": 11,
+      "uf": "SP",
+      "clinicaNome": "",
+      "id": 1774733849458,
+      "dataCadastro": "2026-03-28T21:37:29.458Z",
+      "responsavel": "Tânia",
+      "cidade": "Bauru",
+      "idade": "0",
+      "telefone": "14 9 8135-0446",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    }
+  ],
+  "missasTemporarias": [
+    {
+      "data": "",
+      "tipo": "unica",
+      "diaSemana": "0",
+      "nome": "Missa de Domingo",
+      "horario": "07:30",
+      "id": "1774041708798",
+      "quantidade": "5"
+    },
+    {
+      "horario": "07:30",
+      "quantidade": "5",
+      "id": "1774041738221",
+      "tipo": "unica",
+      "data": "",
+      "nome": "Missa de Domingo",
+      "diaSemana": "0"
+    },
+    {
+      "horario": "10:00",
+      "id": "1774041819948",
+      "quantidade": "8",
+      "data": "",
+      "tipo": "unica",
+      "diaSemana": "0",
+      "nome": "Missa de Domingo"
+    },
+    {
+      "datasInativas": [
+        "2026-04-04"
+      ],
+      "frequencia": "semanal",
+      "horario": "17:00",
+      "id": "1774042473937",
+      "data": "",
+      "diaSemana": "6",
+      "nome": "Missa de Sábado",
+      "quantidade": "6",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "quantidade": "5",
+      "id": "1774042490116",
+      "frequencia": "semanal",
+      "horario": "07:30",
+      "diaSemana": "0",
+      "nome": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "data": ""
+    },
+    {
+      "id": "1774042502936",
+      "quantidade": "8",
+      "frequencia": "semanal",
+      "horario": "10:00",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "nome": "Missa de Domingo",
+      "diaSemana": "0",
+      "data": ""
+    },
+    {
+      "data": "",
+      "nome": "Missa de Domingo",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "diaSemana": "0",
+      "horario": "19:00",
+      "frequencia": "semanal",
+      "id": "1774042517342",
+      "quantidade": "8"
+    },
+    {
+      "quantidade": 4,
+      "diaMes": "22",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "horario": "19:30",
+      "frequencia": "mensal-data",
+      "id": "1774043219009",
+      "data": "",
+      "nome": "Missa e Oração da Coroa de Santa Rita",
+      "diaSemana": "0"
+    },
+    {
+      "horario": "19:30",
+      "frequencia": "temporaria",
+      "id": "1774043899190",
+      "data": "2026-04-02",
+      "nome": "Missa A Ceia do Senhor e Lava-Pés",
+      "diaSemana": "0",
+      "quantidade": "10",
+      "diaMes": "1",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "horario": "15:00",
+      "frequencia": "temporaria",
+      "id": "1774043937805",
+      "data": "2026-04-03",
+      "diaSemana": "0",
+      "nome": "Celebração da Paixão e Morte do Senhor",
+      "quantidade": "10",
+      "diaMes": "1",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "diaMes": "1",
+      "quantidade": 4,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "horario": "19:30",
+      "frequencia": "temporaria",
+      "id": "1774092886093",
+      "data": "2026-04-17",
+      "nome": "Missa com Benção do Santíssimo",
+      "diaSemana": "0"
+    },
+    {
+      "diaSemana": "0",
+      "nome": "Missa do Crisma",
+      "data": "2026-04-25",
+      "id": "1774092941275",
+      "horario": "19:00",
+      "frequencia": "temporaria",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "diaMes": "1",
+      "quantidade": "8"
+    },
+    {
+      "quantidade": "10",
+      "diaMes": "1",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "id": "1774099323067",
+      "frequencia": "temporaria",
+      "horario": "19:30",
+      "diaSemana": "0",
+      "nome": "Sábado de Aleluia",
+      "data": "2026-04-04"
+    }
+  ],
+  "ministros": [
+    {
+      "dataNascimento": "26/02",
+      "nome": "Alexandre Borelli Facchini",
+      "nomeExibicao": "Alexandre",
+      "role": "coordenacao",
+      "acessoCoordenacao": "casal",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "14/11",
+      "nomeConjuge": "Priscila De Bortolli Facchini",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "Priscila",
+      "excecaoAcessoAte": null,
+      "id": 1,
+      "aprovado": true,
+      "senha": "888",
+      "telefone": "14997865806",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefoneConjuge": "14996021377"
+    },
+    {
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "17/06",
+      "nome": "Vinícius De Morais Carvalho Saracini",
+      "nomeExibicao": "Vinícius",
+      "telefoneConjuge": "",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14991322808",
+      "id": 2
+    },
+    {
+      "dataNascimento": "15/07",
+      "nome": "Rafaela Rodrigues Da Silva",
+      "nomeExibicao": "Rafaela",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "tipo": "individual",
+      "senhaConjuge": "",
+      "dataNascimentoConjuge": "",
+      "nomeConjuge": "",
+      "disponibilidadeConfirmada": false,
+      "excecaoAcessoAte": "2026-02-28T20:53:14.078Z",
+      "nomeExibicaoConjuge": "",
+      "afastado": true,
+      "id": 3,
+      "aprovado": true,
+      "senha": "000",
+      "telefone": "14997857300",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefoneConjuge": "",
+      "afastadoConjuge": false
+    },
+    {
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeConjuge": "",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "dataNascimento": "31/05",
+      "nomeExibicao": "Taluza",
+      "nome": "Taluza Alves Tripoli",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14988077330",
+      "telefoneConjuge": "",
+      "id": 4
+    },
+    {
+      "telefoneConjuge": "",
+      "aprovado": true,
+      "senha": "000",
+      "telefone": "14998352448",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "id": 5,
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "06/05",
+      "nome": "Beatriz Costa Bertozzo",
+      "nomeExibicao": "Beatriz"
+    },
+    {
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nome": "Ceine Renê Silva",
+      "nomeExibicao": "Ceine",
+      "dataNascimento": "05/05",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997158689",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "",
+      "id": 6
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "10/10",
+      "nome": "Adolfo Ferracin Junior",
+      "nomeExibicao": "Adolfo",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "nomeConjuge": "",
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "id": 7,
+      "telefoneConjuge": "",
+      "aprovado": true,
+      "senha": "000",
+      "telefone": "14997743563",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "telefoneConjuge": "",
+      "telefone": "14997015840",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "senha": "000",
+      "aprovado": true,
+      "id": 8,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nome": "Antônio Carlos Martins Sampaio",
+      "nomeExibicao": "Antônio Carlos",
+      "dataNascimento": "27/02"
+    },
+    {
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Teresa",
+      "nome": "Maria Teresa Chiquito Palhares",
+      "dataNascimento": "09/02",
+      "telefoneConjuge": "",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997957702",
+      "aprovado": true,
+      "senha": "000",
+      "id": 9
+    },
+    {
+      "aprovado": true,
+      "senha": "000",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997941758",
+      "telefoneConjuge": "",
+      "id": 10,
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "nomeConjuge": "",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "dataNascimento": "18/02",
+      "nome": "Maria Elisabete Davies ",
+      "nomeExibicao": "Bete",
+      "role": "ministro",
+      "acessoCoordenacao": "casal"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "02/03",
+      "nome": "Ana Cláudia Vasquez Maurício Roda",
+      "nomeExibicao": "Ana Cláudia",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeConjuge": "",
+      "id": 11,
+      "telefoneConjuge": "",
+      "senha": "000",
+      "aprovado": true,
+      "telefone": "14991376657",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "telefone": "14991266399",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "aprovado": true,
+      "senha": "000",
+      "telefoneConjuge": "",
+      "id": 12,
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "nomeConjuge": "",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nome": "Rosa Maria Fernandes Scalvi",
+      "nomeExibicao": "Rosa",
+      "dataNascimento": "28/03",
+      "acessoCoordenacao": "casal",
+      "role": "ministro"
+    },
+    {
+      "telefoneConjuge": "",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997336691",
+      "senha": "000",
+      "aprovado": true,
+      "id": 13,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeConjuge": "",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nome": "Anderson Aparecido Pereira",
+      "nomeExibicao": "Anderson",
+      "dataNascimento": "29/03"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "31/03",
+      "nomeExibicao": "Silvia",
+      "nome": "Silvia Fernanda Rueda Amadeu",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "id": 14,
+      "telefoneConjuge": "",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "19991202187"
+    },
+    {
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeExibicao": "Doroty",
+      "nome": "Doroty Mariza Geronimo Da Silva",
+      "dataNascimento": "24/04",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997861445",
+      "aprovado": true,
+      "senha": "000",
+      "telefoneConjuge": "",
+      "id": 15
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14991039167",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "",
+      "id": 16,
+      "nomeConjuge": "",
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeExibicao": "Shyrlei",
+      "nome": "Shyrlei Aparecida Anzolin Bernardinelli",
+      "dataNascimento": "02/11",
+      "acessoCoordenacao": "casal",
+      "role": "ministro"
+    },
+    {
+      "dataNascimento": "05/12",
+      "nome": "Simone Gomes Aversa Rossetto",
+      "nomeExibicao": "Simone",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "id": 17,
+      "aprovado": true,
+      "senha": "000",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14981434357",
+      "telefoneConjuge": ""
+    },
+    {
+      "id": 18,
+      "telefone": "14997961504",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "aprovado": true,
+      "senha": "000",
+      "telefoneConjuge": "",
+      "nome": "Maria Vitória Carneiro Pollini Carrara Rodrigues",
+      "nomeExibicao": "Mavii",
+      "dataNascimento": "06/12",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": "",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true
+    },
+    {
+      "nomeExibicao": "Vicente",
+      "nome": "Luis Vicente De Andrade Scalvi",
+      "dataNascimento": "22/12",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "nomeConjuge": "",
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "disponibilidadeConfirmada": true,
+      "id": 19,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14991932010",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": ""
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "29/12",
+      "nome": "Sônia Sbeghen Pelegrini",
+      "nomeExibicao": "Sônia",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "",
+      "dataNascimentoConjuge": "",
+      "tipo": "individual",
+      "nomeConjuge": "",
+      "id": 20,
+      "telefoneConjuge": "",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997125533"
+    },
+    {
+      "id": 21,
+      "telefoneConjuge": "",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14982056161",
+      "senha": "000",
+      "aprovado": true,
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Luís Gustavo",
+      "nome": "Luís Gustavo De Moraes",
+      "dataNascimento": "07/03",
+      "nomeExibicaoConjuge": "",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeConjuge": "",
+      "tipo": "individual",
+      "dataNascimentoConjuge": ""
+    },
+    {
+      "dataNascimento": "31/12",
+      "nome": "Wilson Marques",
+      "nomeExibicao": "Wilson",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "tipo": "casal",
+      "senhaConjuge": "",
+      "dataNascimentoConjuge": "13/11",
+      "nomeConjuge": "Regina Marques",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Regina",
+      "id": 22,
+      "senha": "000",
+      "aprovado": true,
+      "telefone": "14981259858",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefoneConjuge": "14981259801"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "12/06",
+      "nomeExibicao": "Sérgio",
+      "nome": "João Sérgio R Cardoso",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "Maria Helena",
+      "excecaoAcessoAte": null,
+      "nomeConjuge": "Maria Helena Travagli Cardoso",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "26/12",
+      "senhaConjuge": "000",
+      "id": 23,
+      "telefoneConjuge": "14997938031",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14997126670"
+    },
+    {
+      "afastadoConjuge": true,
+      "telefoneConjuge": "14991776017",
+      "telefone": "14998885512",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "aprovado": true,
+      "senha": "000",
+      "id": 24,
+      "afastado": false,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Camila",
+      "disponibilidadeConfirmada": true,
+      "nomeConjuge": "Camila Spacca Soares",
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "21/11",
+      "tipo": "casal",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Gustavo Soares",
+      "nome": "Gustavo Henrique Escantamburlo Soares",
+      "dataNascimento": "21/11"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "09/11",
+      "nome": "Valter Kamiya",
+      "nomeExibicao": "Valter",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Cristiane",
+      "dataNascimentoConjuge": "17/04",
+      "senhaConjuge": "000",
+      "tipo": "casal",
+      "nomeConjuge": "Cristiane Yukye Okida",
+      "id": 25,
+      "telefoneConjuge": "14996077348",
+      "aprovado": true,
+      "senha": "000",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14996077531"
+    },
+    {
+      "telefone": "14997277984",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "14997789804",
+      "id": 26,
+      "tipo": "casal",
+      "dataNascimentoConjuge": "30/03",
+      "senhaConjuge": "000",
+      "nomeConjuge": "Aline Bufeli Bianchini Barbosa",
+      "nomeExibicaoConjuge": "Aline",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nome": "Rogério Fernandes Barbosa",
+      "nomeExibicao": "Rogério",
+      "dataNascimento": "07/11",
+      "acessoCoordenacao": "casal",
+      "role": "ministro"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "07/11",
+      "nome": "Cleber Rogério Gonçalves",
+      "nomeExibicao": "Cleber",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "Márcia",
+      "excecaoAcessoAte": null,
+      "nomeConjuge": "Márcia Cristina Mucheroni Gonçalves",
+      "dataNascimentoConjuge": "27/06",
+      "tipo": "casal",
+      "senhaConjuge": "000",
+      "id": 27,
+      "telefoneConjuge": "14991799001",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14991577710"
+    },
+    {
+      "id": 28,
+      "telefone": "14997013237",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "14997143228",
+      "nomeExibicao": "Lázaro",
+      "nome": "Lázaro Lourenço Jaccobini",
+      "dataNascimento": "05/10",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeConjuge": "Tânia Mara De Oliveira Jacobini",
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "21/02",
+      "tipo": "casal",
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Tânia",
+      "disponibilidadeConfirmada": true
+    },
+    {
+      "id": 29,
+      "telefone": "14998001005",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "14981149020",
+      "nomeExibicao": "Cristiano",
+      "nome": "Cristiano Cordeiro",
+      "dataNascimento": "17/09",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "dataNascimentoConjuge": "30/08",
+      "tipo": "casal",
+      "senhaConjuge": "000",
+      "nomeConjuge": "Fabiana Aparecida Menegazzo Cordeiro",
+      "nomeExibicaoConjuge": "Fabiana",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "18/03",
+      "nomeExibicao": "Rodrigo",
+      "nome": "Rodrigo Vendramini",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "Eleksandra",
+      "excecaoAcessoAte": null,
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "15/09",
+      "tipo": "casal",
+      "nomeConjuge": "Eleksandra Cibele Gusman Vendramini",
+      "id": 30,
+      "telefoneConjuge": "14997979527",
+      "aprovado": true,
+      "senha": "000",
+      "telefone": "14997954270",
+      "paroquia": "Paróquia Santa Rita de Cássia"
+    },
+    {
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Darzi",
+      "nome": "Darzi Luiz Capello",
+      "dataNascimento": "27/08",
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Irene",
+      "disponibilidadeConfirmada": true,
+      "senhaConjuge": "000",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "14/01",
+      "nomeConjuge": "Irene Martins Capello",
+      "id": 31,
+      "telefoneConjuge": "14981193674",
+      "telefone": "14981121956",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "senha": "000",
+      "aprovado": true
+    },
+    {
+      "tipo": "casal",
+      "dataNascimentoConjuge": "24/08",
+      "senhaConjuge": "000",
+      "nomeConjuge": "Maria Aparecida Lopes Fernandes Hudinik",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Maria",
+      "dataNascimento": "15/01",
+      "nomeExibicao": "Osvaldo",
+      "nome": "Osvaldo Aparecido Hudinik",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "aprovado": true,
+      "senha": "000",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14981125519",
+      "telefoneConjuge": "14997578008",
+      "id": 32
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14991052002",
+      "aprovado": true,
+      "senha": "000",
+      "telefoneConjuge": "14997983181",
+      "id": 33,
+      "tipo": "casal",
+      "dataNascimentoConjuge": "22/08",
+      "senhaConjuge": "000",
+      "nomeConjuge": "Valéria C. Victório Da Silva",
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Valéria",
+      "disponibilidadeConfirmada": true,
+      "nome": "Edilson Da Silva",
+      "nomeExibicao": "Edilson",
+      "dataNascimento": "21/02",
+      "acessoCoordenacao": "casal",
+      "role": "ministro"
+    },
+    {
+      "id": 34,
+      "telefoneConjuge": "14981447340",
+      "telefone": "14988250899",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "aprovado": true,
+      "senha": "000",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Natanael",
+      "nome": "Natanael Emídio Júnior",
+      "dataNascimento": "07/06",
+      "nomeExibicaoConjuge": "Zildene",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "senhaConjuge": "000",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "07/08",
+      "nomeConjuge": "Zildene Pedrosa de Oliveira Emídio"
+    },
+    {
+      "id": 35,
+      "telefoneConjuge": "14988067227",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14988004389",
+      "aprovado": true,
+      "senha": "000",
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nomeExibicao": "Alan Ciocca",
+      "nome": "Alan M. Ciocca",
+      "dataNascimento": "19/07",
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Ana Neri",
+      "disponibilidadeConfirmada": true,
+      "tipo": "casal",
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "22/01",
+      "nomeConjuge": "Ana Neri De Moura"
+    },
+    {
+      "afastado": true,
+      "id": 36,
+      "telefoneConjuge": "14997154800",
+      "afastadoConjuge": true,
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Santa Rita de Cássia",
+      "telefone": "14997021989",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "07/03",
+      "nome": "Gustavo Sgamzela Guanaes",
+      "nomeExibicao": "Gustavo Guanaes",
+      "excecaoAcessoAte": "2026-02-28T20:52:44.839Z",
+      "nomeExibicaoConjuge": "Ana Elisa",
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "15/07",
+      "tipo": "casal",
+      "nomeConjuge": "Ana Elisa Manzano Guanaes"
+    },
+    {
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "dataNascimento": "30/05",
+      "nome": "Eliara Yolanda Lima de Castro Lípolis",
+      "nomeExibicao": "Eliara",
+      "disponibilidadeConfirmada": true,
+      "nomeExibicaoConjuge": "Junior",
+      "excecaoAcessoAte": null,
+      "nomeConjuge": "João Batista Lípolis Júnior",
+      "dataNascimentoConjuge": "03/01",
+      "tipo": "casal",
+      "senhaConjuge": "000",
+      "id": 37,
+      "telefoneConjuge": "14988300716",
+      "senha": "000",
+      "aprovado": true,
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14981740771"
+    },
+    {
+      "dataNascimento": "07/04",
+      "nomeExibicao": "Maurício",
+      "nome": "Maurício Pontes Porto",
+      "role": "ministro",
+      "acessoCoordenacao": "casal",
+      "nomeConjuge": "Juliana Trad Porto",
+      "senhaConjuge": "000",
+      "dataNascimentoConjuge": "19/05",
+      "tipo": "casal",
+      "disponibilidadeConfirmada": true,
+      "excecaoAcessoAte": null,
+      "nomeExibicaoConjuge": "Juliana",
+      "id": 38,
+      "senha": "000",
+      "aprovado": true,
+      "telefone": "14981766556",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefoneConjuge": "14996068810"
+    },
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "telefone": "14996758190",
+      "senha": "000",
+      "aprovado": true,
+      "telefoneConjuge": "14997397167",
+      "id": 39,
+      "nomeConjuge": "Luciene Sierra Maximino",
+      "senhaConjuge": "000",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "02/03",
+      "nomeExibicaoConjuge": "Luciene",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeExibicao": "Cláudio",
+      "nome": "Cláudio Motta Máximino",
+      "dataNascimento": "19/05",
+      "acessoCoordenacao": "casal",
+      "role": "ministro"
+    },
+    {
+      "acessoCoordenacao": "casal",
+      "role": "ministro",
+      "nome": "Júlio César Teixeira De Carvalho",
+      "nomeExibicao": "Júlio",
+      "dataNascimento": "04/01",
+      "nomeExibicaoConjuge": "Ana Michele",
+      "excecaoAcessoAte": null,
+      "disponibilidadeConfirmada": true,
+      "nomeConjuge": "Ana Michele Noitel Valim Teixeira De Carvalho",
+      "tipo": "casal",
+      "dataNascimentoConjuge": "15/04",
+      "senhaConjuge": "000",
+      "id": 40,
+      "telefoneConjuge": "14997349357",
+      "telefone": "14991142617",
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "aprovado": true,
+      "senha": "000"
+    },
+    {
+      "id": 41,
+      "role": "ministro",
+      "disponibilidadeConfirmada": true,
+      "telefone": "14988067227",
+      "nome": "Ana Neri",
+      "aprovado": true,
+      "tipo": "casal",
+      "nomeConjuge": "Alan Ciocca"
+    },
+    {
+      "acessoCoordenacao": "casal",
+      "role": "coordenacao",
+      "nome": "Josué Silva dos Santos",
+      "nomeExibicao": "Josué",
+      "dataNascimento": "04/04",
+      "nomeExibicaoConjuge": "",
+      "disponibilidadeConfirmada": false,
+      "dataNascimentoConjuge": "",
+      "senhaConjuge": "",
+      "tipo": "individual",
+      "nomeConjuge": "",
+      "id": 42,
+      "afastado": false,
+      "afastadoConjuge": false,
+      "telefoneConjuge": "",
+      "telefone": "14999999999",
+      "paroquia": "Paróquia São Cristóvão",
+      "senha": "000",
+      "aprovado": true
+    }
+  ],
+  "mensagens": []
+}

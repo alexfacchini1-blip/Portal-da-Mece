@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "AppData": {
+      "title": "Application Data",
+      "description": "The entire state of the application stored in a single document.",
+      "type": "object",
+      "properties": {
+        "ministros": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "nome": { "type": "string" },
+              "telefone": { "type": "string" },
+              "senha": { "type": "string" },
+              "paroquia": { "type": "string" },
+              "role": { "type": "string" },
+              "aprovado": { "type": "boolean" }
+            }
+          }
+        },
+        "paroquias": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "nome": { "type": "string" }
+            }
+          }
+        },
+        "disponibilidades": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "config": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/app_data/main_db": {
+      "schema": "AppData",
+      "description": "The main document containing all application state."
+    }
+  }
+}

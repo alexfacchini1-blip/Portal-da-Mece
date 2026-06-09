@@ -1,0 +1,7 @@
+106:import CoordenacaoCadastroView from "./components/CoordenacaoCadastroView";
+107:import CoordenacaoMissasView from "./components/CoordenacaoMissasView";
+2539:function CoordenacaoView({
+3534:    console.log("[CoordenacaoView] Fetching data for paroquia:", user.paroquia);
+5467:                    <CoordenacaoCadastroView
+5520:                    <CoordenacaoMissasView
+13719:        <CoordenacaoView

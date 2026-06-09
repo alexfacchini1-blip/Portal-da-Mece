@@ -1,0 +1,12 @@
+1846:  const [vagas, setVagas] = useState({});
+2244:        const vagasRes = await fetch(`/api/config/vagas?paroquia=${encodeURIComponent(user.paroquia)}`);
+2245:        if (vagasRes.ok) setVagas(await vagasRes.json());
+2250:        const vagasRes = await fetch(`/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}`);
+2251:        if (vagasRes.ok) setVagas(await vagasRes.ok ? await vagasRes.json() : []);
+2342:                `A escala foi gerada, mas algumas missas não possuem ministros suficientes para preencher todas as vagas:\n\n${detalhes}`
+3800:                        {Object.keys(vagas).length === 0 ? (
+3804:                          Object.entries(vagas)
+7651:    console.log(`[DEBUG] fetchVagas calling /api/vagas for paroquia: "${user.paroquia}", mes: ${mesSelecionado}, ano: ${anoSelecionado}`);
+7653:      const response = await fetch(`/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}`);
+7662:      console.error("Erro ao buscar vagas:", error);
+7864:      fetchVagas(); // Atualiza as vagas após salvar

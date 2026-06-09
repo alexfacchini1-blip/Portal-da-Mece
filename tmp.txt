@@ -1,0 +1,43 @@
+1654:  mesSelecionado, 
+1688:  const [mesGerar, setMesGerar] = useState(Number(mesSelecionado));
+1693:    setMesGerar(Number(mesSelecionado));
+1695:  }, [mesSelecionado, anoSelecionado]);
+1825:        return m === Number(mesSelecionado) && y === Number(anoSelecionado);
+1828:  }, [disponibilidades, mesSelecionado, anoSelecionado]);
+1917:      let targetMonth = Number(mesSelecionado);
+2193:        fetch(`/api/stats?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}&t=${now}`)
+2244:        const vagasRes = await fetch(`/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}`);
+2250:        const vagasRes = await fetch(`/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}`);
+2258:  }, [user.paroquia, user.role, isCoordenador, activeTab, mesSelecionado, anoSelecionado]);
+2271:  }, [activeTab, mesSelecionado, anoSelecionado, fetchData]);
+2320:    setMesGerar(Number(mesSelecionado));
+3058:                  mesSelecionado={mesSelecionado}
+3085:                    mesSelecionado={mesSelecionado}
+3111:                        <p className={`text-sm font-black ${themeClasses.text}`}>{monthNames[mesSelecionado - 1]} / {anoSelecionado}</p>
+3155:                          <p className={`text-2xl font-black ${hasSubmittedGlobal ? 'text-emerald-600' : (disponibilidadeAberta ? 'text-black' : (escalaPublicadaPorMes?.[`${anoSelecionado}-${mesSelecionado.toString().padStart(2, '0')}`] ? 'text-black' : 'text-blue-500'))}`}>
+3156:                            {hasSubmittedGlobal ? 'Enviada' : (disponibilidadeAberta ? 'Aberta' : (escalaPublicadaPorMes?.[`${anoSelecionado}-${mesSelecionado.toString().padStart(2, '0')}`] ? 'Fechada' : 'Aguardando'))}
+3161:                            ? `${monthNames[mesSelecionado - 1]} registrada`
+3163:                               ? `${monthNames[mesSelecionado - 1]} recebendo` 
+3164:                               : (escalaPublicadaPorMes?.[`${anoSelecionado}-${mesSelecionado.toString().padStart(2, '0')}`] 
+3165:                                   ? `${monthNames[mesSelecionado - 1]} fechada` 
+3166:                                   : `${monthNames[mesSelecionado - 1]} aguardando`))}
+3326:                      <CoordenacaoMissasView user={user} mesSelecionado={mesSelecionado} anoSelecionado={anoSelecionado} />
+3385:                                  value={mesSelecionado}
+3409:                                    {monthNames[mesSelecionado - 1]} / {anoSelecionado}
+3730:                            value={mesSelecionado}
+3979:                                      return m === Number(mesSelecionado) && y === Number(anoSelecionado);
+4053:                          let targetMonth = Number(mesSelecionado);
+4923:        mes={mesSelecionado}
+4986:function AdminView({ onLogout, setView, user, mesSelecionado, anoSelecionado, onDownloadBackup, onRestoreBackup, setViewAsMinister, onImpersonate, onCustomConfirm, onAlert, setDownloadOptionMode }) {
+7065:  const [mesSelecionado, setMesSelecionado] = useState(() => {
+7195:      if (m !== mesSelecionado) setMesSelecionado(m);
+7201:  }, [mesSelecionado, anoSelecionado]);
+7368:        const response = await fetch(`/api/disponibilidade/${encodeURIComponent(targetUser.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`);
+7387:  }, [mesSelecionado, anoSelecionado, user?.telefone, viewAsUser]);
+7502:      const response = await fetch(`/api/disponibilidade/${encodeURIComponent(userData.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`);
+7651:    console.log(`[DEBUG] fetchVagas calling /api/vagas for paroquia: "${user.paroquia}", mes: ${mesSelecionado}, ano: ${anoSelecionado}`);
+7653:      const response = await fetch(`/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}`);
+7706:        const slots = await getExpectedSlots(targetUser.paroquia, mesSelecionado, anoSelecionado);
+7712:  }, [viewAsUser, user?.paroquia, view, mesSelecionado, anoSelecionado]);
+7961:          mesSelecionado={mesSelecionado}
+8009:          mesSelecionado={mesSelecionado} 

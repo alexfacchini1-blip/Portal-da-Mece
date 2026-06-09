@@ -1,0 +1,24 @@
+# Registro de Software - Escala de Ministros
+Data: 08 de Maio de 2026
+
+## Identificação do Sistema
+Nome: Escala de Ministros
+Versão: 1.0.0
+Descrição: Sistema completo para gestão de escalas litúrgicas, coordenação de ministros e administração de paróquias com suporte multi-unidade.
+
+## Resumo Digital (Hash) para INPI
+Algoritmo: SHA-256
+Hash das Fontes (Fingerprint): 24712b989e21ab530140634cafe370a6fe548cafc6b5dfa0d6c547381ea6e41e
+
+## Módulos Principais
+1. **Coordenação**: Gestão de ministros, paróquias, missas e mensagens.
+2. **Ministro**: Informação de disponibilidade, visualização de escala e perfil.
+3. **Comunhão**: Módulo para controle de distribuição da Eucaristia.
+4. **Calendário Litúrgico**: Integração com as cores e tempos da Igreja (Vaticano/CNBB).
+5. **Administração Central**: Controle de paróquias em modo teste, ativo ou bloqueado.
+
+## Instruções de Instalação (PWA)
+O sistema está configurado como Progressive Web App (PWA). Para instalar em smartphones (Android/iOS):
+1. Acesse o link do sistema no navegador.
+2. Clique em "Adicionar à tela de início" ou no ícone de compartilhamento (iOS) > "Adicionar à Tela de Início".
+3. O ícone do aplicativo será exibido na tela inicial do celular.

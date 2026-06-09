@@ -1,0 +1,6 @@
+{
+  "name": "Escala de Ministros",
+  "description": "Sistema completo para gestão de escalas litúrgicas, coordenação de ministros e administração de paróquias com suporte multi-unidade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

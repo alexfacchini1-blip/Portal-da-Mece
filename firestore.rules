@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regra específica para o documento de dados do aplicativo
+    match /app_data/main_db {
+      allow read, write: if true;
+    }
+    
+    // Regra para coleções dentro de app_data (caso existam)
+    match /app_data/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Bloqueia tudo por padrão para segurança
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-display: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-liturgy-50: var(--liturgy-50);
+  --color-liturgy-100: var(--liturgy-100);
+  --color-liturgy-200: var(--liturgy-200);
+  --color-liturgy-300: var(--liturgy-300);
+  --color-liturgy-400: var(--liturgy-400);
+  --color-liturgy-500: var(--liturgy-500);
+  --color-liturgy-600: var(--liturgy-600);
+  --color-liturgy-700: var(--liturgy-700);
+  --color-liturgy-800: var(--liturgy-800);
+  --color-liturgy-900: var(--liturgy-900);
+  --color-liturgy-950: var(--liturgy-950);
+}
+
+.theme-purple {
+  --liturgy-50: var(--color-purple-50);
+  --liturgy-100: var(--color-purple-100);
+  --liturgy-200: var(--color-purple-200);
+  --liturgy-300: var(--color-purple-300);
+  --liturgy-400: var(--color-purple-400);
+  --liturgy-500: var(--color-purple-500);
+  --liturgy-600: var(--color-purple-600);
+  --liturgy-700: var(--color-purple-700);
+  --liturgy-800: var(--color-purple-800);
+  --liturgy-900: var(--color-purple-900);
+  --liturgy-950: var(--color-purple-950);
+}
+
+.theme-rose {
+  --liturgy-50: var(--color-rose-50);
+  --liturgy-100: var(--color-rose-100);
+  --liturgy-200: var(--color-rose-200);
+  --liturgy-300: var(--color-rose-300);
+  --liturgy-400: var(--color-rose-400);
+  --liturgy-500: var(--color-rose-500);
+  --liturgy-600: var(--color-rose-600);
+  --liturgy-700: var(--color-rose-700);
+  --liturgy-800: var(--color-rose-800);
+  --liturgy-900: var(--color-rose-900);
+  --liturgy-950: var(--color-rose-950);
+}
+
+.theme-emerald {
+  --liturgy-50: var(--color-emerald-50);
+  --liturgy-100: var(--color-emerald-100);
+  --liturgy-200: var(--color-emerald-200);
+  --liturgy-300: var(--color-emerald-300);
+  --liturgy-400: var(--color-emerald-400);
+  --liturgy-500: var(--color-emerald-500);
+  --liturgy-600: var(--color-emerald-600);
+  --liturgy-700: var(--color-emerald-700);
+  --liturgy-800: var(--color-emerald-800);
+  --liturgy-900: var(--color-emerald-900);
+  --liturgy-950: var(--color-emerald-950);
+}
+
+.theme-indigo {
+  --liturgy-50: var(--color-indigo-50);
+  --liturgy-100: var(--color-indigo-100);
+  --liturgy-200: var(--color-indigo-200);
+  --liturgy-300: var(--color-indigo-300);
+  --liturgy-400: var(--color-indigo-400);
+  --liturgy-500: var(--color-indigo-500);
+  --liturgy-600: var(--color-indigo-600);
+  --liturgy-700: var(--color-indigo-700);
+  --liturgy-800: var(--color-indigo-800);
+  --liturgy-900: var(--color-indigo-900);
+  --liturgy-950: var(--color-indigo-950);
+}
+
+.theme-white {
+  --liturgy-50: var(--color-slate-50);
+  --liturgy-100: var(--color-slate-100);
+  --liturgy-200: var(--color-slate-200);
+  --liturgy-300: var(--color-slate-300);
+  --liturgy-400: var(--color-slate-400);
+  --liturgy-500: var(--color-slate-500);
+  --liturgy-600: var(--color-slate-600);
+  --liturgy-700: var(--color-slate-700);
+  --liturgy-800: var(--color-slate-800);
+  --liturgy-900: var(--color-slate-900);
+  --liturgy-950: var(--color-slate-950);
+}
+
+.theme-blue {
+  --liturgy-50: var(--color-blue-50);
+  --liturgy-100: var(--color-blue-100);
+  --liturgy-200: var(--color-blue-200);
+  --liturgy-300: var(--color-blue-300);
+  --liturgy-400: var(--color-blue-400);
+  --liturgy-500: var(--color-blue-500);
+  --liturgy-600: var(--color-blue-600);
+  --liturgy-700: var(--color-blue-700);
+  --liturgy-800: var(--color-blue-800);
+  --liturgy-900: var(--color-blue-900);
+  --liturgy-950: var(--color-blue-950);
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9; 
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; 
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
