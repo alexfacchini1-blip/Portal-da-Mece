@@ -1,7 +1,8 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { User, Phone, Lock, BookOpen, Heart, UserPlus, Check, Cross, Unlock, MessageCircle, Trash2, Award, Eye, UserMinus } from 'lucide-react';
+import { User, Phone, Lock, BookOpen, Heart, UserPlus, Check, Cross, Unlock, MessageCircle, Trash2, Award, Eye, EyeOff, UserMinus, Flag, ShieldCheck } from 'lucide-react';
 import type { User as UserType } from '../types';
 import { toTitleCase, formatPhone } from '../utils';
+import { Tooltip } from './Tooltip';
 
 function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCustomConfirm, onImpersonate, onUpdateUser }) {
   const [pendingUsers, setPendingUsers] = useState<UserType[]>([]);
@@ -28,8 +29,14 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     role: 'ministro', acessoCoordenacao: 'casal', afastado: false, afastadoConjuge: false,
     tempoMinisterio: 'novo' as 'antigo' | 'novo',
     tempoMinisterioConjuge: 'novo' as 'antigo' | 'novo',
-    incompatibilidades: [] as number[]
+    incompatibilidades: [] as number[],
+    isTesoureiro: false,
+    isLider: false,
+    isLiderConjuge: false
   });
+
+  const [showNovoCadastroSenha, setShowNovoCadastroSenha] = useState(false);
+  const [showNovoCadastroSenhaConjuge, setShowNovoCadastroSenhaConjuge] = useState(false);
 
   useEffect(() => {
     fetchPendingUsers();
@@ -53,13 +60,19 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
         }
       }
     } catch (err) {
-      console.error('Erro ao buscar paróquias:', err);
+      const isNet = err instanceof Error && (err.message.includes("fetch") || err.message.includes("NetworkError") || err.message.includes("network") || err.message.includes("Failed to fetch") || err.message.includes("HTTP"));
+      if (isNet) {
+        console.warn("Aviso de conexão ao buscar paróquias (coordenação):", err instanceof Error ? err.message : err);
+      } else {
+        console.error("Erro ao buscar paróquias:", err);
+      }
     }
   };
 
   const fetchApprovedMinisters = async () => {
     try {
-      const url = user.role === 'admin' ? '/api/admin/ministros' : `/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia)}`;
+      const query = user.role === 'admin' ? `?t=${Date.now()}` : `?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`;
+      const url = `/api/admin/ministros${query}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -73,7 +86,8 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
 
   const fetchPendingUsers = async () => {
     try {
-      const url = user.role === 'admin' ? '/api/admin/pending' : `/api/admin/pending?paroquia=${encodeURIComponent(user.paroquia)}`;
+      const query = user.role === 'admin' ? `?t=${Date.now()}` : `?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`;
+      const url = `/api/admin/pending${query}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -90,7 +104,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     try {
       const res = await fetch(`/api/admin/approve/${id}`, { method: 'POST' });
       if (res.ok) {
-        setPendingUsers(prev => prev.filter(u => u.id !== id));
+        setPendingUsers(prev => prev.filter(u => String(u.id) !== String(id)));
         setMessage('Usuário aprovado com sucesso!');
         onNewUserRegistered();
         fetchApprovedMinisters();
@@ -109,7 +123,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     try {
       const res = await fetch(`/api/admin/reject/${id}`, { method: 'POST' });
       if (res.ok) {
-        setPendingUsers(prev => prev.filter(u => u.id !== id));
+        setPendingUsers(prev => prev.filter(u => String(u.id) !== String(id)));
         setMessage('Usuário rejeitado com sucesso!');
         onNewUserRegistered();
         setTimeout(() => setMessage(''), 3000);
@@ -172,7 +186,24 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
   const handleNovoCadastroChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'nome' || name === 'nomeExibicao' || name === 'nomeExibicaoConjuge' || name === 'nomeConjuge') {
+    if (name === 'role') {
+      const newRole = value;
+      setNovoCadastro(prev => {
+        const isPrevCoord = ['coordenacao', 'vice_coordenacao'].includes(prev.role);
+        const isNewCoord = ['coordenacao', 'vice_coordenacao'].includes(newRole);
+        
+        let nextState = { ...prev, [name]: newRole };
+        
+        if (isPrevCoord && !isNewCoord) {
+          nextState.senha = prev.senha.replace(/\D/g, '').slice(0, 3);
+          nextState.senhaConjuge = prev.senhaConjuge.replace(/\D/g, '').slice(0, 3);
+        } else if (!isPrevCoord && isNewCoord) {
+          nextState.senha = '';
+          nextState.senhaConjuge = '';
+        }
+        return nextState;
+      });
+    } else if (name === 'nome' || name === 'nomeExibicao' || name === 'nomeExibicaoConjuge' || name === 'nomeConjuge') {
       setNovoCadastro(prev => ({ ...prev, [name]: toTitleCase(value) }));
     } else if (name === 'dataNascimento' || name === 'dataNascimentoConjuge') {
       let v = value.replace(/\D/g, '');
@@ -184,8 +215,17 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     } else if (name === 'telefone' || name === 'telefoneConjuge') {
       setNovoCadastro(prev => ({ ...prev, [name]: formatPhone(value) }));
     } else if (name === 'senha' || name === 'senhaConjuge') {
-      const v = value.replace(/\D/g, '').slice(0, 3);
-      setNovoCadastro(prev => ({ ...prev, [name]: v }));
+      // We need to use the latest role. But the functional update of setNovoCadastro 
+      // will use the latest state.
+      setNovoCadastro(prev => {
+        const isCoord = ['coordenacao', 'vice_coordenacao'].includes(prev.role);
+        if (isCoord) {
+          return { ...prev, [name]: value };
+        } else {
+          const v = value.replace(/\D/g, '').slice(0, 3);
+          return { ...prev, [name]: v };
+        }
+      });
     } else {
       setNovoCadastro(prev => ({ ...prev, [name]: value }));
     }
@@ -256,6 +296,57 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     }
   };
 
+  const handleToggleLider = async (minister: UserType) => {
+    let nextLider = !minister.isLider;
+    let nextLiderConjuge = minister.isLiderConjuge || false;
+
+    if (minister.tipo === 'casal') {
+      if (!minister.isLider && !minister.isLiderConjuge) {
+        nextLider = true;
+        nextLiderConjuge = false;
+      } else if (minister.isLider && !minister.isLiderConjuge) {
+        nextLider = false;
+        nextLiderConjuge = true;
+      } else if (!minister.isLider && minister.isLiderConjuge) {
+        nextLider = true;
+        nextLiderConjuge = true;
+      } else {
+        nextLider = false;
+        nextLiderConjuge = false;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/ministros/${minister.telefone}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          isLider: nextLider,
+          isLiderConjuge: nextLiderConjuge
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessage(`Atribuição ⭐ atualizado para ${minister.nome}.`);
+        fetchApprovedMinisters();
+
+        if (onUpdateUser && data.ministro) {
+          const clean = (p: string | null | undefined) => p ? p.replace(/\D/g, '') : '';
+          const mTelefone = clean(data.ministro.telefone);
+          const uTelefone = clean(user.telefone);
+          const uTelefoneConjuge = clean(user.telefoneConjuge);
+          if (mTelefone === uTelefone || (uTelefoneConjuge && mTelefone === uTelefoneConjuge)) {
+            onUpdateUser(data.ministro);
+          }
+        }
+
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleEditMinister = (minister: UserType) => {
     setEditingMinister(minister);
     setNovoCadastro({
@@ -277,7 +368,10 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
       afastadoConjuge: minister.afastadoConjuge || false,
       tempoMinisterio: minister.tempoMinisterio || 'novo',
       tempoMinisterioConjuge: minister.tempoMinisterioConjuge || 'novo',
-      incompatibilidades: minister.incompatibilidades || []
+      incompatibilidades: minister.incompatibilidades || [],
+      isTesoureiro: minister.isTesoureiro || false,
+      isLider: minister.isLider || false,
+      isLiderConjuge: minister.isLiderConjuge || false
     });
     setMainTab('novo');
     // Scroll to top to see the form
@@ -374,7 +468,11 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
           paroquia: user.role !== 'admin' ? (user.paroquia || '') : (paroquias.length > 0 ? paroquias[0].nome : ''),
           tipo: 'individual', nomeConjuge: '', dataNascimento: '', dataNascimentoConjuge: '', telefoneConjuge: '',
           role: 'ministro', acessoCoordenacao: 'casal', afastado: false, afastadoConjuge: false,
-          incompatibilidades: []
+          tempoMinisterio: 'novo', tempoMinisterioConjuge: 'novo',
+          incompatibilidades: [],
+          isTesoureiro: false,
+          isLider: false,
+          isLiderConjuge: false
         });
         setEditingMinister(null); // Clear editing state
         onNewUserRegistered(); // Notify parent of new registration
@@ -442,7 +540,11 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
               paroquia: user.role !== 'admin' ? (user.paroquia || '') : (paroquias.length > 0 ? paroquias[0].nome : ''),
               tipo: 'individual', nomeConjuge: '', dataNascimento: '', dataNascimentoConjuge: '', telefoneConjuge: '',
               role: 'ministro', acessoCoordenacao: 'casal', afastado: false, afastadoConjuge: false,
-              tempoMinisterio: 'novo', tempoMinisterioConjuge: 'novo'
+              tempoMinisterio: 'novo', tempoMinisterioConjuge: 'novo',
+              incompatibilidades: [],
+              isTesoureiro: false,
+              isLider: false,
+              isLiderConjuge: false
             });
             setMainTab('novo');
           }}
@@ -591,17 +693,26 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-slate-700">Senha</label>
-                    <input
-                      type="password"
-                      name="senha"
-                      value={novoCadastro.senha}
-                      onChange={handleNovoCadastroChange}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
-                      required
-                      maxLength={3}
-                      placeholder="Ex: 123"
-                      autoComplete="new-password"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNovoCadastroSenha ? "text" : "password"}
+                        name="senha"
+                        value={novoCadastro.senha}
+                        onChange={handleNovoCadastroChange}
+                        className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
+                        required
+                        maxLength={novoCadastro.role.includes('coordena') ? undefined : 3}
+                        placeholder={novoCadastro.role.includes('coordena') ? "Sua senha complexa" : "Ex: 123"}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNovoCadastroSenha(!showNovoCadastroSenha)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                      >
+                        {showNovoCadastroSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-slate-700">Paróquia</label>
@@ -672,7 +783,45 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                     >
                       <option value="ministro">Ministro</option>
                       <option value="coordenacao">Coordenação</option>
+                      <option value="vice_coordenacao">Vice-Coordenação (Mesmos acessos)</option>
                     </select>
+                  </div>
+
+                  {novoCadastro.role === 'ministro' && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="isTesoureiro"
+                        name="isTesoureiro"
+                        checked={novoCadastro.isTesoureiro || false}
+                        onChange={(e) => setNovoCadastro(prev => ({ ...prev, isTesoureiro: e.target.checked }))}
+                        className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="isTesoureiro" className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                        Designar como Tesoureiro (Acesso ao módulo financeiro)
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="isLider"
+                      name="isLider"
+                      checked={novoCadastro.isLider || false}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setNovoCadastro(prev => ({
+                          ...prev,
+                          isLider: checked,
+                        }));
+                      }}
+                      className="w-5 h-5 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
+                    />
+                    <label htmlFor="isLider" className="text-sm font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                      <Flag className="w-4 h-4 text-amber-600" />
+                      Atribuição 🚩 ({novoCadastro.nome ? (novoCadastro.nomeExibicao || novoCadastro.nome) : 'Titular'} - Apto a Responsável de Missa)
+                    </label>
                   </div>
 
                   <div className="flex items-center gap-2 pt-6">
@@ -689,7 +838,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                     </label>
                   </div>
 
-                  {novoCadastro.role === 'coordenacao' && novoCadastro.tipo === 'casal' && (
+                  {['coordenacao', 'vice_coordenacao'].includes(novoCadastro.role) && novoCadastro.tipo === 'casal' && (
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-slate-700">Liberar Acesso Para</label>
                       <select
@@ -699,8 +848,8 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                       >
                         <option value="casal">Casal (Ambos)</option>
-                        <option value="ele">Ele (Apenas {novoCadastro.nome || 'Nome'})</option>
-                        <option value="ela">Ela (Apenas {novoCadastro.nomeConjuge || 'Cônjuge'})</option>
+                        <option value="ele">Titular (Apenas {novoCadastro.nome || 'Nome'})</option>
+                        <option value="ela">Cônjuge (Apenas {novoCadastro.nomeConjuge || 'Cônjuge'})</option>
                       </select>
                     </div>
                   )}
@@ -757,18 +906,27 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                           title="Formato DD/MM (ex: 25/03)"
                         />
                       </div>
-                      <div className="space-y-1">
+                       <div className="space-y-1">
                         <label className="block text-sm font-medium text-slate-700">Senha do Cônjuge</label>
-                        <input
-                          type="password"
-                          name="senhaConjuge"
-                          value={novoCadastro.senhaConjuge}
-                          onChange={handleNovoCadastroChange}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
-                          maxLength={3}
-                          autoComplete="new-password"
-                          placeholder="Ex: 456 (Deixe em branco para usar a mesma)"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showNovoCadastroSenhaConjuge ? "text" : "password"}
+                            name="senhaConjuge"
+                            value={novoCadastro.senhaConjuge}
+                            onChange={handleNovoCadastroChange}
+                            className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
+                            maxLength={novoCadastro.role.includes('coordena') ? undefined : 3}
+                            autoComplete="new-password"
+                            placeholder={novoCadastro.role.includes('coordena') ? "Senha complexa do cônjuge" : "Ex: 456 (Deixe em branco para usar a mesma)"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNovoCadastroSenhaConjuge(!showNovoCadastroSenhaConjuge)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          >
+                            {showNovoCadastroSenhaConjuge ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="block text-sm font-medium text-slate-700">Tempo de Ministério (Cônjuge)</label>
@@ -781,6 +939,26 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                           <option value="novo">Novo</option>
                           <option value="antigo">Antigo</option>
                         </select>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="isLiderConjuge"
+                          name="isLiderConjuge"
+                          checked={novoCadastro.isLiderConjuge || false}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setNovoCadastro(prev => ({
+                              ...prev,
+                              isLiderConjuge: checked,
+                            }));
+                          }}
+                          className="w-5 h-5 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
+                        />
+                        <label htmlFor="isLiderConjuge" className="text-sm font-medium text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                          <Flag className="w-4 h-4 text-amber-600" />
+                          Atribuição 🚩 ({novoCadastro.nomeConjuge ? (novoCadastro.nomeExibicaoConjuge || novoCadastro.nomeConjuge) : 'Cônjuge'} - Apto a Responsável de Missa)
+                        </label>
                       </div>
                       <div className="flex items-center gap-2 pt-6">
                         <input
@@ -844,7 +1022,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                     {(user.role?.toLowerCase().includes('coordena') || user.role === 'admin') && (
                       <>
                         <button
-                          onClick={() => handleApprove(pendingUser.id!)}
+                          onClick={() => handleApprove(String(pendingUser.id!))}
                           className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-colors shadow-sm"
                           title="Aprovar"
                         >
@@ -858,7 +1036,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                           <User className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleReject(pendingUser.id!)}
+                          onClick={() => handleReject(String(pendingUser.id!))}
                           className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors shadow-sm"
                           title="Rejeitar"
                         >
@@ -946,11 +1124,22 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                         {minister.nomeExibicao || minister.nome} 
                         {minister.nomeConjuge && ` e ${minister.nomeExibicaoConjuge || minister.nomeConjuge}`}
                       </p>
-                      {minister.role?.toLowerCase().includes('coordena') && (
+                      {minister.role === 'vice_coordenacao' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 border border-amber-200">
+                          VICE-COORDENAÇÃO
+                        </span>
+                      )}
+                      {minister.role === 'coordenacao' && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 border border-amber-200">
                           COORDENAÇÃO
                         </span>
                       )}
+                      {minister.isTesoureiro && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 border border-emerald-200">
+                          TESOUREIRO
+                        </span>
+                      )}
+
                       {minister.tempoMinisterio === 'novo' && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-blue-100 text-blue-700">
                           NOVO
@@ -977,48 +1166,75 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1 ml-4">
-                    <button
-                      onClick={() => {
-                        handleEditMinister(minister);
-                        setFormTab('restricoes');
-                      }}
-                      className="w-7 h-7 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-all border border-red-100 flex items-center justify-center shadow-sm"
-                      title="Gerenciar Incompatibilidades (Sigiloso)"
-                    >
-                      <UserMinus className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleToggleTempo(minister)}
-                      className={`w-7 h-7 rounded-full transition-all shadow-sm border flex items-center justify-center ${
-                        minister.tempoMinisterio === 'novo' 
-                          ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' 
-                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200'
-                      }`}
-                      title={minister.tempoMinisterio === 'novo' ? 'Status: Novo' : 'Status: Antigo'}
-                    >
-                      <Award className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleConcederExcecao(minister.telefone)}
-                      className="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 transition-all border border-emerald-100 flex items-center justify-center shadow-sm"
-                      title="Acesso Temporário (Liberar Disponibilidade)"
-                    >
-                      <Unlock className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleEditMinister(minister)}
-                      className="w-7 h-7 bg-amber-50 text-amber-600 rounded-full hover:bg-amber-100 transition-all border border-amber-100 flex items-center justify-center shadow-sm"
-                      title="Editar"
-                    >
-                      <User className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(minister.id!, minister.role)}
-                      className="w-7 h-7 bg-rose-50 text-rose-600 rounded-full hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center shadow-sm"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <Tooltip content="Gerenciar Incompatibilidades (Sigiloso)">
+                      <button
+                        onClick={() => {
+                          handleEditMinister(minister);
+                          setFormTab('restricoes');
+                        }}
+                        className="w-7 h-7 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-all border border-red-100 flex items-center justify-center shadow-sm"
+                        title="Gerenciar Incompatibilidades (Sigiloso)"
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content={minister.tempoMinisterio === 'novo' ? 'Status: Novo (Clique para alterar)' : 'Status: Antigo (Clique para alterar)'}>
+                      <button
+                        onClick={() => handleToggleTempo(minister)}
+                        className={`w-7 h-7 rounded-full transition-all shadow-sm border flex items-center justify-center ${
+                          minister.tempoMinisterio === 'novo' 
+                            ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' 
+                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200'
+                        }`}
+                        title={minister.tempoMinisterio === 'novo' ? 'Status: Novo' : 'Status: Antigo'}
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content={minister.isLider || minister.isLiderConjuge ? 'Bandeira de Responsável Ativa (Clique para alterar)' : 'Marcar como Responsável (Bandeira)'}>
+                      <button
+                        onClick={() => handleToggleLider(minister)}
+                        className={`w-7 h-7 rounded-full transition-all shadow-sm border flex items-center justify-center ${
+                          minister.isLider || minister.isLiderConjuge
+                            ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
+                            : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-amber-600 hover:border-amber-200'
+                        }`}
+                        title={
+                          minister.isLider || minister.isLiderConjuge
+                            ? 'Bandeira de Responsável Ativa (Clique para alterar)'
+                            : 'Marcar como Responsável (Bandeira)'
+                        }
+                      >
+                        <Flag className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Acesso Temporário (Liberar Disponibilidade)">
+                      <button
+                        onClick={() => handleConcederExcecao(minister.telefone)}
+                        className="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 transition-all border border-emerald-100 flex items-center justify-center shadow-sm"
+                        title="Acesso Temporário (Liberar Disponibilidade)"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Editar dados cadastrais">
+                      <button
+                        onClick={() => handleEditMinister(minister)}
+                        className="w-7 h-7 bg-amber-50 text-amber-600 rounded-full hover:bg-amber-100 transition-all border border-amber-100 flex items-center justify-center shadow-sm"
+                        title="Editar"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Excluir cadastro">
+                      <button
+                        onClick={() => handleDeleteUser(String(minister.id!), minister.role)}
+                        className="w-7 h-7 bg-rose-50 text-rose-600 rounded-full hover:bg-rose-100 transition-all border border-rose-100 flex items-center justify-center shadow-sm"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               ))}

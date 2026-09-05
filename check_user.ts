@@ -12,10 +12,10 @@ async function checkUser() {
   
   if (docSnap.exists()) {
     const data = docSnap.data();
-    const user = data.ministros.find(m => m.telefone === '14981145657' || m.email === 'alex.facchini1@gmail.com');
-    console.log('--- USER ---');
+    const user = data.ministros.find(m => String(m.id) === '37');
+    console.log('--- USER 37 ---');
     console.log(JSON.stringify(user, null, 2));
-    console.log('--- END USER ---');
+    console.log('--- END USER 37 ---');
   } else {
     console.log('No such document!');
   }

@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Package, Plus, Trash2, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle, History, X, Info, AlertTriangle, Edit2, Save } from 'lucide-react';
 import { EstoqueItem, EstoqueMovimentacao } from '../types';
 
+const getMinistroDisplayName = (m: any) => {
+  if (!m) return "";
+  const isCouple = m.tipo === "casal" || !!m.nomeConjuge || !!m.nomeExibicaoConjuge;
+  if (isCouple) {
+    const p1 = m.nomeExibicao || m.nome || "";
+    const p2 = m.nomeExibicaoConjuge || m.nomeConjuge || "";
+    if (p1 && p2) {
+      return `${p1} e ${p2}`;
+    }
+    return p1 || p2;
+  }
+  return m.nomeExibicao || m.nome || "";
+};
+
 interface AdminEstoqueViewProps {
   user: any;
   onCustomConfirm: (message: string, onConfirm: () => void) => void;
@@ -681,7 +695,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                      isEmbalagem: false, 
                                      quantidade: 0, 
                                      observacao: '',
-                                     ministroResponsavel: user.role === 'ministro' ? (user.loggedInName || user.nome) : ''
+                                     ministroResponsavel: user.role === 'ministro' ? getMinistroDisplayName(user) : ''
                                    }));
                                    setShowMovementForm(item.id); 
                                  }}
@@ -911,9 +925,13 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                     >
                       <option value="">Selecione o Ministro...</option>
                       {ministros
-                        .sort((a, b) => (a.nomeExibicao || a.nome || '').localeCompare(b.nomeExibicao || b.nome || ''))
+                        .map(m => {
+                          const displayName = getMinistroDisplayName(m);
+                          return { id: m.id, displayName };
+                        })
+                        .sort((a, b) => a.displayName.localeCompare(b.displayName))
                         .map(m => (
-                          <option key={m.id} value={m.nomeExibicao || m.nome}>{m.nomeExibicao || m.nome}</option>
+                          <option key={m.id} value={m.displayName}>{m.displayName}</option>
                         ))
                       }
                     </select>

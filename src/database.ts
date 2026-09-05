@@ -29,6 +29,14 @@ type Data = {
     tempoMinisterio?: 'antigo' | 'novo';
     tempoMinisterioConjuge?: 'antigo' | 'novo';
     incompatibilidades?: number[];
+    isTesoureiro?: boolean;
+    isLider?: boolean;
+    isLiderConjuge?: boolean;
+    sessionToken?: string;
+    sessionTokenConjuge?: string;
+    isConjugeLogin?: boolean;
+    loggedInName?: string;
+    loginPhone?: string;
   }[];
   paroquias?: {
     id: string;
@@ -75,6 +83,7 @@ type Data = {
   }[];
   config?: { 
     coordinatorEnabled: boolean; 
+    modoManutencao?: boolean;
     escalaPublicada?: boolean; 
     escalaPublicadaPorParoquia?: Record<string, boolean>;
     escalaPublicadaPorMes?: Record<string, Record<string, boolean>>;
@@ -92,7 +101,10 @@ type Data = {
       horaFechamento?: string;
     }>;
     limiteEscalacaoPorParoquia?: Record<string, number>;
+    limiteNovosPorMissaPorParoquia?: Record<string, number | "livre">;
+    regraDisponibilidadePorParoquia?: Record<string, "livre" | "regra2" | "regra3">;
     lastClearAvailabilityDate?: string;
+    lembreteAutomaticoPorParoquia?: Record<string, boolean>;
   };
   missasTemporarias?: { 
     id: string; 
@@ -112,8 +124,12 @@ type Data = {
     id: number;
     nomeIdoso: string;
     idade: number;
+    cep?: string;
+    numero?: string;
     endereco: string;
     bairro: string;
+    cidade?: string;
+    uf?: string;
     telefone: string;
     responsavel: string;
     telefoneResponsavel: string;
@@ -173,6 +189,86 @@ type Data = {
     confirmadoDestinatario?: boolean;
     dataSolicitacao: string;
   }[];
+  testers?: {
+    id: string;
+    email: string;
+    nome: string;
+    paroquia: string;
+    confirmado?: boolean;
+    dataAdicao: string;
+  }[];
+  financeiro?: {
+    id: string;
+    tipo: 'entrada' | 'saida';
+    categoria: 'mensalidade' | 'outros';
+    valor: number;
+    data: string;
+    ministroId?: number;
+    ministroNome?: string;
+    usuario: string;
+    paroquia: string;
+    descricao?: string;
+    mesReferencia?: string;
+    createdAt: string;
+  }[];
+  vapidKeys?: { publicKey: string; privateKey: string; };
+  pushSubscriptions?: { endpoint: string; keys: { p256dh: string; auth: string; }; userId: number; paroquia?: string; }[];
+  fidelisCoordinators?: {
+    id: string;
+    nome: string;
+    telefone: string;
+    email?: string;
+    paroquia: string;
+    cargo?: 'coordenador' | 'vice_coordenador';
+    tipo?: 'individual' | 'casal';
+    nomeConjuge?: string;
+    telefoneConjuge?: string;
+    senha?: string;
+    status: 'ativo' | 'inativo';
+    observacoes?: string;
+    createdAt: string;
+  }[];
+  faltas?: {
+    id: string;
+    ministroId: string | number;
+    ministroNome: string;
+    quantidade?: number;
+    tipoFalta?: string;
+    telefone?: string;
+    data: string;
+    horario?: string;
+    nomeMissa?: string;
+    paroquia?: string;
+    motivo?: string;
+    justificativa?: string;
+    registradoPor?: string;
+    dataRegistro?: string;
+    createdAt?: string;
+  }[];
+  relatoriosLider?: {
+    id: string;
+    paroquia: string;
+    data: string;
+    horario: string;
+    liderNome: string;
+    presencas?: Record<string, boolean>;
+    faltasReportadas?: any[];
+    usoEstoque?: string;
+    observacoes?: string;
+    updatedAt?: string;
+  }[];
+  eventos?: {
+    id: string;
+    titulo: string;
+    data: string;
+    horario?: string;
+    tipo?: string;
+    descricao?: string;
+    paroquia?: string;
+    criadoPor?: string;
+    criadoPorAdmin?: boolean;
+    createdAt?: string;
+  }[];
 }
 
 // Configura o banco de dados
@@ -187,7 +283,12 @@ const defaultData: Data = {
   comunhao: [],
   estoque: [],
   estoqueMovimentacoes: [],
-  trocas: []
+  trocas: [],
+  testers: [],
+  financeiro: [],
+  pushSubscriptions: [],
+  fidelisCoordinators: [],
+  eventos: []
 }
 
 const adapter = new FirestoreAdapter<Data>('app_data', 'main_db')
@@ -282,14 +383,16 @@ export async function setupDatabase() {
     console.log(`Banco de dados carregado. Total de paróquias: ${db.data?.paroquias?.length || 0}`);
     
     if (db.data?.paroquias?.length === 0) {
-      console.log('AVISO: O banco de dados de paróquias está VAZIO. Adicionando paróquia padrão para permitir o início do sistema.');
+      console.log('AVISO: O banco de dados de paróquias está VAZIO. Adicionando paróquias padrão para permitir o início do sistema.');
       db.data.paroquias = [
-        { id: '1', nome: 'Paróquia Santa Rita de Cássia', cnpj: '44.454.312/0024-37', coordenador: 'Admin', telefoneCoordenador: '14999999999', estado: 'SP', cidade: 'Bauru' }
+        { id: '1772280333795', nome: 'Paróquia Santa Rita de Cássia', cnpj: '44.454.312/0024-37', coordenador: 'Alexandre', telefoneCoordenador: '14997865806', estado: 'SP', cidade: 'Bauru', status: 'ativo' },
+        { id: '1772281505207', nome: 'Paróquia São Cristóvão', cnpj: '00.000.000/0000-00', coordenador: 'Josué', telefoneCoordenador: '14999999999', estado: 'SP', cidade: 'Bauru', status: 'ativo' },
+        { id: '1774922106968', nome: 'Paróquia Nossa Senhora das Graças', cnpj: '00.000.000/0000-00', coordenador: 'Fernanda e Celiomar', telefoneCoordenador: '14991133422', estado: 'SP', cidade: 'Bauru', status: 'ativo' }
       ];
       try {
         await db.write();
       } catch (e) {
-        console.error('Erro ao salvar paróquia padrão no Firestore:', e);
+        console.error('Erro ao salvar paróquias padrão no Firestore:', e);
       }
     }
     

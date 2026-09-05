@@ -1,0 +1,78 @@
+[
+  {
+    "nomeConjuge": "Priscila de Bortolli Facchini",
+    "dataNascimento": "26/02",
+    "id": 1,
+    "role": "coordenacao",
+    "telefoneConjuge": "(14) 99602-1377",
+    "pushSubscriptions": [
+      {
+        "telefone": "14997865806",
+        "subscription": {
+          "expirationTime": null,
+          "endpoint": "https://fcm.googleapis.com/fcm/send/ekjTP6CmwhI:APA91bFd2PQ7Wk0oyeTllhp-xQkYKSO3RIeou_57m_YmfKjklepD6UxbI4AgNjwX4dSQ8PAo1bhaWwO2t0YOQSDpjTTjBStoFPAr9-fdHrRL7C0sznarwhJQNt1kUm8M5cez_Cwy1_o2",
+          "keys": {
+            "auth": "3m1ZEZlbTrjzKHY55ju5Yw",
+            "p256dh": "BBJu2_i0svE3XUoqk6_nA9unT9rkBrEvpswUzbqZ5vZL29lvNXKN1443lVXPu7vqIMFRBeneLhZCvpLX0dAuRog"
+          }
+        }
+      },
+      {
+        "telefone": "14997865806",
+        "subscription": {
+          "expirationTime": null,
+          "keys": {
+            "p256dh": "BNVzFnLX6HDEPF9yGWPnWZMNOiLi9d4D4CPHgDMPZkU3aa-0YlxVGEYPvVk1vENiFdiu2MaUUJ6avx19E-cPGwE",
+            "auth": "SdWbjw3fInUlmHgTzfhWIA"
+          },
+          "endpoint": "https://fcm.googleapis.com/fcm/send/cZHRBFcVbsQ:APA91bF-PR6uEGTLLFCHKKl2ZMuFm_qgsA8YPUDmiat4FeOmySfYmrt-t00Y0yyJojLLf5b2UcJ_tW_qkOcF9X2yTdnoofwJCEw-ZPpK_i65inqI--yoHiaF94IroWy_RxxlxKsQQe14"
+        }
+      }
+    ],
+    "cadastroCompleto": true,
+    "tipo": "casal",
+    "telefone": "(14) 99786-5806",
+    "aprovado": true,
+    "nomeExibicao": "Alexandre",
+    "paroquia": "Paróquia Santa Rita de Cássia",
+    "nomeExibicaoConjuge": "Priscila",
+    "senhaConjuge": "Mece1411%",
+    "senha": "Aqamnsqa071%",
+    "dataNascimentoConjuge": "14/11",
+    "nome": "Alexandre"
+  },
+  {
+    "nome": "Josué",
+    "telefone": "(14) 99999-9999",
+    "id": 43,
+    "role": "coordenacao",
+    "senha": "111",
+    "paroquia": "Paróquia São Cristóvão",
+    "tipo": "individual",
+    "aprovado": true
+  },
+  {
+    "paroquia": "Paróquia Santa Rita de Cássia",
+    "tipo": "individual",
+    "aprovado": true,
+    "nome": "Ministro",
+    "senha": "888",
+    "id": 47,
+    "telefone": "(14) 98888-8888",
+    "role": "coordenacao"
+  },
+  {
+    "cadastroCompleto": false,
+    "tipo": "individual",
+    "telefone": "14991133422",
+    "nome": "Fernanda e Celiomar",
+    "incompatibilidades": [],
+    "aprovado": true,
+    "nomeExibicao": "Fernanda e Celiomar",
+    "paroquia": "Paróquia Nossa Senhora das Graças",
+    "role": "coordenacao",
+    "id": 48,
+    "senha": "123456",
+    "acessoCoordenacao": "casal"
+  }
+]

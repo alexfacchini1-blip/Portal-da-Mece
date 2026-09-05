@@ -1,0 +1,51 @@
+{
+  "mensagens": [],
+  "missasTemporarias": [
+    { "horario": "07:30", "tipo": "unica", "diaSemana": "0", "quantidade": "5", "id": "1774041708798", "nome": "Missa de Domingo" },
+    { "nome": "Missa de Domingo", "id": "1774041738221", "quantidade": "5", "diaSemana": "0", "tipo": "unica", "horario": "07:30", "data": "" },
+    { "quantidade": "8", "diaSemana": "0", "tipo": "unica", "horario": "10:00", "data": "", "nome": "Missa de Domingo", "id": "1774041819948" },
+    { "diaSemana": "6", "frequencia": "semanal", "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Missa de Sábado", "horario": "17:00", "data": "", "datasInativas": ["2026-04-04"], "quantidade": "6", "id": "1774042473937" },
+    { "diaSemana": "0", "quantidade": "5", "horario": "07:30", "data": "", "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Missa de Domingo", "id": "1774042490116", "frequencia": "semanal" },
+    { "data": "", "horario": "10:00", "diaSemana": "0", "quantidade": "8", "frequencia": "semanal", "id": "1774042502936", "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Missa de Domingo" },
+    { "nome": "Missa de Domingo", "paroquia": "Paróquia Santa Rita de Cássia", "id": "1774042517342", "frequencia": "semanal", "quantidade": "8", "diaSemana": "0", "horario": "19:00", "data": "" },
+    { "data": "", "horario": "19:30", "diaMes": "22", "quantidade": 4, "id": "1774043219009", "diaSemana": "0", "frequencia": "mensal-data", "nome": "Missa e Oração da Coroa de Santa Rita", "paroquia": "Paróquia Santa Rita de Cássia" },
+    { "quantidade": 4, "diaMes": "1", "horario": "19:30", "data": "2026-05-01", "id": "1776457832892", "diaSemana": "5", "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Sagrado Coração de Jesus", "frequencia": "mensal-1" },
+    { "id": "1776457906677", "diaMes": "1", "quantidade": 4, "horario": "19:30", "data": "", "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Missa com a Benção do Santíssimo", "frequencia": "mensal-2", "diaSemana": "5" },
+    { "diaSemana": "1", "nome": "Diária", "paroquia": "Paróquia São Cristóvão", "frequencia": "diaria", "diaMes": "1", "quantidade": 3, "horario": "07:00", "data": "2026-06-01", "id": "1778187519559" },
+    { "diaSemana": "6", "paroquia": "Paróquia São Cristóvão", "nome": "Manhã", "frequencia": "semanal", "quantidade": "5", "diaMes": "1", "data": "2026-06-01", "horario": "07:00", "id": "1778189038388" },
+    { "diaSemana": "6", "paroquia": "Paróquia São Cristóvão", "nome": "Tarde", "frequencia": "semanal", "quantidade": "6", "diaMes": "1", "horario": "17:00", "data": "", "id": "1778189060670" },
+    { "nome": "Paroquia N. Sra. Carmo", "paroquia": "Paróquia São Cristóvão", "frequencia": "semanal", "diaSemana": "6", "id": "1778189085806", "quantidade": 2, "diaMes": "1", "horario": "19:00", "data": "" },
+    { "nome": "Paróquia N. Sra. Rosário", "paroquia": "Paróquia São Cristóvão", "frequencia": "semanal", "diaSemana": "0", "id": "1778189153252", "quantidade": "2", "diaMes": "1", "data": "", "horario": "08:00" },
+    { "id": "1778189181162", "horario": "10:00", "data": "", "diaMes": "1", "quantidade": "8", "frequencia": "semanal", "paroquia": "Paróquia São Cristóvão", "nome": "Manhã", "diaSemana": "0" },
+    { "id": "1778189198854", "diaMes": "1", "quantidade": "6", "horario": "12:15", "data": "", "nome": "Tarde", "paroquia": "Paróquia São Cristóvão", "frequencia": "semanal", "diaSemana": "0" },
+    { "frequencia": "semanal", "nome": "Noite", "paroquia": "Paróquia São Cristóvão", "diaSemana": "0", "id": "1778189211165", "horario": "19:00", "data": "", "diaMes": "1", "quantidade": "8" },
+    { "paroquia": "Paróquia Santa Rita de Cássia", "nome": "Corpus Christi ", "frequencia": "temporaria", "diaSemana": "0", "id": "1779916524765", "diaMes": "1", "quantidade": "3", "horario": "07:30", "data": "2026-06-04" },
+    { "nome": "Sábado", "paroquia": "Paróquia Teste", "frequencia": "semanal", "diaSemana": "6", "id": "1780961299119", "diaMes": "1", "quantidade": "2", "data": "2026-07-01", "horario": "17:00" },
+    { "diaSemana": "0", "paroquia": "Paróquia Teste", "nome": "Domingo", "frequencia": "semanal", "quantidade": "3", "diaMes": "1", "data": "", "horario": "10:00", "id": "1780961311764" },
+    { "diaSemana": "0", "frequencia": "mensal-data", "paroquia": "Paróquia Teste", "nome": "Exposição do Santissimo", "horario": "20:00", "data": "", "quantidade": "2", "diaMes": "15", "id": "1780961346040" }
+  ],
+  "estoque": [
+    { "unidadesPorEmbalagem": 15, "ultimaAtualizacao": "2026-05-19T00:03:45.182Z", "entradas": 90, "paroquia": "Paróquia Santa Rita de Cássia", "tipoEmbalagem": "Pacote", "quantidade": 90, "quantidadeEmbalagens": 6, "saidas": 0, "id": "1779149025182", "unidadeMedida": "unidades", "item": "Hóstia Grande - 12 cm" },
+    { "quantidadeEmbalagens": 4, "quantidade": 200, "saidas": 0, "item": "Hóstia Média", "id": "1779149110233", "unidadeMedida": "unidades", "ultimaAtualizacao": "2026-05-19T00:05:10.233Z", "entradas": 200, "unidadesPorEmbalagem": 50, "tipoEmbalagem": "Caixa", "paroquia": "Paróquia Santa Rita de Cássia" },
+    { "unidadeMedida": "unidades", "id": "1779152756792", "quantidade": 6000, "quantidadeEmbalagens": 6, "paroquia": "Paróquia Santa Rita de Cássia", "entradas": 9000, "unidadesPorEmbalagem": 1000, "saidas": 3000, "item": "Hóstia Comum", "nivelMinimo": 3, "nivelMinimoTipo": "embalagem", "tipoEmbalagem": "Caixa", "ultimaAtualizacao": "2026-06-08T21:15:03.864Z" },
+    { "ultimaAtualizacao": "2026-05-29T01:08:21.159Z", "tipoEmbalagem": "Caixa", "nivelMinimo": 3, "nivelMinimoTipo": "unidade", "saidas": 10, "item": "Vinho Canônico", "unidadesPorEmbalagem": 6, "entradas": 13, "paroquia": "Paróquia Santa Rita de Cássia", "quantidadeEmbalagens": 1.1666666666666667, "quantidade": 7, "unidadeMedida": "unidades", "id": "1779153767981" }
+  ],
+  "paroquias": [
+    { "nome": "Paróquia Santa Rita de Cássia", "bairro": "Centro", "telefone2": "1499115-2878", "telefone1": "143223-5000", "estado": "SP", "id": "1772280333795", "status": "ativo", "endereco": "Rua São Gonçalo, ", "site": "https://santaritabauru.com.br/", "email": "santarita@bispadobauru.org.br", "cep": "17015-450", "coordenador": "Alexandre", "cnpj": "44.454.312/0024-37", "cidade": "Bauru", "numero": "3-54", "telefoneCoordenador": "14997865806", "padre": "Pe. Marcos Eduardo Pavan" },
+    { "estado": "SP", "telefone1": "143234-6429", "status": "ativo", "id": "1772281505207", "email": "s.cristovao@terra.com.br", "site": " www.saocristovaobauru.org.br", "endereco": "Avenida Nossa Senhora de Fátima ", "nome": "Paróquia São Cristóvão", "bairro": "Jardim América", "telefone2": "1499172-7755", "numero": "15-89", "telefoneCoordenador": "(14) 99999-9999", "padre": "Pe. Adinam Roniere da Silva", "cep": "17017-337", "coordenador": "Josué", "cnpj": "44.454.312/0027-80", "cidade": "Bauru" }
+  ],
+  "config": {
+    "horaAbertura": "06:00",
+    "horaFechamento": "23:59",
+    "adminPassword": "Aqamnsqa081%",
+    "escalaPublicada": true,
+    "escalaPublicadaPorMes": { "Paróquia Santa Rita de Cássia": { "2026-06": true, "2026-04": true } }
+  },
+  "ministros": [
+    { "role": "coordenacao", "nomeExibicao": "Alexandre", "nomeConjuge": "Priscila De Bortolli Facchini", "telefoneConjuge": "(14) 99602-1377", "telefone": "(14) 99786-5806", "aprovado": true, "nome": "Alexandre", "paroquia": "Paróquia Santa Rita de Cássia", "id": 1, "tipo": "casal", "senha": "888" },
+    { "nomeExibicao": "Vinícius", "role": "ministro", "telefone": "(14) 99132-2808", "aprovado": true, "nome": "Vinícius", "paroquia": "Paróquia Santa Rita de Cássia", "id": 2, "tipo": "individual", "senha": "000" },
+    { "id": 3, "tipo": "individual", "senha": "000", "nome": "Rafaela", "paroquia": "Paróquia Santa Rita de Cássia", "telefone": "(14) 99785-7300", "aprovado": true, "role": "ministro" },
+    { "id": 43, "nome": "Josué", "senha": "111", "tipo": "individual", "role": "coordenacao", "telefone": "(14) 99999-9999", "paroquia": "Paróquia São Cristóvão", "aprovado": true },
+    { "id": 47, "nome": "Ministro", "role": "coordenacao", "senha": "888", "tipo": "individual", "paroquia": "Paróquia Teste", "telefone": "(14) 98888-8888", "aprovado": true }
+  ]
+}

@@ -5,7 +5,7 @@ export interface User {
   telefone: string;
   tipo?: string; // 'individual' ou 'casal'
   nomeConjuge?: string;
-  role?: 'ministro' | 'coordenacao' | 'admin';
+  role?: 'ministro' | 'coordenacao' | 'admin' | 'vice_coordenacao';
   dataNascimento?: string;
   dataNascimentoConjuge?: string;
   paroquia?: string;
@@ -23,6 +23,29 @@ export interface User {
   tempoMinisterio?: 'antigo' | 'novo';
   tempoMinisterioConjuge?: 'antigo' | 'novo';
   incompatibilidades?: number[];
+  isTesoureiro?: boolean;
+  isLider?: boolean;
+  isLiderConjuge?: boolean;
+  sessionToken?: string;
+  sessionTokenConjuge?: string;
+  isConjugeLogin?: boolean;
+  excecaoAcessoAte?: string;
+}
+
+export interface FinanceiroLancamento {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  categoria: 'mensalidade' | 'outros' | 'saldo_anterior';
+  valor: number;
+  tipoValor?: 'fixo' | 'variado'; // Add this
+  data: string; // YYYY-MM-DD
+  ministroId?: number; // Para dízimo/mensalidade de ministros
+  ministroNome?: string;
+  usuario: string; // Tesoureiro / Coordenador que inseriu
+  paroquia: string;
+  descricao?: string;
+  mesReferencia?: string; // 'YYYY-MM'
+  createdAt: string;
 }
 
 export interface DisponibilidadeSlot {

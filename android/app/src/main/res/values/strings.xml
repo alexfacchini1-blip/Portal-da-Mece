@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Escala de Ministros</string>
+    <string name="title_activity_main">Escala de Ministros</string>
+    <string name="package_name">com.escolaministros.app</string>
+    <string name="custom_url_scheme">com.escolaministros.app</string>
+</resources>

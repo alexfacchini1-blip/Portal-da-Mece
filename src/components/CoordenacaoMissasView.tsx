@@ -1,5 +1,6 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { CalendarPlus, Trash2, AlertTriangle, Plus, Minus, Settings2, Edit2, X } from 'lucide-react';
+import { CalendarPlus, Trash2, AlertTriangle, Plus, Minus, Settings2, Edit2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { safeFetchJson } from '../utils';
 
 const MISSAS_PADRAO = [
   // Fim de semana
@@ -9,13 +10,23 @@ const MISSAS_PADRAO = [
   { id: 'padrao-dom-19', nome: 'Missa de Domingo', diaNome: 'Domingo', horario: '19:00', defaultQuantidade: 8, grupo: 'Fim de Semana' },
 ];
 
-function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user: any, mesSelecionado?: number, anoSelecionado?: number }) {
+function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate }: { user: any, mesSelecionado?: number, anoSelecionado?: number, onUpdate?: () => void }) {
+  const targetMonth = mesSelecionado !== undefined ? mesSelecionado - 1 : new Date().getMonth();
+  const targetYear = anoSelecionado !== undefined ? anoSelecionado : new Date().getFullYear();
+
   const [missasTemporarias, setMissasTemporarias] = useState([]);
   const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [editingMissa, setEditingMissa] = useState<any>(null);
   const [managingInactiveDates, setManagingInactiveDates] = useState<any>(null);
+  const [modalMonth, setModalMonth] = useState<number>(targetMonth);
+  const [modalYear, setModalYear] = useState<number>(targetYear);
+
+  useEffect(() => {
+    setModalMonth(targetMonth);
+    setModalYear(targetYear);
+  }, [targetMonth, targetYear]);
   const [showGestao, setShowGestao] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -27,9 +38,6 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
   } | null>(null);
 
   const missasPadrao = MISSAS_PADRAO;
-
-  const targetMonth = mesSelecionado !== undefined ? mesSelecionado - 1 : new Date().getMonth();
-  const targetYear = anoSelecionado !== undefined ? anoSelecionado : new Date().getFullYear();
 
   const [novaMissa, setNovaMissa] = useState({
     data: `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`,
@@ -49,9 +57,16 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
 
   const fetchMissasTemporarias = async () => {
     try {
-      const res = await fetch(`/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}`);
-      if (res.ok) {
-        setMissasTemporarias(await res.json());
+      const data = await safeFetchJson<any[]>(
+        `/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}`,
+        undefined,
+        []
+      );
+      if (Array.isArray(data)) {
+        setMissasTemporarias(data);
+        if (onUpdate) {
+          onUpdate();
+        }
       }
     } catch (err) {
       console.error('Erro ao buscar missas temporárias:', err);
@@ -176,13 +191,11 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
     }
   };
 
-  const handleUpdateQuantidade = async (id: string, novaQuantidade: number, extraData?: any) => {
-    if (novaQuantidade < 0) return;
+  const handleUpdateQuantidade = async (id: string, novaQuantidade: number | string, extraData?: any) => {
+    const qtdNum = Math.max(0, parseInt(String(novaQuantidade || 0), 10));
+    if (isNaN(qtdNum)) return;
     
     // Suporte a quantidade 0 via botões - e + (reativar/inativar)
-    // Mas mantemos a lógica de confirmação se for inativar/reativar?
-    // O usuário relatou problemas nos botões, então vamos focar na reatividade.
-    
     // Se já estiver processando esse ID, evita cliques duplos
     if (pendingUpdates.has(id)) return;
 
@@ -190,7 +203,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
     const anterior = missasTemporarias.find((m: any) => m.id === id);
     
     // Atualização Otimista
-    setMissasTemporarias(prev => prev.map((m: any) => m.id === id ? { ...m, quantidade: novaQuantidade } : m));
+    setMissasTemporarias(prev => prev.map((m: any) => m.id === id ? { ...m, quantidade: qtdNum } : m));
     setPendingUpdates(prev => {
       const next = new Set(prev);
       next.add(id);
@@ -201,14 +214,13 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
       const res = await fetch(`/api/missas-temporarias/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantidade: novaQuantidade, ...extraData })
+        body: JSON.stringify({ quantidade: qtdNum, ...extraData })
       });
       
       if (res.ok) {
         const updatedMissa = await res.json();
         // Sincroniza com o ID real retornado (caso tenha sido criado um override no backend)
         setMissasTemporarias(prev => {
-          const exists = prev.some(m => m.id === updatedMissa.id);
           if (id !== updatedMissa.id) {
             // Se o ID mudou (override criado), substitui o temporário pelo final
             return prev.map(m => m.id === id ? updatedMissa : m);
@@ -216,13 +228,10 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
           return prev.map(m => m.id === updatedMissa.id ? updatedMissa : m);
         });
 
-        if (novaQuantidade === 0) {
+        if (qtdNum === 0) {
           setMessage('Missa inativada com sucesso!');
-        } else if (anterior && anterior.quantidade === 0 && novaQuantidade > 0) {
+        } else if (anterior && Number(anterior.quantidade) === 0 && qtdNum > 0) {
           setMessage('Missa reativada com sucesso!');
-        } else {
-          // Não mostra mensagem para ajustes rápidos de número para não poluir
-          // setMessage('Vagas atualizadas com sucesso!');
         }
       } else {
         // Rollback se falhar
@@ -239,8 +248,6 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
     } finally {
       setPendingUpdates(prev => {
         const next = new Set(prev);
-        next.add(id); // O ID novo pode ser diferente se foi override
-        // Na dúvida, limpamos ambos se soubermos, mas aqui limpamos o original
         next.delete(id);
         return next;
       });
@@ -268,15 +275,18 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
     }
   };
 
-  const getNextOccurrences = (missa: any) => {
+  const getNextOccurrences = (missa: any, year?: number, month?: number) => {
     const occurrences: string[] = [];
-    let current = new Date(targetYear, targetMonth, 1);
-    const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const useYear = year !== undefined ? year : targetYear;
+    const useMonth = month !== undefined ? month : targetMonth;
+    
+    let current = new Date(useYear, useMonth, 1);
+    const lastDayOfMonth = new Date(useYear, useMonth + 1, 0).getDate();
 
     // If it's a temporary mass, it only has one date
     if (missa.frequencia === 'temporaria') {
       const dataObj = new Date(missa.data + 'T00:00:00');
-      if (dataObj.getMonth() === targetMonth && dataObj.getFullYear() === targetYear) {
+      if (dataObj.getMonth() === useMonth && dataObj.getFullYear() === useYear) {
         return [missa.data];
       }
       return [];
@@ -307,8 +317,9 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
     return occurrences;
   };
 
-  const handleUpdateMissaPadrao = async (padrao: any, novaQuantidade: number) => {
-    if (novaQuantidade < 0) return;
+  const handleUpdateMissaPadrao = async (padrao: any, novaQuantidade: number | string) => {
+    const qtdNum = Math.max(0, parseInt(String(novaQuantidade || 0), 10));
+    if (isNaN(qtdNum)) return;
     
     const selectedDate = selectedDates[padrao.id] || '';
 
@@ -326,7 +337,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
         );
 
     if (override) {
-      await handleUpdateQuantidade(override.id, novaQuantidade, {
+      await handleUpdateQuantidade(override.id, qtdNum, {
         nome: padrao.nome,
         horario: padrao.horario,
         diaSemana: padrao.diaSemana,
@@ -343,7 +354,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
             nome: padrao.nome,
             diaSemana: padrao.diaNome === 'Sábado' ? '6' : '0',
             horario: padrao.horario,
-            quantidade: novaQuantidade,
+            quantidade: qtdNum,
             data: selectedDate,
             paroquia: user.paroquia
           })
@@ -351,7 +362,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
 
         if (res.ok) {
           fetchMissasTemporarias();
-          if (novaQuantidade === 0) {
+          if (qtdNum === 0) {
             setMessage('Missa inativada com sucesso!');
           } else {
             setMessage('Missa reativada com sucesso!');
@@ -366,7 +377,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
   };
 
   const isOverride = (m: any) => {
-    if (m.tipo === 'fixa' || m.tipo === 'padrao') {
+    if (m.tipo === 'fixa') {
       return MISSAS_PADRAO.some(p => p.nome === m.nome && p.horario === m.horario);
     } else if (m.tipo === 'unica') {
       return MISSAS_PADRAO.some(p => p.nome === m.nome && p.horario === m.horario);
@@ -499,18 +510,29 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Limite Atual</p>
                             <div className={`flex items-center bg-white rounded-lg border shadow-sm overflow-hidden transition-all ${pendingUpdates.has(override?.id || padrao.id) ? 'opacity-50 grayscale pointer-events-none' : 'border-slate-200'}`}>
                               <button
-                                onClick={() => handleUpdateMissaPadrao(padrao, quantidade - 1)}
-                                disabled={quantidade <= 0}
+                                onClick={() => handleUpdateMissaPadrao(padrao, Math.max(0, Number(quantidade || 0) - 1))}
+                                disabled={Number(quantidade) <= 0}
                                 className="p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 transition-colors"
+                                title="Diminuir Vagas"
                               >
                                 <Minus className="w-4 h-4" />
                               </button>
-                              <div className="w-8 text-center text-sm font-bold text-slate-700 border-x border-slate-200 py-1 min-w-[2.5rem]">
-                                {quantidade}
-                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                max="99"
+                                value={quantidade}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                                  handleUpdateMissaPadrao(padrao, isNaN(val) ? 0 : Math.max(0, val));
+                                }}
+                                className="w-12 text-center text-sm font-bold text-slate-700 border-x border-slate-200 py-1 bg-transparent focus:outline-none focus:bg-blue-50/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                title="Clique para digitar a quantidade de vagas"
+                              />
                               <button
-                                onClick={() => handleUpdateMissaPadrao(padrao, quantidade + 1)}
+                                onClick={() => handleUpdateMissaPadrao(padrao, Number(quantidade || 0) + 1)}
                                 className="p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                                title="Aumentar Vagas"
                               >
                                 <Plus className="w-4 h-4" />
                               </button>
@@ -610,28 +632,79 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
                 </p>
               </div>
 
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Próximas Ocorrências</p>
-                {getNextOccurrences(managingInactiveDates).map(date => {
-                  const isInactive = managingInactiveDates.datasInativas?.includes(date);
-                  return (
-                    <div key={date} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <span className="text-sm font-medium text-slate-700">
-                        {date.split('-').reverse().join('/')}
-                      </span>
-                      <button
-                        onClick={() => handleToggleInactiveDate(managingInactiveDates.id, date)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                          isInactive 
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                        }`}
-                      >
-                        {isInactive ? 'Inativa' : 'Ativa'}
-                      </button>
-                    </div>
-                  );
-                })}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                  <button
+                    onClick={() => {
+                      if (modalMonth === 0) {
+                        setModalMonth(11);
+                        setModalYear(prev => prev - 1);
+                      } else {
+                        setModalMonth(prev => prev - 1);
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+                    title="Mês Anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Datas de {String(modalMonth + 1).padStart(2, '0')}/{modalYear}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (modalMonth === 11) {
+                        setModalMonth(0);
+                        setModalYear(prev => prev + 1);
+                      } else {
+                        setModalMonth(prev => prev + 1);
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+                    title="Próximo Mês"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {(() => {
+                    const occurrences = getNextOccurrences(
+                      managingInactiveDates, 
+                      modalYear,
+                      modalMonth
+                    );
+
+                    if (occurrences.length === 0) {
+                      return (
+                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                          Nenhuma data encontrada para {String(modalMonth + 1).padStart(2, '0')}/{modalYear}.
+                        </div>
+                      );
+                    }
+
+                    return occurrences.map(date => {
+                      const isInactive = managingInactiveDates.datasInativas?.includes(date);
+                      return (
+                        <div key={date} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100/70 transition-colors">
+                          <span className="text-sm font-semibold text-slate-700">
+                            {date.split('-').reverse().join('/')}
+                          </span>
+                          <button
+                            onClick={() => handleToggleInactiveDate(managingInactiveDates.id, date)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                              isInactive 
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                          >
+                            {isInactive ? 'Inativa' : 'Ativa'}
+                          </button>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
 
               <div className="pt-4">
@@ -986,18 +1059,27 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
                         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ajustar Vagas:</span>
                         <div className={`flex items-center bg-white rounded-lg border shadow-sm overflow-hidden transition-all ${pendingUpdates.has(missa.id) ? 'opacity-50 grayscale pointer-events-none' : 'border-slate-200'}`}>
                           <button
-                            onClick={() => handleUpdateQuantidade(missa.id, missa.quantidade - 1)}
-                            disabled={missa.quantidade <= 0}
+                            onClick={() => handleUpdateQuantidade(missa.id, Math.max(0, Number(missa.quantidade || 0) - 1))}
+                            disabled={Number(missa.quantidade) <= 0}
                             className="p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 transition-colors"
                             title="Diminuir Vagas"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
-                          <div className="w-8 text-center text-sm font-bold text-slate-700 border-x border-slate-200 py-1 min-w-[2.5rem]">
-                            {missa.quantidade}
-                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={missa.quantidade}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                              handleUpdateQuantidade(missa.id, isNaN(val) ? 0 : Math.max(0, val));
+                            }}
+                            className="w-12 text-center text-sm font-bold text-slate-700 border-x border-slate-200 py-1 bg-transparent focus:outline-none focus:bg-blue-50/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            title="Clique para digitar a quantidade de vagas"
+                          />
                           <button
-                            onClick={() => handleUpdateQuantidade(missa.id, missa.quantidade + 1)}
+                            onClick={() => handleUpdateQuantidade(missa.id, Number(missa.quantidade || 0) + 1)}
                             className="p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
                             title="Aumentar Vagas"
                           >
@@ -1032,7 +1114,11 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado }: { user:
                             </button>
 
                             <button
-                              onClick={() => setManagingInactiveDates(missa)}
+                              onClick={() => {
+                                setModalMonth(targetMonth);
+                                setModalYear(targetYear);
+                                setManagingInactiveDates(missa);
+                              }}
                               className="ml-2 flex items-center gap-1 px-2 py-1 bg-white text-blue-600 border border-blue-100 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
                             >
                               <Settings2 className="w-3 h-3" />

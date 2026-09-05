@@ -48,7 +48,7 @@ export class FirestoreAdapter<T> {
 
   private cachedData: T | null = null;
   private lastReadTime: number = 0;
-  private CACHE_DURATION = 10000; // 10 seconds cache
+  private CACHE_DURATION = 30000; // 30 seconds cache
 
   async read(force: boolean = false): Promise<T | null> {
     if (!this.docRef) return null;
@@ -62,7 +62,7 @@ export class FirestoreAdapter<T> {
     let timeoutId: NodeJS.Timeout | undefined;
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Firestore read timeout')), 5000);
+        timeoutId = setTimeout(() => reject(new Error('Firestore read timeout')), 10000);
       });
       
       const snapshot = await Promise.race([

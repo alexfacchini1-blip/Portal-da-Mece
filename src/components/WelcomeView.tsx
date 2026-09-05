@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { User, Info, CalendarDays, Calendar, LogOut, Check, ChevronLeft, BookOpen, Heart, Sun, Cross, Users, Settings, Lock, Unlock, Clock, Church, RefreshCw, AlertCircle, Activity, Gift, X, Minus, Plus } from 'lucide-react';
-import { getLiturgicalThemeDynamic } from '../utils/calendario';
+import { User, Info, CalendarDays, Calendar, LogOut, Check, CheckCircle2, ChevronLeft, BookOpen, Heart, Sun, Cross, Users, Settings, Lock, Unlock, Clock, Church, RefreshCw, AlertCircle, Activity, Gift, X, Minus, Plus, LayoutDashboard, MessageSquare, HelpCircle, Monitor, Smartphone, HandHeart, DollarSign, UserX, Flag, Sparkles } from 'lucide-react';
+import { getLiturgicalThemeDynamic, getTodayDateStringForLiturgy } from '../utils/calendario';
+import { hasCoordAccess, isMinisterMatchingUser, isMinisterLiderForUser, safeJson, safeFetchJson } from '../utils';
+import LiderMissaCard from './LiderMissaCard';
 
 interface WelcomeViewProps {
   needsPasswordReset?: boolean;
@@ -31,6 +33,8 @@ interface WelcomeViewProps {
   showPreAberturaMessage?: boolean;
   mensagemDisponibilidade?: {texto: string, tipo: 'info' | 'warning' | 'error' | 'success'} | null;
   onAlert?: (titulo: string, mensagem: string) => void;
+  classicWebMode?: boolean;
+  onToggleClassicWebMode?: (val: boolean) => void;
 }
 
 const BIBLE_VERSES = [
@@ -59,15 +63,15 @@ const BIBLE_VERSES = [
 const DEFAULT_GOSPEL = {
   text: 'Naquele tempo, Jesus disse aos seus discípulos... (Evangelho)',
   ref: 'Mateus 5, 13-16',
-  vaticanUrl: '',
+  vaticanUrl: 'https://www.vaticannews.va/pt/palavra-do-dia.html',
   papasText: ''
 };
 
-function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, onVerEscala, onSetView, onSetTab, onUpdateUser, onClearImpersonation, originalUser, slotsDisponiveis, escala, needsPasswordReset, isTab = false, disponibilidadeAberta = false, escalaPublicada = false, paroquiaBloqueada = false, hasSubmitted = false, mesSelecionado, anoSelecionado, unreadCount = 0, showPreAberturaMessage = false, mensagemDisponibilidade = null, onAlert }: WelcomeViewProps) {
+function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, onVerEscala, onSetView, onSetTab, onUpdateUser, onClearImpersonation, originalUser, slotsDisponiveis, escala, needsPasswordReset, isTab = false, disponibilidadeAberta = false, escalaPublicada = false, paroquiaBloqueada = false, hasSubmitted = false, mesSelecionado, anoSelecionado, unreadCount = 0, showPreAberturaMessage = false, mensagemDisponibilidade = null, onAlert, classicWebMode, onToggleClassicWebMode }: WelcomeViewProps) {
   const isImpersonating = !!originalUser && originalUser.id !== user.id;
 
   const liturgyColor = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateStringForLiturgy();
     const color = getLiturgicalThemeDynamic(today);
     switch (color) {
       case 'purple': return 'purple';
@@ -138,10 +142,220 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
   const [weekendAssignments, setWeekendAssignments] = useState<any[]>([]);
   const [myAssignments, setMyAssignments] = useState<any[]>([]);
   const [showWeekendReminder, setShowWeekendReminder] = useState(false);
-  const [showGospelModal, setShowGospelModal] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [fontScale, setFontScale] = useState(1);
+  const [ministerPontualidade, setMinisterPontualidade] = useState<number>(100);
+  const [submittedReportKeys, setSubmittedReportKeys] = useState<string[]>([]);
+  const [selectedLiderAssign, setSelectedLiderAssign] = useState<any>(null);
+
+  const myLeaderAssignments = useMemo(() => {
+    return myAssignments.filter((assign) => {
+      const liderName = assign.lider || "";
+      if (!liderName || liderName === "Não definido" || liderName === "Líder da Missa" || liderName === "Coordenação") return false;
+      const ministros = Array.isArray(assign.ministros) ? assign.ministros : [];
+      return isMinisterLiderForUser(assign.lider, user, ministros);
+    });
+  }, [user, myAssignments]);
+
+  const activeLeaderAssignment = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Filter my leader assignments that are NOT submitted yet
+    const unsubmittedLeaderAssignments = myLeaderAssignments.filter((assign) => {
+      const key = `${assign.date}_${assign.time || assign.horario}`;
+      return !submittedReportKeys.includes(key);
+    });
+
+    const eligibleAssignments = unsubmittedLeaderAssignments.filter((assign) => {
+      const parts = assign.date.split("-");
+      if (parts.length !== 3) return false;
+      const assignDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      assignDate.setHours(0, 0, 0, 0);
+      const diffInDays = Math.round((assignDate.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Appears 2 days before (diffInDays <= 2) and disappears 2 days after (diffInDays >= -2)
+      return diffInDays >= -2 && diffInDays <= 2;
+    });
+
+    // If there is any eligible assignment, we take the earliest one (exactly one!)
+    if (eligibleAssignments.length > 0) {
+      return eligibleAssignments[0];
+    }
+
+    return null;
+  }, [myLeaderAssignments, submittedReportKeys]);
+
+  const isLiderUser = useMemo(() => {
+    if (!user) return false;
+    // 1. Check profile flags - only registered leaders or coordination can be leader users
+    const isLoggedAsConjuge = user.tipo === 'casal' && user.isConjugeLogin;
+    if (isLoggedAsConjuge) {
+      return Boolean(user.isLiderConjuge || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin');
+    } else {
+      return Boolean(user.isLider || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin');
+    }
+  }, [user]);
+
+  // Real-time discreet clock state
+  const [liveDateTime, setLiveDateTime] = useState({
+    weekday: "",
+    date: "",
+    time: ""
+  });
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      
+      const weekdayStr = now.toLocaleDateString('pt-BR', { weekday: 'long' });
+      const capitalizedWeekday = weekdayStr.charAt(0).toUpperCase() + weekdayStr.slice(1);
+      
+      const dateStr = now.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      const timeStr = now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      setLiveDateTime({
+        weekday: capitalizedWeekday,
+        date: dateStr,
+        time: timeStr
+      });
+    };
+
+    updateClock(); // Initial run
+    const intervalId = setInterval(updateClock, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const [customEvents, setCustomEvents] = useState<any[]>([]);
+  const [readEventIds, setReadEventIds] = useState<string[]>(() => {
+    try {
+      const userKey = user?.id || user?.telefone || 'guest';
+      return JSON.parse(localStorage.getItem(`read_events_${userKey}`) || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleEventsReadUpdate = () => {
+      try {
+        const userKey = user?.id || user?.telefone || 'guest';
+        setReadEventIds(JSON.parse(localStorage.getItem(`read_events_${userKey}`) || '[]'));
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('events_read_updated', handleEventsReadUpdate);
+    window.addEventListener('storage', handleEventsReadUpdate);
+    return () => {
+      window.removeEventListener('events_read_updated', handleEventsReadUpdate);
+      window.removeEventListener('storage', handleEventsReadUpdate);
+    };
+  }, [user?.id, user?.telefone]);
+
+  useEffect(() => {
+    if (user && user.paroquia) {
+      safeFetchJson<any[]>(`/api/eventos?paroquia=${encodeURIComponent(user.paroquia)}`, undefined, [])
+        .then(data => {
+          if (Array.isArray(data)) {
+            setCustomEvents(data);
+          }
+        })
+        .catch(err => console.error('Erro ao buscar eventos em WelcomeView:', err));
+
+      safeFetchJson<any[]>(`/api/relatorios-lider?paroquia=${encodeURIComponent(user.paroquia)}`, undefined, [])
+        .then(data => {
+          if (Array.isArray(data)) {
+            const keys = data.map((r: any) => `${r.data}_${r.horario}`);
+            setSubmittedReportKeys(keys);
+          }
+        })
+        .catch(err => console.error('Erro ao buscar relatórios enviados em WelcomeView:', err));
+    }
+  }, [user?.paroquia]);
+
+  const handleReportSubmitted = (dateStr: string, timeStr: string) => {
+    const key = `${dateStr}_${timeStr}`;
+    setSubmittedReportKeys(prev => prev.includes(key) ? prev : [...prev, key]);
+  };
+
+  const upcomingEvents = useMemo(() => {
+    if (!customEvents || customEvents.length === 0) return [];
+    const now = new Date();
+    const isCoord = hasCoordAccess(user) || user?.isTesoureiro;
+
+    return customEvents.filter((evt: any) => {
+      if (!evt.data) return false;
+
+      // Check if it is an admin agenda event - only show to coordination users
+      if (evt.criadoPorAdmin && !hasCoordAccess(user)) return false;
+
+      // Check destinatario targeting for non-coordinators
+      if (!isCoord && evt.destinatario && evt.destinatario !== 'todos') {
+        if (!user) return false;
+        
+        if (evt.destinatario === 'lideres') {
+          if (!isLiderUser) return false;
+        } else {
+          const uId = String(user.id);
+          const uName = (user.nome || user.nomeExibicao || "").toLowerCase();
+          
+          let matches = false;
+          if (evt.alvoIds && Array.isArray(evt.alvoIds) && evt.alvoIds.includes(uId)) {
+            matches = true;
+          } else if (evt.alvoId && String(evt.alvoId) === uId) {
+            matches = true;
+          } else if (evt.alvoNomes && Array.isArray(evt.alvoNomes)) {
+            matches = evt.alvoNomes.some((n: string) => uName.includes(n.toLowerCase()) || n.toLowerCase().includes(uName));
+          } else if (evt.alvoNome && uName) {
+            matches = uName.includes(evt.alvoNome.toLowerCase()) || evt.alvoNome.toLowerCase().includes(uName);
+          }
+          if (!matches) return false;
+        }
+      }
+
+      const parts = evt.data.split('-').map(Number);
+      if (parts.length !== 3) return false;
+      const [y, m, d] = parts;
+
+      let eventHour = 23;
+      let eventMin = 59;
+      if (evt.horario && typeof evt.horario === 'string' && evt.horario.includes(':')) {
+        const hParts = evt.horario.split(':').map(Number);
+        eventHour = hParts[0] || 0;
+        eventMin = hParts[1] || 0;
+      }
+
+      const evtDateTime = new Date(y, m - 1, d, eventHour, eventMin, 0);
+      const expirationTime = new Date(evtDateTime.getTime() + 2 * 60 * 60 * 1000);
+
+      if (now.getTime() > expirationTime.getTime()) {
+        return false;
+      }
+
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const evtDayStart = new Date(y, m - 1, d, 0, 0, 0);
+      const diffTime = evtDayStart.getTime() - todayStart.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 3;
+    }).sort((a: any, b: any) => a.data.localeCompare(b.data));
+  }, [customEvents, user, isLiderUser]);
+
+  const unreadUpcomingEvents = useMemo(() => {
+    return upcomingEvents.filter((evt: any) => !readEventIds.includes(evt.id));
+  }, [upcomingEvents, readEventIds]);
+
+  const hasUnreadCalendarEvents = unreadUpcomingEvents.length > 0;
 
   const tutorialSteps = [
     {
@@ -180,12 +394,21 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
   const exceptionExpiry = hasException ? new Date(user.excecaoAcessoAte).toLocaleString('pt-BR') : null;
 
   const aniversariantesHoje = useMemo(() => {
-    const today = new Date().getDate();
-    return aniversariantes.filter((a: any) => a.dia === today && a.nome !== user.nome && a.nome !== user.nomeConjuge);
+    const today = new Date();
+    const todayDay = today.getDate();
+    return (aniversariantes || []).filter((a: any) => {
+      const birthDia = parseInt(a.dia);
+      return birthDia === todayDay && a.nome !== user.nome && a.nome !== user.nomeConjuge;
+    });
   }, [aniversariantes, user.nome, user.nomeConjuge]);
 
+  const anyBirthdayToday = useMemo(() => {
+    const todayDay = new Date().getDate();
+    return (aniversariantes || []).filter((a: any) => parseInt(a.dia) === todayDay);
+  }, [aniversariantes]);
+
   const handleAction = async (view: string, tab?: string) => {
-    const isCoordenador = user?.role === 'admin' || user?.role === 'coordenador' || user?.role === 'coordenacao';
+    const isCoordenador = hasCoordAccess(user);
 
     if (paroquiaBloqueada && view === 'disponibilidade' && !isCoordenador) {
       onAlert?.('Acesso Bloqueado', 'Sua paróquia está temporariamente bloqueada. Entre em contato com a coordenação.');
@@ -212,7 +435,9 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
     if (user && user.paroquia) {
       fetch(`/api/mensagens?paroquia=${encodeURIComponent(user.paroquia)}&type=broadcast&telefone=${encodeURIComponent(user.telefone || '')}`)
         .then(res => {
-          if (!res.ok) throw new Error('Falha ao buscar mensagens');
+          if (!res.ok) return [];
+          const ct = res.headers.get('content-type');
+          if (!ct || !ct.includes('application/json')) return [];
           return res.json();
         })
         .then(data => {
@@ -223,10 +448,31 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
         .catch(err => console.error('Erro ao buscar mensagens:', err));
     }
 
-    // Verificar exceção de acesso
+    // Buscar pontualidade do ministro
+    if (user && user.paroquia) {
+      const ministerName = user.isConjugeLogin ? (user.nomeExibicaoConjuge || user.nomeConjuge || user.nome) : (user.nomeExibicao || user.nome);
+      fetch(`/api/ministro/pontualidade?telefone=${encodeURIComponent(user.telefone || '')}&paroquia=${encodeURIComponent(user.paroquia)}&nome=${encodeURIComponent(ministerName || '')}&id=${encodeURIComponent(user.id || '')}`)
+        .then(res => {
+          if (!res.ok) return null;
+          const ct = res.headers.get('content-type');
+          if (!ct || !ct.includes('application/json')) return null;
+          return res.json();
+        })
+        .then(data => {
+          if (data && typeof data.pontualidade === 'number') {
+            setMinisterPontualidade(data.pontualidade);
+          }
+        })
+        .catch(err => console.error('Erro ao buscar pontualidade do ministro:', err));
+    }
     if (user && user.telefone) {
       fetch(`/api/ministros/${encodeURIComponent(user.telefone)}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) return null;
+          const ct = res.headers.get('content-type');
+          if (!ct || !ct.includes('application/json')) return null;
+          return res.json();
+        })
         .then(data => {
           if (data) {
             if (onUpdateUser && data.excecaoAcessoAte !== user.excecaoAcessoAte) {
@@ -272,26 +518,21 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
 
       Object.entries(escala).forEach(([dateStr, missas]: [string, any]) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
-        const assignmentDate = new Date(dateStr + 'T00:00:00');
-        if (assignmentDate >= todayReset) {
-          Object.entries(missas).forEach(([time, missa]: [string, any]) => {
-            const ministros = missa.ministros || [];
-            const matchedName = ministros.find((m: string) => {
-              const normalizedM = normalize(m);
-              
-              return allUserNames.some(userName => {
-                // 1. Exact match
-                if (normalizedM === userName) return true;
-                
-                // 2. Split schedule into parts (for couples like "Osvaldo e Maria")
-                const mParts = normalizedM.split(' e ').map(p => p.trim()).filter(Boolean);
-                
-                // If any part of the schedule matches any of the user's names exactly
-                return mParts.some(mp => allUserNames.includes(mp));
-              });
-            });
+        if (!missas || typeof missas !== 'object') return;
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            if (matchedName) {
+        if (dateStr >= todayStr) {
+          Object.entries(missas).forEach(([time, missa]: [string, any]) => {
+            if (!missa || typeof missa !== 'object') return;
+            const ministros = Array.isArray(missa.ministros) ? missa.ministros : [];
+            const matchedMinister = ministros.find((m: any) => isMinisterMatchingUser(m, user));
+
+            if (matchedMinister) {
+              const matchedName = (typeof matchedMinister === 'object' && matchedMinister !== null) 
+                ? (matchedMinister.nome || '') 
+                : matchedMinister;
+
               allFoundAssignments.push({
                 date: dateStr,
                 time: time,
@@ -313,21 +554,13 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
       // Filtrar apenas futuras para a lista geral
       setMyAssignments(allFoundAssignments);
 
-      // Lógica do Lembrete: Mostrar somente escalações de final de semana, 3 dias antes da missa
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const reminderAssignments = allFoundAssignments.filter(assign => {
-        const assignDate = new Date(assign.date + 'T00:00:00');
-        const diffInTime = assignDate.getTime() - todayStart.getTime();
-        const diffInDays = Math.round(diffInTime / (1000 * 60 * 60 * 24));
-        
-        // Verifica se é final de semana (Sexta=5, Sábado=6, Domingo=0)
-        const dayOfWeek = assignDate.getDay();
-        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
-        
-        // Retorna verdadeiro se for final de semana e estiver dentro do intervalo de 3 dias (ou hoje)
-        return isWeekend && diffInDays >= 0 && diffInDays <= 3;
+      // Lembrete: Mostrar missas de hoje ou de amanhã (1 dia antes da celebração, independente do dia da semana)
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const reminderAssignments = allFoundAssignments.filter((assign) => {
+        const [y, m, d] = assign.date.split('-').map(Number);
+        const assignDateOnly = new Date(y, m - 1, d);
+        const diffInDays = Math.round((assignDateOnly.getTime() - todayDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+        return diffInDays >= 0 && diffInDays <= 1;
       });
 
       if (reminderAssignments.length > 0) {
@@ -342,56 +575,28 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
     // Fetch daily liturgy
     const isSaturday = today.getDay() === 6;
 
-    // Fetch today's liturgy
+    // Fetch today's liturgy from Vatican News
     fetch('/api/liturgia')
-      .then(res => {
-        if (!res.ok) return { evangelho: { texto: 'Liturgia indisponível', referencia: '', papasText: '' } };
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         if (data && data.evangelho) {
           setDailyGospel({
             text: data.evangelho.texto || '',
             ref: data.evangelho.referencia || '',
-            vaticanUrl: data.evangelho.vaticanUrl || '',
+            vaticanUrl: data.evangelho.vaticanUrl || 'https://www.vaticannews.va/pt/palavra-do-dia.html',
             papasText: data.evangelho.papasText || ''
           });
         }
       })
       .catch(err => {
-        console.error('Erro ao buscar liturgia diária:', err);
-        setDailyGospel({ text: 'Não foi possível carregar a liturgia.', ref: '', papasText: '', vaticanUrl: '' });
-      });
-
-    // If Saturday, fetch tomorrow's liturgy (Vigil)
-    if (isSaturday) {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const dayStr = tomorrow.getDate().toString().padStart(2, '0');
-      const monthStr = (tomorrow.getMonth() + 1).toString().padStart(2, '0');
-      const dateParam = `${dayStr}-${monthStr}`;
-
-      fetch(`/api/liturgia?date=${dateParam}`)
-        .then(res => {
-          if (!res.ok) throw new Error('Failed to fetch vigil liturgy');
-          return res.json();
-        })
-        .then(data => {
-          if (data && data.evangelho) {
-            setVigilGospel({
-              text: data.evangelho.texto || '',
-              ref: data.evangelho.referencia || '',
-              vaticanUrl: data.evangelho.vaticanUrl || '',
-              papasText: data.evangelho.papasText || ''
-            });
-          }
-        })
-        .catch(err => {
-          console.error('Erro ao buscar liturgia da vigília:', err);
+        console.error('Erro ao buscar liturgia do Vatican News:', err);
+        setDailyGospel({
+          text: 'Não foi possível carregar a liturgia.',
+          ref: '',
+          papasText: '',
+          vaticanUrl: 'https://www.vaticannews.va/pt/palavra-do-dia.html'
         });
-    } else {
-      setVigilGospel(null);
-    }
+      });
 
   }, [escala, user.nome, user.paroquia]);
 
@@ -403,35 +608,104 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
     >
       <div className={`${isTab ? '' : 'max-w-6xl mx-auto'} w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
         {/* 1. Welcome Banner - Soft & Delicate (Dynamic Liturgical Theme) */}
-        <div className={`${theme.bg} p-4 md:p-5 rounded-2xl shadow-sm border ${theme.border} text-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden group`}>
-          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-            <Church className={`w-32 h-32 ${theme.text600}`} />
-          </div>
+        <div
+          className={`p-4 md:p-5 rounded-2xl shadow-sm border ${
+            user.paroquia === "Paróquia Santa Rita de Cássia"
+              ? "border-slate-800/20"
+              : `${theme.bg} ${theme.border}`
+          } text-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center relative overflow-hidden group min-h-[140px]`}
+          style={{
+            backgroundColor: user.paroquia === "Paróquia Santa Rita de Cássia" ? "transparent" : undefined,
+          }}
+        >
+          {user.paroquia === "Paróquia Santa Rita de Cássia" ? (
+            <div className="absolute inset-0 z-0">
+              <img
+                src="/church-facade.png?v=1"
+                alt="Paróquia Santa Rita de Cássia"
+                className="w-full h-full object-cover brightness-[0.5] contrast-[1.05]"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/50 to-slate-900/10" />
+            </div>
+          ) : (
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+              <Church className={`w-32 h-32 ${theme.text600}`} />
+            </div>
+          )}
           <div className="relative z-10 space-y-1 mb-4 sm:mb-0">
-            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 ${theme.pillBg} rounded-full border ${theme.pillBorder} text-[9px] font-black uppercase tracking-widest ${theme.text600}`}>
+            <div
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${
+                user.paroquia === "Paróquia Santa Rita de Cássia"
+                  ? "bg-white/10 border-white/20 text-white"
+                  : `${theme.pillBg} ${theme.pillBorder} ${theme.text600}`
+              }`}
+            >
               <Activity className="w-3 h-3" />
               Portal do Ministro
             </div>
-            <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${theme.text950}`}>
-              Olá, {(user.nomeExibicao || user.nome || '').split(' ')[0]}
-              {user.tipo === 'casal' && (user.nomeExibicaoConjuge || user.nomeConjuge) ? <span className={`${theme.text700} font-medium italic`}> & {(user.nomeExibicaoConjuge || user.nomeConjuge || '').split(' ')[0]}</span> : ''}
-            </h2>
-            <p className={`${theme.text700}/80 text-xs font-medium`}>Servindo com amor no mês de <strong>{format(new Date(), "MMMM", { locale: ptBR })}</strong>.</p>
-          </div>
-          
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-2">
-            <button 
-              onClick={() => { setShowTutorial(true); setTutorialStep(0); }}
-              className={`bg-white/80 backdrop-blur-sm shadow-sm border ${theme.pillBorder} px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-white transition-all group/btn mb-2 sm:mb-0`}
+            <h2
+              className={`text-xl sm:text-2xl font-black tracking-tight ${
+                user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-white" : theme.text950
+              }`}
             >
-              <BookOpen className={`w-4 h-4 ${theme.text600}`} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text700}`}>Como usar o sistema?</span>
-            </button>
-            <div className={`bg-white/80 backdrop-blur-sm shadow-sm border ${theme.pillBorder} px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[120px]`}>
-              <p className={`text-[9px] font-black uppercase tracking-widest ${theme.text500} mb-0.5`}>Mês de Referência</p>
-              <p className={`text-sm font-black ${theme.text700}`}>{format(new Date(), "MMMM / yyyy", { locale: ptBR })}</p>
+              Olá, {user.isConjugeLogin ? (user.nomeExibicaoConjuge || user.nomeConjuge || '') : (user.nomeExibicao || user.nome || '')}
+              {user.tipo === 'casal' && (user.nomeExibicaoConjuge || user.nomeConjuge) ? (
+                <span className={`${user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-slate-200" : theme.text700} font-medium italic`}>
+                  {" "}
+                  & {user.isConjugeLogin ? (user.nomeExibicao || user.nome || '') : (user.nomeExibicaoConjuge || user.nomeConjuge || '')}
+                </span>
+              ) : (
+                ''
+              )}
+            </h2>
+            <p
+              className={`text-xs font-medium ${
+                user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-slate-300" : `${theme.text700}/80`
+              }`}
+            >
+              Servindo com amor no mês de <strong>{(() => {
+                const date = mesSelecionado && anoSelecionado 
+                  ? new Date(Number(anoSelecionado), Number(mesSelecionado) - 1) 
+                  : new Date();
+                const formatted = format(date, "MMMM/yyyy", { locale: ptBR });
+                return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+              })()}</strong>.
+            </p>
+            <div className="flex items-center gap-2.5 pt-1 flex-wrap">
+              {isLiderUser && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ${
+                  user.paroquia === "Paróquia Santa Rita de Cássia"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}>
+                  <Flag className="w-3.5 h-3.5" />
+                  Responsável pela Missa
+                </span>
+              )}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ${
+                user.paroquia === "Paróquia Santa Rita de Cássia"
+                  ? "bg-white/10 text-emerald-300 border border-white/20"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              }`}>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Pontualidade: {ministerPontualidade}%
+              </span>
             </div>
           </div>
+
+          {/* Discreet Clock in the bottom-right corner */}
+          <div className={`absolute bottom-3 right-4 z-10 flex items-center gap-1.5 text-[10px] font-bold ${
+            user.paroquia === "Paróquia Santa Rita de Cássia"
+              ? "text-white bg-white/15 border border-white/20 shadow-sm"
+              : `${theme.text600} bg-white/80 border ${theme.border || "border-slate-200"} shadow-sm`
+          } px-2.5 py-1 rounded-lg backdrop-blur-xs`}>
+            <Clock className="w-3 h-3 opacity-80" />
+            <span>
+              {liveDateTime.weekday}, {liveDateTime.date}
+            </span>
+          </div>
+
         </div>
 
         {birthdayMessage && (
@@ -471,45 +745,6 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
           </div>
         )}
 
-        {/* Featured Gospel Card - Compact and Dynamic */} 
-        <div 
-          onClick={() => setShowGospelModal(true)}
-          className={`relative overflow-hidden ${theme.bg} p-5 sm:p-6 rounded-3xl shadow-sm border ${theme.border} cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all duration-300 group flex flex-col`}
-        >
-          {/* Decorative subtle element */}
-          <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-full pointer-events-none`}></div>
-
-          <div className="flex items-start sm:items-center justify-between gap-4 relative z-10 w-full">
-             <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 ${theme.iconBg} ${theme.text600} rounded-xl flex items-center justify-center shadow-inner border border-white/50 flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className={`text-[9px] font-black ${theme.text600} uppercase tracking-[0.2em] leading-tight`}>Evangelho do Dia</p>
-                    {vigilGospel && (
-                       <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-200">
-                         Vigília
-                       </span>
-                    )}
-                  </div>
-                  <h3 className={`text-lg sm:text-xl font-display font-black ${theme.text950} tracking-tight`}>
-                    {(vigilGospel || dailyGospel).ref || 'Carregando...'}
-                  </h3>
-                </div>
-             </div>
-             <div className={`hidden sm:flex w-8 h-8 rounded-full ${theme.iconBg} items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors`}>
-                <ChevronLeft className={`w-4 h-4 ${theme.text600} rotate-180`} />
-             </div>
-          </div>
-          
-          <div className="mt-4 relative z-10">
-            <p className={`text-sm sm:text-base font-serif italic ${theme.text700} leading-relaxed line-clamp-2 opacity-90`}>
-              "{(vigilGospel || dailyGospel).text.split('\n\n')[0].substring(0, 150)}..."
-            </p>
-          </div>
-        </div>
-
         {/* Alerts Section */}
         <div className="space-y-4">
           {user.cadastroCompleto === false && (
@@ -536,23 +771,70 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
             </div>
           )}
 
-          {aniversariantesHoje.length > 0 && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col gap-3 shadow-sm border-l-4 border-l-amber-500">
-              <div className="flex items-center gap-2 text-amber-900">
-                <Gift className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                <p className="text-sm font-bold">Aniversariantes do Dia na Paróquia</p>
-              </div>
-              <div className="space-y-2">
-                {aniversariantesHoje.map((a: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between gap-2 bg-white/60 p-3 rounded-xl border border-amber-100">
-                    <div>
-                      <p className="text-xs font-black text-slate-800">{a.nome}</p>
-                      <p className="text-[10px] uppercase font-bold text-slate-500 mt-0.5">
-                        {a.tipo} • <span className="text-amber-700 italic">Deseje a ele um feliz aniversário!</span>
-                      </p>
-                    </div>
+          {upcomingEvents.length > 0 && (
+            <div className="p-4 bg-indigo-50/80 border border-indigo-200/80 rounded-2xl flex flex-col gap-3 shadow-sm border-l-4 border-l-indigo-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-950">
+                  <CalendarDays className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider">
+                      Aviso de Reunião / Formação / Evento
+                    </p>
+                    <p className="text-[10px] text-indigo-700 font-medium">
+                      Agendado pela coordenação para os próximos dias
+                    </p>
                   </div>
-                ))}
+                </div>
+                <button
+                  onClick={() => handleAction("home", "calendario")}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  Ver Calendário
+                </button>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {upcomingEvents.map((evt: any) => {
+                  const isUnread = !readEventIds.includes(evt.id);
+                  const parts = evt.data.split('-').map(Number);
+                  const formattedDate = parts.length === 3 ? `${String(parts[2]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${parts[0]}` : evt.data;
+                  const tipoLabel = evt.tipo === 'formacao' ? 'Formação' : evt.tipo === 'retiro' ? 'Retiro' : evt.tipo === 'evento' ? 'Evento' : 'Reunião';
+
+                  return (
+                    <div
+                      key={evt.id}
+                      onClick={() => handleAction("home", "calendario")}
+                      className="p-3 bg-white/90 rounded-xl border border-indigo-100 flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-300 transition-all shadow-2xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                            {tipoLabel}
+                          </span>
+                          <span className="text-xs font-black text-slate-800 truncate">
+                            {evt.titulo}
+                          </span>
+                          {isUnread && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse flex-shrink-0" title="Não visualizado" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-600 mt-1 font-medium flex items-center gap-3">
+                          <span>🗓️ {formattedDate}</span>
+                          {evt.horario && <span>⏰ {evt.horario}</span>}
+                        </p>
+                        {evt.descricao && (
+                          <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                            {evt.descricao}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-indigo-600 text-xs font-bold">
+                        <span>Ver</span>
+                        <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -564,6 +846,8 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
         <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
           <div className="grid grid-cols-1 gap-8">
             <div className="space-y-6">
+              
+
               {/* Section for Upcoming Weekend Schedules (3 days before) */}
               {showWeekendReminder && weekendAssignments.length > 0 ? (
                 <div className={`p-4 md:p-5 ${theme.bg} border ${theme.border} rounded-2xl shadow-sm relative overflow-hidden group`}>
@@ -630,8 +914,456 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                   <p className={`font-bold text-xs ${theme.text600}/60 uppercase tracking-widest`}>Nenhum agendamento para os próximos dias.</p>
                 </div>
               )}
+
+              {/* Grid of Menu Icon Buttons like the Photo */}
+              <div className="mt-8 border-t border-slate-200/60 pt-6">
+                <div className="text-center sm:text-left mb-6">
+                  <h3 className={`text-xs font-black ${theme.text600} uppercase tracking-widest`}>
+                    Serviços e Atalhos
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                    Acesse as funcionalidades do seu portal
+                  </p>
+                </div>
+
+                <div className={`grid ${classicWebMode ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7'} gap-2 sm:gap-3`}>
+                    {(() => {
+                      const menuItems = [
+                        {
+                          id: "calendario",
+                          label: "Calendário Litúrgico",
+                          subtitle: "Leituras e cores",
+                          icon: CalendarDays,
+                          badge: hasUnreadCalendarEvents ? unreadUpcomingEvents.length : 0,
+                        },
+                        {
+                          id: "como_usar",
+                          label: "Como Usar",
+                          subtitle: "Guia do sistema",
+                          icon: HelpCircle,
+                          badge: 0,
+                        },
+                        {
+                          id: "comunhao",
+                          label: "Comunhão",
+                          subtitle: "Reg. de comunhão",
+                          icon: Heart,
+                          badge: 0,
+                        },
+                        {
+                          id: "disponibilidade",
+                          label: "Disponibilidade",
+                          subtitle: "Enviar datas",
+                          icon: LayoutDashboard,
+                          badge: 0,
+                        },
+                        {
+                          id: "escala",
+                          label: "Escalas",
+                          subtitle: "Consultar escala",
+                          icon: Calendar,
+                          badge: 0,
+                        },
+                        {
+                          id: "aniversariantes",
+                          label: "Aniversariantes",
+                          subtitle: "Aniversariantes do mês",
+                          icon: Gift,
+                          badge: 0,
+                        },
+                        {
+                          id: "mensagem",
+                          label: "Mensagens",
+                          subtitle: "Falar com coord.",
+                          icon: MessageSquare,
+                          badge: unreadCount,
+                        },
+                        {
+                          id: "editar",
+                          label: "Meu Perfil",
+                          subtitle: "Seus dados",
+                          icon: Settings,
+                          badge: 0,
+                        },
+                        {
+                          id: "enfermos",
+                          label: "Rito de Enfermos",
+                          subtitle: "Visita e Comunhão",
+                          icon: Cross,
+                          badge: 0,
+                        },
+                        {
+                          id: "evangelho",
+                          label: "Evangelho",
+                          subtitle: "Vatican News",
+                          icon: BookOpen,
+                          badge: 0,
+                        },
+                        {
+                          id: "liturgia",
+                          label: "Liturgia Diária",
+                          subtitle: "Canção Nova",
+                          icon: BookOpen,
+                          badge: 0,
+                        },
+                        {
+                          id: "oracoes",
+                          label: "Orações",
+                          subtitle: "Preces e orações",
+                          icon: HandHeart,
+                          badge: 0,
+                        },
+                        {
+                          id: "trocas",
+                          label: "Trocas",
+                          subtitle: "Gerenciar trocas",
+                          icon: RefreshCw,
+                          badge: 0,
+                        },
+                        ...(isLiderUser ? [{
+                          id: "lider_painel",
+                          label: "Responsável pela Missa",
+                          subtitle: "Relatórios",
+                          icon: Flag,
+                          badge: activeLeaderAssignment ? 1 : 0,
+                        }] : []),
+                        ...(user.isTesoureiro || hasCoordAccess(user) ? [{
+                          id: "financeiro",
+                          label: "Tesouraria",
+                          subtitle: "Gestão Financeira",
+                          icon: DollarSign,
+                          badge: 0,
+                        }] : []),
+                        ...(hasCoordAccess(user) ? [{
+                          id: "faltas",
+                          label: "Faltas",
+                          subtitle: "Ranking e ausências",
+                          icon: UserX,
+                          badge: 0,
+                        }] : []),
+                        ...((user.paroquia === "Paróquia Santa Rita de Cássia" || user.paroquia?.toLowerCase().includes("santa rita")) ? [{
+                          id: "santo",
+                          label: "Santos",
+                          subtitle: "História",
+                          icon: Sparkles,
+                          badge: 0,
+                        }] : []),
+                        {
+                          id: "versao_web",
+                          label: classicWebMode ? "Modo Moderno" : "Versão Web",
+                          subtitle: classicWebMode ? "Usar grades compactas" : "Modo Clássico",
+                          icon: classicWebMode ? LayoutDashboard : Monitor,
+                          badge: 0,
+                        },
+                      ];
+
+                      // Always sort menu items alphabetically by label
+                      menuItems.sort((a, b) =>
+                        a.label.localeCompare(b.label, "pt-BR", {
+                          sensitivity: "base",
+                        }),
+                      );
+
+                      return menuItems;
+                    })().map((item) => {
+                      const IconComp = item.icon;
+                      const isNiverHoje = item.id === "aniversariantes" && anyBirthdayToday.length > 0;
+                      const isEscalado = item.id === "escala" && Array.isArray(weekendAssignments) && weekendAssignments.length > 0;
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            if (item.id === "como_usar") {
+                              setShowTutorial(true);
+                              setTutorialStep(0);
+                            } else if (item.id === "santo") {
+                              if (isTab && onSetTab) {
+                                onSetTab("santo");
+                              } else {
+                                onSetView("santo");
+                              }
+                            } else if (item.id === "versao_web") {
+                              if (onToggleClassicWebMode) {
+                                onToggleClassicWebMode(!classicWebMode);
+                              }
+                            } else if (item.id === "lider_painel") {
+                              onSetView("lider_painel");
+                            } else {
+                              handleAction("home", item.id);
+                            }
+                          }}
+                          className={`group flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-2xl transition-all duration-300 relative border cursor-pointer hover:shadow-lg hover:-translate-y-0.5 aspect-square ${
+                            isNiverHoje
+                              ? "bg-red-500/10 backdrop-blur-md border-red-300/70 ring-2 ring-red-500/20 shadow-[0_4px_16px_rgba(239,68,68,0.1),inset_0_1px_1px_rgba(255,255,255,0.7)]"
+                              : isEscalado
+                                ? "bg-red-500/15 backdrop-blur-md border-red-400/80 ring-2 ring-red-500/25 shadow-[0_4px_16px_rgba(239,68,68,0.15),inset_0_1px_1px_rgba(255,255,255,0.7)] hover:bg-red-500/25"
+                                : item.id === "versao_web"
+                                  ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                  : liturgyColor === "purple"
+                                    ? "bg-purple-900/[0.04] backdrop-blur-md border-purple-300/40 hover:bg-purple-900/[0.08] hover:border-purple-400/60 shadow-[0_4px_16px_rgba(147,51,234,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                    : liturgyColor === "rose"
+                                      ? "bg-rose-900/[0.04] backdrop-blur-md border-rose-300/40 hover:bg-rose-900/[0.08] hover:border-rose-400/60 shadow-[0_4px_16px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                      : liturgyColor === "white"
+                                        ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                        : liturgyColor === "emerald"
+                                          ? "bg-emerald-900/[0.04] backdrop-blur-md border-emerald-300/40 hover:bg-emerald-900/[0.08] hover:border-emerald-400/60 shadow-[0_4px_16px_rgba(16,185,129,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                          : "bg-blue-900/[0.04] backdrop-blur-md border-blue-300/40 hover:bg-blue-900/[0.08] hover:border-blue-400/60 shadow-[0_4px_16px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                          }`}
+                        >
+                          <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center mb-1.5 transition-all duration-300 relative border overflow-hidden ${
+                            isNiverHoje
+                              ? "bg-gradient-to-b from-red-500/20 to-red-500/5 border-red-300/70 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.12)] animate-bounce"
+                              : isEscalado
+                                ? "bg-gradient-to-b from-red-500/25 to-red-500/10 border-red-400/80 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.15)]"
+                                : item.id === "versao_web"
+                                  ? "bg-gradient-to-b from-white/80 to-white/30 border-white/80 text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.9),0_2px_6px_rgba(0,0,0,0.04)]"
+                                  : item.id === "santo"
+                                    ? "bg-transparent border-transparent shadow-none"
+                                    : item.id === "comunhao"
+                                      ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
+                                      : item.id === "financeiro"
+                                        ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
+                                        : liturgyColor === "purple"
+                                        ? "bg-gradient-to-b from-purple-500/20 to-purple-500/5 border-purple-200/60 text-purple-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(147,51,234,0.08)]"
+                                        : liturgyColor === "rose"
+                                          ? "bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-200/60 text-rose-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(244,63,94,0.08)]"
+                                          : liturgyColor === "white"
+                                            ? "bg-gradient-to-b from-white/90 to-white/40 border-white text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
+                                            : liturgyColor === "emerald"
+                                              ? "bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-200/60 text-emerald-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(16,185,129,0.08)]"
+                                              : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-200/60 text-blue-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(59,130,246,0.08)]"
+                          }`}>
+                            {item.id === "santo" ? (
+                              <img
+                                src="/santa_rita_cassia.jpg"
+                                alt="Santos"
+                                className="w-full h-full object-cover object-center rounded-2xl transform scale-110 shadow-sm"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "comunhao" ? (
+                              <img
+                                src="/hostia.jpg"
+                                alt="Comunhão"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "financeiro" ? (
+                              <img
+                                src="/tesouraria.jpg"
+                                alt="Tesouraria"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "liturgia" ? (
+                              <img
+                                src="/biblia_3d.jpg"
+                                alt="Liturgia Diária"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "evangelho" ? (
+                              <img
+                                src="/evangelho_3d.jpg"
+                                alt="Evangelho"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "oracoes" ? (
+                              <img
+                                src="/oracoes_3d.jpg"
+                                alt="Orações"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "escala" ? (
+                              <img
+                                src="/escala_3d.jpg"
+                                alt="Escalas"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "calendario" ? (
+                              <img
+                                src="/calendario_3d.jpg"
+                                alt="Calendário Litúrgico"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "enfermos" ? (
+                              <img
+                                src="/enfermos_3d.jpg"
+                                alt="Rito de Enfermos"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "mensagem" ? (
+                              <img
+                                src="/mensagem_3d.jpg"
+                                alt="Mensagens"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "trocas" ? (
+                              <img
+                                src="/trocas_3d.jpg"
+                                alt="Trocas"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "aniversariantes" ? (
+                              <img
+                                src="/aniversariantes_3d.jpg"
+                                alt="Aniversariantes"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "disponibilidade" ? (
+                              <img
+                                src="/disponibilidade_3d.jpg"
+                                alt="Disponibilidade"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "editar" ? (
+                              <img
+                                src="/editar_3d.jpg"
+                                alt="Meu Perfil"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "como_usar" ? (
+                              <img
+                                src="/como_usar_3d.jpg"
+                                alt="Como Usar"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "versao_web" ? (
+                              <img
+                                src="/versao_web_3d.jpg"
+                                alt="Versão Web"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "faltas" ? (
+                              <img
+                                src="/faltas_3d.jpg"
+                                alt="Faltas"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : item.id === "lider_painel" ? (
+                              <img
+                                src="/relatorios_3d.jpg"
+                                alt="Responsável pela Missa"
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <IconComp className={`w-7 h-7 sm:w-8 sm:h-8 ${isEscalado ? "text-red-600" : ""}`} />
+                            )}
+                          </div>
+                          {isNiverHoje ? (
+                            <>
+                              <span className="text-[10px] sm:text-[11px] font-black leading-tight tracking-tight text-red-700 line-clamp-1 px-1">
+                                Hoje: {anyBirthdayToday.map(a => a.nome.split(' ')[0]).join(' & ')} 🎂
+                              </span>
+                              <span className="text-[8px] sm:text-[9px] text-red-500 font-black mt-1 leading-none uppercase tracking-wider bg-red-100/50 px-1 py-0.5 rounded border border-red-200/40">
+                                Parabéns!
+                              </span>
+                            </>
+                          ) : isEscalado ? (
+                            <>
+                              <span className="text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-center line-clamp-2 px-0.5 text-red-950">
+                                {item.label}
+                              </span>
+                              <span className="text-[8px] sm:text-[9px] text-red-600 font-black mt-1 leading-none uppercase tracking-wider bg-red-100/80 px-1.5 py-0.5 rounded border border-red-200/60">
+                                Escalado
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-center line-clamp-2 px-0.5 ${theme.text950}`}>
+                                {item.label}
+                              </span>
+                              <span className="text-[8px] sm:text-[10px] text-slate-400 font-bold mt-0.5 leading-none">
+                                {item.subtitle}
+                              </span>
+                            </>
+                          )}
+
+                          {isNiverHoje ? (
+                            <div className="absolute top-3 right-3 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                            </div>
+                          ) : isEscalado ? (
+                            <div className="absolute top-2.5 right-2.5 flex items-center justify-center">
+                              <span className="relative inline-flex items-center justify-center bg-red-600 text-white text-[9px] font-black min-w-[18px] h-[18px] px-1 rounded-full shadow-sm">
+                                {weekendAssignments && weekendAssignments.length > 0 ? weekendAssignments.length : "✓"}
+                              </span>
+                            </div>
+                          ) : item.badge > 0 ? (
+                            <span className="absolute top-3 right-3 bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center justify-center shadow-sm">
+                              {item.badge}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-center pb-8 pt-4">
+          <button
+            type="button"
+            onClick={() => onSetView("privacy")}
+            className="text-[10px] font-bold text-slate-300 hover:text-slate-400 uppercase tracking-widest transition-colors flex items-center gap-1.5"
+          >
+            <Lock className="w-3 h-3 opacity-50" />
+            Política de Privacidade
+          </button>
         </div>
       </div>
 
@@ -689,201 +1421,6 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
         </div>
       )}
 
-      {/* Improved & Compact Gospel Modal */}
-      {showGospelModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-[#fcfaf7] w-full max-w-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-full sm:h-auto max-h-[100vh] sm:max-h-[90vh] border border-stone-200"
-          >
-            {/* Modal Header - Editorial Style Compact */}
-            <div className="px-6 py-5 sm:py-6 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-              <div className="flex items-center gap-4">
-                <div className={`w-11 h-11 ${theme.iconBg} ${theme.text600} rounded-xl flex items-center justify-center shadow-sm border ${theme.border}`}>
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display font-black text-stone-900 text-xl sm:text-2xl tracking-tight">Santo Evangelho</h3>
-                    {vigilGospel && (
-                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-200">
-                        Vigília
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                    <span className={`w-1 h-1 rounded-full ${theme.text500}/40`}></span>
-                    {(() => {
-                      const now = new Date();
-                      const isSaturdayAfternoon = now.getDay() === 6 && now.getHours() >= 17;
-                      return (isSaturdayAfternoon && vigilGospel) ? vigilGospel.ref : dailyGospel.ref;
-                    })()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1 mr-2">
-                  <button 
-                    onClick={() => setFontScale(prev => Math.max(0.7, prev - 0.15))}
-                    className="p-1.5 hover:bg-white rounded-md transition-colors text-stone-500 hover:text-stone-700 shadow-sm border border-transparent hover:border-stone-200"
-                    title="Diminuir texto"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <div className="w-px h-4 bg-stone-200" />
-                  <button 
-                    onClick={() => setFontScale(prev => Math.min(2.5, prev + 0.15))}
-                    className="p-1.5 hover:bg-white rounded-md transition-colors text-stone-500 hover:text-stone-700 shadow-sm border border-transparent hover:border-stone-200"
-                    title="Aumentar texto"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <button 
-                  onClick={() => setShowGospelModal(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white transition-all text-stone-400 hover:text-stone-600 hover:shadow-sm border border-transparent hover:border-stone-200"
-                >
-                  <ChevronLeft className="w-5 h-5 rotate-180 sm:rotate-0" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body - Book Layout Compact */}
-            <div className="p-6 sm:p-10 overflow-y-auto custom-scrollbar flex-1 bg-white/40">
-              <div 
-                className="max-w-prose mx-auto"
-                style={{ fontSize: `${fontScale}rem`, lineHeight: 1.6 }}
-              >
-                <div className="font-serif text-slate-800 space-y-6">
-                  {(() => {
-                    const now = new Date();
-                    const isSaturdayAfternoon = now.getDay() === 6 && now.getHours() >= 17;
-                    const text = (isSaturdayAfternoon && vigilGospel) ? vigilGospel.text : dailyGospel.text;
-                    
-                    if (!text || text.includes('Carregando')) {
-                      return <div className="flex flex-col items-center justify-center py-16 text-stone-300 italic">
-                        <RefreshCw className="w-8 h-8 animate-spin mb-3" />
-                        Carregando a Palavra...
-                      </div>;
-                    }
-
-                    return text.split('\n\n').map((paragraph, i) => {
-                      const cleanParagraph = paragraph.trim();
-                      if (!cleanParagraph) return null;
-
-                      // Only drop cap for the first paragraph
-                      if (i === 0) {
-                        const firstChar = cleanParagraph[0];
-                        const restOfText = cleanParagraph.slice(1);
-                        return (
-                          <p key={i} className="relative">
-                            <span className={`text-5xl sm:text-6xl font-display font-black mr-3 float-left leading-[0.85] ${theme.text600} opacity-80 pt-1`}>
-                              {firstChar}
-                            </span>
-                            {restOfText}
-                          </p>
-                        );
-                      }
-                      return <p key={i} className="font-serif text-slate-800 mb-6">{cleanParagraph}</p>;
-                    });
-                  })()}
-                </div>
-                
-                <div className="mt-12 pt-8 border-t border-stone-100 flex flex-col items-center">
-                  <div className="w-10 h-px bg-stone-200 mb-6" />
-                  <p className="text-[10px] text-stone-400 uppercase font-black tracking-[0.3em] mb-1.5">Palavra da Salvação</p>
-                  <p className={`text-base ${theme.text700} font-display font-black uppercase tracking-tight`}>Glória a vós, Senhor</p>
-                </div>
-                
-                {(() => {
-                  const now = new Date();
-                  const isSaturdayAfternoon = now.getDay() === 6 && now.getHours() >= 17;
-                  const papasText = (isSaturdayAfternoon && vigilGospel) ? vigilGospel.papasText : dailyGospel.papasText;
-                  
-                  if (papasText) {
-                    return (
-                      <div className="mt-16 p-6 sm:p-8 rounded-[1.5rem] bg-stone-50/80 border border-stone-100 shadow-inner relative overflow-hidden group">
-                         <div className="absolute top-0 right-0 p-3 opacity-[0.03]">
-                            <Church className="w-24 h-24" />
-                         </div>
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 ${theme.iconBg} ${theme.text700} rounded-lg flex items-center justify-center`}>
-                              <Heart className="w-4 h-4" />
-                            </div>
-                            <h3 className="text-lg font-display font-bold text-stone-800 italic">O Pensamento do Papa</h3>
-                          </div>
-                          
-                          <div className="flex items-center gap-1 bg-stone-200/50 rounded-lg p-0.5">
-                            <button 
-                              onClick={() => setFontScale(prev => Math.max(0.7, prev - 0.15))}
-                              className="p-1 hover:bg-white rounded-md transition-colors text-stone-500 hover:text-stone-700"
-                              title="Diminuir texto"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <button 
-                              onClick={() => setFontScale(prev => Math.min(2.5, prev + 0.15))}
-                              className="p-1 hover:bg-white rounded-md transition-colors text-stone-500 hover:text-stone-700"
-                              title="Aumentar texto"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <div 
-                          className="font-serif text-stone-600 italic leading-relaxed space-y-4"
-                          style={{ fontSize: `${fontScale}rem` }}
-                        >
-                          {papasText.split('\n\n').map((paragraph, i) => (
-                            <p key={i}>{paragraph.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-            </div>
-
-            {/* Modal Footer - Actions Compact */}
-            <div className="p-6 bg-stone-50 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-center gap-5">
-              {(() => {
-                const now = new Date();
-                const isSaturdayAfternoon = now.getDay() === 6 && now.getHours() >= 17;
-                const vaticanUrl = (isSaturdayAfternoon && vigilGospel) ? vigilGospel.vaticanUrl : dailyGospel.vaticanUrl;
-                if (vaticanUrl) return (
-                  <a 
-                    href={vaticanUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="group px-6 py-3 bg-white text-stone-900 border border-stone-200 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-stone-100 transition-all shadow-sm flex items-center gap-2.5"
-                  >
-                    <div className={`w-6 h-6 ${theme.iconBg} ${theme.text600} rounded-md flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <Church className="w-3.5 h-3.5" />
-                    </div>
-                    Vatican News
-                  </a>
-                );
-                return null;
-              })()}
-              <button 
-                onClick={() => setShowGospelModal(false)}
-                className={`w-full sm:w-auto px-12 py-3.5 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 group relative flex items-center justify-center gap-2 overflow-hidden`}
-                style={{ backgroundColor: `var(--color-${liturgyColor === 'white' ? 'slate' : (liturgyColor === 'rose' ? 'rose' : (liturgyColor === 'emerald' ? 'emerald' : liturgyColor))}-600)` }}
-              >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <span className="relative flex items-center gap-2">
-                   <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
-                   Amém
-                </span>
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </motion.div>
   );
 }

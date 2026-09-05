@@ -11,6 +11,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /testers/{testerId} {
+      allow read, write: if true;
+    }
+
     // Bloqueia tudo por padrão para segurança
     match /{document=**} {
       allow read, write: if false;

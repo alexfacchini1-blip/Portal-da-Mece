@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from 'react';
-import { Heart, User, Phone, MapPin, Calendar, ChevronLeft, Clock, Trash2, Edit2, Users } from 'lucide-react';
-import { toTitleCase } from '../utils';
+import { Heart, User, Phone, MapPin, Calendar, ChevronLeft, Clock, Trash2, Edit2, Users, BookOpen, X, Sparkles, Search, Loader2, CheckCircle2, Plus, Save } from 'lucide-react';
+import { toTitleCase, formatPhone, formatCep, fetchAddressByCep } from '../utils';
 
 const BRAZILIAN_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
@@ -23,6 +23,12 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const [loadingCepNovo, setLoadingCepNovo] = useState(false);
+  const [cepStatusNovo, setCepStatusNovo] = useState<'success' | 'error' | 'loading' | ''>('');
+  const [loadingCepEdit, setLoadingCepEdit] = useState(false);
+  const [cepStatusEdit, setCepStatusEdit] = useState<'success' | 'error' | 'loading' | ''>('');
+  const [filtroMinistro, setFiltroMinistro] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     let totalAssistidos = 0;
@@ -67,6 +73,9 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
     nomeIdoso: '',
     esposoNome: '',
     esposaNome: '',
+    cep: '',
+    numero: '',
+    complemento: '',
     endereco: '',
     bairro: '',
     cidade: 'Bauru',
@@ -163,11 +172,71 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
   const handleNovoComunhaoChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    if (name === 'cep') {
+      const formattedCep = formatCep(value);
+      setNovoComunhao(prev => ({ ...prev, cep: formattedCep }));
+
+      const cleanDigits = formattedCep.replace(/\D/g, '');
+      if (cleanDigits.length === 8) {
+        setLoadingCepNovo(true);
+        setCepStatusNovo('loading');
+        fetchAddressByCep(formattedCep).then(addr => {
+          setLoadingCepNovo(false);
+          if (addr) {
+            setNovoComunhao(prev => ({
+              ...prev,
+              endereco: addr.logradouro ? toTitleCase(addr.logradouro) : prev.endereco,
+              bairro: addr.bairro ? toTitleCase(addr.bairro) : prev.bairro,
+              cidade: addr.localidade ? toTitleCase(addr.localidade) : prev.cidade,
+              uf: addr.uf ? addr.uf.toUpperCase() : prev.uf,
+            }));
+            setCepStatusNovo('success');
+          } else {
+            setCepStatusNovo('error');
+          }
+        });
+      } else {
+        setCepStatusNovo('');
+      }
+      return;
+    }
+
     // Apply capitalization to specific fields
-    const fieldsToCapitalize = ['nomeIdoso', 'responsavel', 'clinicaNome', 'endereco', 'bairro', 'cidade', 'esposoNome', 'esposaNome', 'familiaNome'];
-    const finalValue = fieldsToCapitalize.includes(name) ? toTitleCase(value) : value;
+    const fieldsToCapitalize = ['nomeIdoso', 'responsavel', 'clinicaNome', 'endereco', 'complemento', 'bairro', 'cidade', 'esposoNome', 'esposaNome', 'familiaNome'];
+    let finalValue = fieldsToCapitalize.includes(name) ? toTitleCase(value) : value;
+    
+    if (name === 'telefone' || name === 'telefoneResponsavel') {
+      finalValue = formatPhone(value);
+    }
     
     setNovoComunhao(prev => ({ ...prev, [name]: finalValue }));
+  };
+
+  const handleEditCepChange = (value: string) => {
+    const formattedCep = formatCep(value);
+    setEditingComunhao((prev: any) => ({ ...prev, cep: formattedCep }));
+    const cleanDigits = formattedCep.replace(/\D/g, '');
+    if (cleanDigits.length === 8) {
+      setLoadingCepEdit(true);
+      setCepStatusEdit('loading');
+      fetchAddressByCep(formattedCep).then(addr => {
+        setLoadingCepEdit(false);
+        if (addr) {
+          setEditingComunhao((prev: any) => ({
+            ...prev,
+            endereco: addr.logradouro ? toTitleCase(addr.logradouro) : (prev.endereco || ''),
+            bairro: addr.bairro ? toTitleCase(addr.bairro) : (prev.bairro || ''),
+            cidade: addr.localidade ? toTitleCase(addr.localidade) : (prev.cidade || ''),
+            uf: addr.uf ? addr.uf.toUpperCase() : (prev.uf || ''),
+          }));
+          setCepStatusEdit('success');
+        } else {
+          setCepStatusEdit('error');
+        }
+      });
+    } else {
+      setCepStatusEdit('');
+    }
   };
 
   const handleFamiliaMembroChange = (index: number, value: string) => {
@@ -206,10 +275,14 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
 
       if (response.ok) {
         setMessage('Comunhão cadastrada e enviada com sucesso!');
+        setCepStatusNovo('');
         setNovoComunhao({
           nomeIdoso: '',
           esposoNome: '',
           esposaNome: '',
+          cep: '',
+          numero: '',
+          complemento: '',
           endereco: '',
           bairro: '',
           cidade: 'Bauru',
@@ -268,6 +341,8 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
     if (prepItem.tipoAtendimento === 'familia' && !prepItem.familiaNome) {
       prepItem.familiaNome = prepItem.nomeIdoso || '';
     }
+    if (prepItem.telefone) prepItem.telefone = formatPhone(prepItem.telefone);
+    if (prepItem.telefoneResponsavel) prepItem.telefoneResponsavel = formatPhone(prepItem.telefoneResponsavel);
     setEditingComunhao(prepItem);
   };
 
@@ -304,7 +379,12 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
         {!isTab && (
           <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Heart className="w-6 h-6 text-red-500" />
+              <img
+                src="/hostia.jpg"
+                alt="Comunhão"
+                className="w-8 h-8 object-contain rounded-full shadow-xs"
+                referrerPolicy="no-referrer"
+              />
               Comunhão
             </h1>
             {voltar && (
@@ -425,7 +505,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                   </>
                 ) : novoComunhao.tipoAtendimento === 'familia' ? (
                   <>
-                    <div className="col-span-2 space-y-2">
+                    <div className="space-y-2">
                       <label className="block text-sm font-medium text-slate-700">Nome da Família</label>
                       <input type="text" name="familiaNome" value={novoComunhao.familiaNome || ''} onChange={handleNovoComunhaoChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ex: Família Silva, Família Santos..." required />
                     </div>
@@ -437,15 +517,73 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                     ))}
                   </>
                 ) : (
-                  <div className="col-span-2 space-y-2">
+                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700">Nome do Idoso/Doente</label>
                     <input type="text" name="nomeIdoso" value={novoComunhao.nomeIdoso} onChange={handleNovoComunhaoChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" required />
                   </div>
                 )}
                 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">Endereço</label>
-                  <input type="text" name="endereco" value={novoComunhao.endereco} onChange={handleNovoComunhaoChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" required />
+                  <label className="block text-sm font-medium text-slate-700">CEP</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="cep"
+                      value={novoComunhao.cep}
+                      onChange={handleNovoComunhaoChange}
+                      placeholder="17010-000"
+                      className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      maxLength={9}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                      {loadingCepNovo ? (
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      ) : cepStatusNovo === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <Search className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </div>
+                  {cepStatusNovo === 'success' && (
+                    <p className="text-[11px] font-semibold text-emerald-600">
+                      ✓ Endereço localizado! Preencha o número da casa.
+                    </p>
+                  )}
+                  {cepStatusNovo === 'error' && (
+                    <p className="text-[11px] font-semibold text-amber-600">
+                      CEP não encontrado. Preencha os campos manualmente.
+                    </p>
+                  )}
+                </div>
+
+                <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Endereço (Rua / Avenida)</label>
+                    <input type="text" name="endereco" value={novoComunhao.endereco} onChange={handleNovoComunhaoChange} placeholder="Nome da rua ou avenida" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" required />
+                  </div>
+                  <div className="sm:col-span-1 space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Número</label>
+                    <input
+                      type="text"
+                      name="numero"
+                      value={novoComunhao.numero}
+                      onChange={handleNovoComunhaoChange}
+                      placeholder="Ex: 18-50, 123"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="sm:col-span-1 space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Complemento</label>
+                    <input
+                      type="text"
+                      name="complemento"
+                      value={novoComunhao.complemento}
+                      onChange={handleNovoComunhaoChange}
+                      placeholder="Ex: Apt 4, Bloco B"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Bairro</label>
@@ -472,7 +610,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Telefone</label>
-                  <input type="tel" name="telefone" value={novoComunhao.telefone} onChange={handleNovoComunhaoChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" required />
+                  <input type="tel" name="telefone" value={novoComunhao.telefone} onChange={handleNovoComunhaoChange} placeholder="(14) 99999-9999" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" required />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Responsável (Opcional)</label>
@@ -480,7 +618,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Telefone do Responsável (Opcional)</label>
-                  <input type="tel" name="telefoneResponsavel" value={novoComunhao.telefoneResponsavel} onChange={handleNovoComunhaoChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <input type="tel" name="telefoneResponsavel" value={novoComunhao.telefoneResponsavel} onChange={handleNovoComunhaoChange} placeholder="(14) 99999-9999" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                  <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Ministro Responsável</label>
@@ -499,10 +637,10 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
 
         {(!isCoordenador || subTab === 'listar') && (
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-600" />
-              {user.role === 'ministro' ? 'Minhas Comunhões' : 'Comunhões Cadastradas'}
-            </h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-600" />
+                {user.role === 'ministro' ? 'Minhas Comunhões' : 'Comunhões Cadastradas'}
+              </h2>
 
           {comunhaoList.length > 0 && (
             <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-6">
@@ -537,35 +675,93 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {(Object.entries(stats.porMinistro) as [string, { assistidos: number; atendimentos: number }][])
                       .sort((a, b) => b[1].assistidos - a[1].assistidos)
-                      .map(([minNome, counts]) => (
-                        <div key={minNome} className="bg-white px-4 py-3 rounded-xl border border-slate-100 shadow-xs flex items-center justify-between group hover:border-blue-200 transition-colors">
-                          <div className="truncate pr-2">
-                            <p className="text-xs font-bold text-slate-700 truncate group-hover:text-blue-600 transition-colors" title={minNome}>
-                              {minNome}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-medium">
-                              {counts.atendimentos} {counts.atendimentos === 1 ? 'visita' : 'visitas'}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-center bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full border border-blue-100 text-xs font-black min-w-[32px]" title={`${counts.assistidos} idoso(s)`}>
-                            {counts.assistidos}
-                          </div>
-                        </div>
-                      ))}
+                      .map(([minNome, counts]) => {
+                        const isSelected = filtroMinistro === minNome;
+                        return (
+                          <button
+                            type="button"
+                            key={minNome}
+                            onClick={() => setFiltroMinistro(isSelected ? null : minNome)}
+                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between group ${
+                              isSelected
+                                ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20 shadow-sm'
+                                : 'bg-white border-slate-100 shadow-xs hover:border-blue-300 hover:shadow-sm'
+                            }`}
+                            title={`Clique para ver apenas os atendimentos de ${minNome}`}
+                          >
+                            <div className="truncate pr-2">
+                              <p className={`text-xs font-bold truncate transition-colors ${
+                                isSelected ? 'text-blue-700 font-extrabold' : 'text-slate-700 group-hover:text-blue-600'
+                              }`} title={minNome}>
+                                {minNome}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium">
+                                {counts.atendimentos} {counts.atendimentos === 1 ? 'visita' : 'visitas'}
+                              </p>
+                            </div>
+                            <div className={`flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-black min-w-[32px] border transition-colors ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                : 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100'
+                            }`} title={`${counts.assistidos} idoso(s)`}>
+                              {counts.assistidos}
+                            </div>
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
               )}
             </div>
           )}
 
+          {/* Banner de Filtro Ativo com Botão para Voltar/Ver Todos */}
+          {filtroMinistro && (
+            <div className="mb-6 p-4 bg-blue-50/90 border border-blue-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs shrink-0">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                      Filtro Ativo
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Exibindo assistidos de:
+                    </span>
+                  </div>
+                  <p className="text-base font-extrabold text-blue-950 mt-0.5">
+                    {filtroMinistro}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltroMinistro(null)}
+                className="w-full sm:w-auto px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4 text-blue-600" />
+                Voltar (Ver Todos os Ministros)
+              </button>
+            </div>
+          )}
+
           {comunhaoList.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-              <Heart className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <img
+                src="/hostia.jpg"
+                alt="Comunhão"
+                className="w-12 h-12 object-contain rounded-full opacity-40 mx-auto mb-4 grayscale"
+                referrerPolicy="no-referrer"
+              />
               <p className="text-slate-500 font-medium">Nenhum registro de comunhão encontrado.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {comunhaoList.map((item) => (
+              {comunhaoList
+                .filter((item) => !filtroMinistro || (item.ministro_nome || 'Não Atribuído') === filtroMinistro)
+                .map((item) => (
                 <div key={item.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 hover:border-blue-300 transition-all group">
                   <div className="flex items-start justify-between mb-4">
                     <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-100 group-hover:bg-blue-50 transition-colors">
@@ -613,9 +809,17 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
                         </ul>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span>{item.endereco}, {item.bairro}, {item.cidade} - {item.uf}</span>
+                    <div className="flex items-start gap-2 text-sm text-slate-600">
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <span>
+                        {item.endereco}
+                        {item.numero && !item.endereco?.includes(item.numero) ? `, Nº ${item.numero}` : ''}
+                        {item.complemento ? ` (${item.complemento})` : ''}
+                        {item.bairro ? `, ${item.bairro}` : ''}
+                        {item.cidade ? `, ${item.cidade}` : ''}
+                        {item.uf ? ` - ${item.uf}` : ''}
+                        {item.cep ? ` (CEP: ${item.cep})` : ''}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       <Phone className="w-4 h-4 text-slate-400" />
@@ -648,142 +852,448 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
         </div>
         )}
         {editingComunhao && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-lg my-8">
-              <h2 className="text-xl font-bold mb-4">Editar Comunhão</h2>
-              <form onSubmit={handleUpdate} className="space-y-4">
-                {editingComunhao.tipoAtendimento === 'casal' ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500">Nome do Esposo</label>
-                      <input
-                        type="text"
-                        value={editingComunhao.esposoNome || ''}
-                        onChange={e => {
-                          const val = toTitleCase(e.target.value);
-                          setEditingComunhao({
-                            ...editingComunhao,
-                            esposoNome: val,
-                            nomeIdoso: `${val} e ${(editingComunhao.esposaNome || '')}`
-                          });
-                        }}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                        placeholder="Nome do Esposo"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500">Nome da Esposa</label>
-                      <input
-                        type="text"
-                        value={editingComunhao.esposaNome || ''}
-                        onChange={e => {
-                          const val = toTitleCase(e.target.value);
-                          setEditingComunhao({
-                            ...editingComunhao,
-                            esposaNome: val,
-                            nomeIdoso: `${(editingComunhao.esposoNome || '')} e ${val}`
-                          });
-                        }}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                        placeholder="Nome da Esposa"
-                        required
-                      />
-                    </div>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-4xl my-auto shadow-2xl border border-slate-100 relative max-h-[92vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100">
+                    <Edit2 className="w-5 h-5" />
                   </div>
-                ) : editingComunhao.tipoAtendimento === 'clinica' ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500">Nome da Clínica</label>
-                      <input type="text" value={editingComunhao.clinicaNome || editingComunhao.nomeIdoso || ''} onChange={e => {
-                        const val = toTitleCase(e.target.value);
-                        setEditingComunhao({
-                          ...editingComunhao,
-                          clinicaNome: val,
-                          nomeIdoso: val
-                        });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Nome da Clínica" required />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-slate-500">Idosos</label>
-                      {editingComunhao.idosos && editingComunhao.idosos.map((idoso: any, idx: number) => (
-                        <div key={idx} className="flex gap-2 items-center">
-                          <input type="text" value={idoso.nome} onChange={(e) => {
-                            const nextIdosos = [...editingComunhao.idosos];
-                            nextIdosos[idx] = { ...idoso, nome: toTitleCase(e.target.value) };
-                            setEditingComunhao({...editingComunhao, idosos: nextIdosos});
-                          }} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded" />
-                          <button type="button" onClick={() => {
-                            setEditingComunhao({...editingComunhao, idosos: editingComunhao.idosos.filter((_: any, i: number) => i !== idx)});
-                          }} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Editar Comunhão</h2>
+                    <p className="text-xs text-slate-500 font-medium">Atualize os dados do atendimento, assistidos e endereço</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingComunhao(null)}
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdate} className="flex flex-col flex-1 overflow-hidden">
+                {/* 2 Colunas Horizontais */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 overflow-y-auto pr-1 pb-2 flex-1">
+                  {/* Coluna Esquerda: Assistidos / Idosos (5 de 12 colunas) */}
+                  <div className="md:col-span-5 space-y-4 flex flex-col">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex-1 flex flex-col">
+                      {/* Tipo Casal */}
+                      {editingComunhao.tipoAtendimento === 'casal' ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            <span className="text-xs font-bold text-slate-800">Atendimento Casal</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-700">Nome do Esposo</label>
+                            <input
+                              type="text"
+                              value={editingComunhao.esposoNome || ''}
+                              onChange={e => {
+                                const val = toTitleCase(e.target.value);
+                                setEditingComunhao({
+                                  ...editingComunhao,
+                                  esposoNome: val,
+                                  nomeIdoso: `${val} e ${(editingComunhao.esposaNome || '')}`
+                                });
+                              }}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Nome do Esposo"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-700">Nome da Esposa</label>
+                            <input
+                              type="text"
+                              value={editingComunhao.esposaNome || ''}
+                              onChange={e => {
+                                const val = toTitleCase(e.target.value);
+                                setEditingComunhao({
+                                  ...editingComunhao,
+                                  esposaNome: val,
+                                  nomeIdoso: `${(editingComunhao.esposoNome || '')} e ${val}`
+                                });
+                              }}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Nome da Esposa"
+                              required
+                            />
+                          </div>
                         </div>
-                      ))}
+                      ) : editingComunhao.tipoAtendimento === 'clinica' ? (
+                        <div className="space-y-4 flex flex-col flex-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-700">Nome da Clínica de Repouso</label>
+                            <input
+                              type="text"
+                              value={editingComunhao.clinicaNome || editingComunhao.nomeIdoso || ''}
+                              onChange={e => {
+                                const val = toTitleCase(e.target.value);
+                                setEditingComunhao({
+                                  ...editingComunhao,
+                                  clinicaNome: val,
+                                  nomeIdoso: val
+                                });
+                              }}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Ex: Lar São Vicente"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2 pt-2 border-t border-slate-200 flex-1 flex flex-col">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-blue-600" />
+                                Idosos Atendidos ({editingComunhao.idosos?.length || 0})
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextIdosos = [...(editingComunhao.idosos || []), { nome: '' }];
+                                  setEditingComunhao({
+                                    ...editingComunhao,
+                                    idosos: nextIdosos,
+                                    quantidadeIdosos: nextIdosos.length
+                                  });
+                                }}
+                                className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-extrabold rounded-lg border border-blue-200 transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Adicionar Idoso
+                              </button>
+                            </div>
+
+                            <div className="space-y-2 flex-1 max-h-72 overflow-y-auto pr-1">
+                              {editingComunhao.idosos && editingComunhao.idosos.length > 0 ? (
+                                editingComunhao.idosos.map((idoso: any, idx: number) => (
+                                  <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                                    <span className="text-xs font-bold text-slate-400 w-6 text-center">{idx + 1}º</span>
+                                    <input
+                                      type="text"
+                                      value={idoso.nome}
+                                      placeholder={`Nome do ${idx + 1}º idoso`}
+                                      onChange={(e) => {
+                                        const nextIdosos = [...editingComunhao.idosos];
+                                        nextIdosos[idx] = { ...idoso, nome: toTitleCase(e.target.value) };
+                                        setEditingComunhao({ ...editingComunhao, idosos: nextIdosos });
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                      required
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextIdosos = editingComunhao.idosos.filter((_: any, i: number) => i !== idx);
+                                        setEditingComunhao({
+                                          ...editingComunhao,
+                                          idosos: nextIdosos,
+                                          quantidadeIdosos: nextIdosos.length
+                                        });
+                                      }}
+                                      className="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors cursor-pointer shrink-0"
+                                      title="Remover este idoso"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
+                                  Nenhum idoso listado. Clique em "+ Adicionar Idoso" acima.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : editingComunhao.tipoAtendimento === 'familia' ? (
+                        <div className="space-y-4 flex flex-col flex-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-700">Nome da Família</label>
+                            <input
+                              type="text"
+                              value={editingComunhao.familiaNome || editingComunhao.nomeIdoso || ''}
+                              onChange={e => {
+                                const val = toTitleCase(e.target.value);
+                                setEditingComunhao({
+                                  ...editingComunhao,
+                                  familiaNome: val,
+                                  nomeIdoso: val
+                                });
+                              }}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Ex: Família Silva"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2 pt-2 border-t border-slate-200 flex-1 flex flex-col">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-blue-600" />
+                                Membros da Família
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextMembros = [...(editingComunhao.familiaMembros || []), ''];
+                                  setEditingComunhao({
+                                    ...editingComunhao,
+                                    familiaMembros: nextMembros
+                                  });
+                                }}
+                                className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-extrabold rounded-lg border border-blue-200 transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Adicionar Membro
+                              </button>
+                            </div>
+
+                            <div className="space-y-2 flex-1 max-h-72 overflow-y-auto pr-1">
+                              {editingComunhao.familiaMembros && editingComunhao.familiaMembros.length > 0 ? (
+                                editingComunhao.familiaMembros.map((membro: string, idx: number) => (
+                                  <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                                    <span className="text-xs font-bold text-slate-400 w-6 text-center">{idx + 1}º</span>
+                                    <input
+                                      type="text"
+                                      value={membro}
+                                      placeholder={`Nome do ${idx + 1}º membro`}
+                                      onChange={(e) => {
+                                        const nextMembros = [...editingComunhao.familiaMembros];
+                                        nextMembros[idx] = toTitleCase(e.target.value);
+                                        setEditingComunhao({ ...editingComunhao, familiaMembros: nextMembros });
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextMembros = editingComunhao.familiaMembros.filter((_: any, i: number) => i !== idx);
+                                        setEditingComunhao({ ...editingComunhao, familiaMembros: nextMembros });
+                                      }}
+                                      className="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors cursor-pointer shrink-0"
+                                      title="Remover este membro"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-200 text-xs text-slate-500">
+                                  Nenhum membro listado. Clique em "+ Adicionar Membro" acima.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <span className="text-xs font-bold text-slate-800">Atendimento Individual</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-700">Nome do Idoso / Doente</label>
+                            <input
+                              type="text"
+                              value={editingComunhao.nomeIdoso || ''}
+                              onChange={e => setEditingComunhao({...editingComunhao, nomeIdoso: toTitleCase(e.target.value)})}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Nome completo do assistido"
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : editingComunhao.tipoAtendimento === 'familia' ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500">Nome da Família</label>
-                      <input type="text" value={editingComunhao.familiaNome || editingComunhao.nomeIdoso || ''} onChange={e => {
-                        const val = toTitleCase(e.target.value);
-                        setEditingComunhao({
-                          ...editingComunhao,
-                          familiaNome: val,
-                          nomeIdoso: val
-                        });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Nome da Família" required />
+
+                  {/* Coluna Direita: Endereço, Contatos e Ministro (7 de 12 colunas) */}
+                  <div className="md:col-span-7 space-y-4">
+                    {/* Bloco Endereço */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                        <MapPin className="w-4 h-4 text-blue-600" />
+                        <span className="text-xs font-bold text-slate-800">Endereço & Localização</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-1 space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">CEP</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={editingComunhao.cep || ''}
+                              onChange={e => handleEditCepChange(e.target.value)}
+                              className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="17010-000"
+                              maxLength={9}
+                            />
+                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center">
+                              {loadingCepEdit ? (
+                                <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                              ) : cepStatusEdit === 'success' ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Search className="w-3.5 h-3.5 text-slate-400" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Rua / Avenida</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.endereco || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, endereco: toTitleCase(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Nome da rua ou avenida"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Número</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.numero || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, numero: e.target.value})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Ex: 18-50, 123"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Complemento</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.complemento || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, complemento: toTitleCase(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Ex: Apt 4, Bloco B"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Bairro</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.bairro || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, bairro: toTitleCase(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Bairro"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Cidade</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.cidade || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, cidade: toTitleCase(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Cidade"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">UF</label>
+                          <select
+                            value={editingComunhao.uf || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, uf: e.target.value})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none"
+                          >
+                            <option value="">UF</option>
+                            {BRAZILIAN_STATES.map(uf => (
+                              <option key={uf} value={uf}>{uf}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                       <label className="text-xs font-semibold text-slate-500">Membros</label>
-                       {editingComunhao.familiaMembros && editingComunhao.familiaMembros.filter((m: string) => m && m.trim().length > 0).map((membro: string, idx: number) => (
-                         <div key={idx} className="flex gap-2 items-center">
-                           <input type="text" value={membro} onChange={(e) => {
-                             const nextMembros = [...editingComunhao.familiaMembros];
-                             nextMembros[idx] = toTitleCase(e.target.value);
-                             setEditingComunhao({...editingComunhao, familiaMembros: nextMembros});
-                           }} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded" />
-                           <button type="button" onClick={() => {
-                             setEditingComunhao({...editingComunhao, familiaMembros: editingComunhao.familiaMembros.filter((_: any, i: number) => i !== idx)});
-                           }} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
-                         </div>
-                       ))}
+
+                    {/* Bloco Contatos e Ministro */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                        <Phone className="w-4 h-4 text-blue-600" />
+                        <span className="text-xs font-bold text-slate-800">Contatos & Ministro</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Telefone do Local</label>
+                          <input
+                            type="tel"
+                            value={editingComunhao.telefone || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, telefone: formatPhone(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="(14) 99999-9999"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Responsável</label>
+                          <input
+                            type="text"
+                            value={editingComunhao.responsavel || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, responsavel: toTitleCase(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="Ex: Cuidador..."
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Tel. Responsável</label>
+                          <input
+                            type="tel"
+                            value={editingComunhao.telefoneResponsavel || ''}
+                            onChange={e => setEditingComunhao({...editingComunhao, telefoneResponsavel: formatPhone(e.target.value)})}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            placeholder="(14) 99999-9999"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-blue-600" />
+                          Ministro Responsável pelo Atendimento
+                        </label>
+                        <select 
+                          value={editingComunhao.ministro_id || ''} 
+                          onChange={e => setEditingComunhao({...editingComunhao, ministro_id: Number(e.target.value)})} 
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        >
+                          <option value="">Selecione um ministro</option>
+                          {getMinisterOptions().map(opt => (
+                            <option key={opt.id} value={opt.id}>{opt.nome}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Nome do Idoso/Doente</label>
-                    <input type="text" value={editingComunhao.nomeIdoso || ''} onChange={e => setEditingComunhao({...editingComunhao, nomeIdoso: toTitleCase(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Nome do Idoso" required />
-                  </div>
-                )}
-                <input type="text" value={editingComunhao.endereco || ''} onChange={e => setEditingComunhao({...editingComunhao, endereco: toTitleCase(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Endereço" />
-                <input type="text" value={editingComunhao.bairro || ''} onChange={e => setEditingComunhao({...editingComunhao, bairro: toTitleCase(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Bairro" />
-                <input type="text" value={editingComunhao.cidade || ''} onChange={e => setEditingComunhao({...editingComunhao, cidade: toTitleCase(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Cidade" />
-                <select
-                  value={editingComunhao.uf || ''}
-                  onChange={e => setEditingComunhao({...editingComunhao, uf: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
-                >
-                  <option value="">Selecione UF</option>
-                  {BRAZILIAN_STATES.map(uf => (
-                    <option key={uf} value={uf}>{uf}</option>
-                  ))}
-                </select>
-                <input type="tel" value={editingComunhao.telefone || ''} onChange={e => setEditingComunhao({...editingComunhao, telefone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Telefone" />
-                <input type="text" value={editingComunhao.responsavel || ''} onChange={e => setEditingComunhao({...editingComunhao, responsavel: toTitleCase(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Responsável (Opcional)" />
-                <input type="tel" value={editingComunhao.telefoneResponsavel || ''} onChange={e => setEditingComunhao({...editingComunhao, telefoneResponsavel: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Telefone do Responsável (Opcional)" />
-                <select 
-                  value={editingComunhao.ministro_id || ''} 
-                  onChange={e => setEditingComunhao({...editingComunhao, ministro_id: Number(e.target.value)})} 
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                >
-                  <option value="">Selecione um ministro</option>
-                  {getMinisterOptions().map(opt => (
-                    <option key={opt.id} value={opt.id}>{opt.nome}</option>
-                  ))}
-                </select>
-                <div className="flex gap-2 justify-end">
-                  <button type="button" onClick={() => setEditingComunhao(null)} className="px-4 py-2 bg-slate-200 rounded-lg">Cancelar</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Salvar</button>
+                </div>
+
+                {/* Ações do Rodapé Fixo */}
+                <div className="flex gap-3 justify-end pt-4 mt-2 border-t border-slate-100 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setEditingComunhao(null)}
+                    className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-200 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    Salvar Alterações
+                  </button>
                 </div>
               </form>
             </div>

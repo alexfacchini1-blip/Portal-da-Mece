@@ -132,6 +132,35 @@ export const getLiturgicalThemeDynamic = (dateString: string) => {
   const trinityStr = trinitySunday.toISOString().split('T')[0];
   const corpusStr = corpusChristi.toISOString().split('T')[0];
 
+  // Month (0-indexed) and day of month
+  const m = date.getMonth();
+  const d = date.getDate();
+  const dayOfWeek = date.getDay();
+
+  // Transferred Solemnities in Brazil
+  // 1. Solenidade de São Pedro e São Paulo (normally June 29)
+  // Transferred to the Sunday in the date range June 28 - July 4
+  const isPeterAndPaulSunday = (dayOfWeek === 0) && ((m === 5 && d >= 28) || (m === 6 && d <= 4));
+  if (isPeterAndPaulSunday || (m === 5 && d === 29)) return 'red';
+
+  // 2. Assunção de Nossa Senhora (normally August 15)
+  // Transferred to the Sunday in the date range August 15 - August 21
+  const isAssumptionSunday = (dayOfWeek === 0) && (m === 7 && d >= 15 && d <= 21);
+  if (isAssumptionSunday || (m === 7 && d === 15)) return 'white';
+
+  // 3. Solenidade de Todos os Santos (normally November 1)
+  // Transferred to the Sunday in the date range November 1 - November 7
+  const isAllSaintsSunday = (dayOfWeek === 0) && (m === 10 && d >= 1 && d <= 7);
+  if (isAllSaintsSunday || (m === 10 && d === 1)) return 'white';
+
+  // Other major Catholic feasts and fixed solemnities
+  if (m === 9 && d === 12) return 'white'; // Nossa Senhora Aparecida (Oct 12)
+  if (m === 11 && d === 8) return 'white'; // Imaculada Conceição (Dec 8)
+  if (m === 11 && d === 25) return 'white'; // Natal (Dec 25)
+  if (m === 0 && d === 20) return 'red'; // São Sebastião (Jan 20)
+  if (m === 3 && d === 23) return 'red'; // São Jorge (Apr 23)
+  if (m === 10 && d === 2) return 'purple'; // Finados (Nov 2)
+
   // Specific Days (Red)
   if (dStr === palmStr || dStr === friStr || dStr === pentStr) return 'red';
   
@@ -145,6 +174,21 @@ export const getLiturgicalThemeDynamic = (dateString: string) => {
   if (date >= christmas || date <= baptismOfLord) return 'white'; // Natal
 
   return 'green'; // Tempo Comum
+};
+
+export const getTodayDateStringForLiturgy = (now: Date = new Date()) => {
+  // Se for sábado após as 17:00, usamos a liturgia de domingo (Vigília)
+  const isSaturdayAfternoon = now.getDay() === 6 && now.getHours() >= 17;
+  const targetDate = new Date(now);
+  if (isSaturdayAfternoon) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
+  
+  // Formata como YYYY-MM-DD no fuso horário local
+  const year = targetDate.getFullYear();
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+  const day = String(targetDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0];

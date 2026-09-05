@@ -38,6 +38,19 @@
         },
         "config": {
           "type": "object"
+        },
+        "testers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "email": { "type": "string" },
+              "paroquia": { "type": "string" },
+              "confirmado": { "type": "boolean" },
+              "dataAdicao": { "type": "string" }
+            }
+          }
         }
       }
     }
