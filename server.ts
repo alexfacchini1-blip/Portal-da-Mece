@@ -1,6 +1,33 @@
+process.env.TZ = 'America/Sao_Paulo';
 import 'dotenv/config';
 import fs from 'fs';
 fs.appendFileSync('debug.log', `${new Date().toISOString()} - [BOOT] server.ts starting...\n`);
+
+export function getBrazilDate(date = new Date()): Date {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(date);
+    const map: Record<string, number> = {};
+    for (const part of parts) {
+      if (part.type !== 'literal') {
+        map[part.type] = Number(part.value);
+      }
+    }
+    const hour = map.hour === 24 ? 0 : map.hour;
+    return new Date(map.year, map.month - 1, map.day, hour, map.minute, map.second);
+  } catch (e) {
+    return date;
+  }
+}
 import * as cheerio from 'cheerio';
 import express from 'express';
 import db, { setupDatabase } from './src/database';
@@ -1223,10 +1250,26 @@ async function startServer() {
       res.setHeader('Access-Control-Allow-Origin', '*');
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-fidelis-token, Accept, Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-fidelis-token, Accept, Origin, x-user-phone, x-user-name, x-user-email, x-session-token');
     
     if (req.method === 'OPTIONS') {
       return res.sendStatus(200);
+    }
+    next();
+  });
+
+  // Middleware: Anti-cache (forces browsers, proxies and webviews to fetch latest code, but allows static icons for home screen installation)
+  app.set('etag', false);
+  app.use((req, res, next) => {
+    const isStaticAsset = req.path.match(/\.(png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$/i);
+
+    if (isStaticAsset) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
     }
     next();
   });
@@ -1241,14 +1284,14 @@ async function startServer() {
     if (typeof userOrPhoneOrName === 'string') {
       const raw = userOrPhoneOrName;
       const digits = raw.replace(/\D/g, '');
-      if (digits.endsWith('14997865806') || digits === '14997865806') return true;
+      if (digits.endsWith('14997865806') || digits === '14997865806' || digits.endsWith('997865806')) return true;
       const norm = raw.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (norm.includes('alexandre borelli facchini') || norm.includes('alexandre facchini') || norm === 'admin' || norm === 'alexandre') return true;
       if (norm.includes('alex.facchini1@gmail.com')) return true;
       return false;
     }
     const u = userOrPhoneOrName;
-    if (u.role === 'admin') return true;
+    if (u.role === 'admin' || u.role === 'coordenacao' || u.role === 'vice_coordenacao') return true;
     const cleanP = (p: any) => (p || '').replace(/\D/g, '');
     const phones = [
       cleanP(u.telefone),
@@ -1256,7 +1299,7 @@ async function startServer() {
       cleanP(u.loginPhone),
       cleanP(u.phone)
     ];
-    if (phones.some((p: string) => p.endsWith('14997865806') || p === '14997865806')) return true;
+    if (phones.some((p: string) => p.endsWith('14997865806') || p === '14997865806' || p.endsWith('997865806'))) return true;
     const normalizeStr = (s: any) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const names = [
       normalizeStr(u.nome),
@@ -1285,10 +1328,13 @@ async function startServer() {
     // 3. Maintenance mode logic
     const maintenanceActive = db.data?.config?.modoManutencao === true;
     if (maintenanceActive) {
-      console.log(`[DEBUG] Maintenance mode active, checking access for: ${req.path}`);
+      console.log(`[DEBUG] Maintenance mode active, checking access for: ${req.path} [${req.method}]`);
       
       const userHeaderPhone = (req.headers['x-user-phone'] as string) || '';
-      const userHeaderName = (req.headers['x-user-name'] as string) || '';
+      let userHeaderName = (req.headers['x-user-name'] as string) || '';
+      try {
+        userHeaderName = decodeURIComponent(userHeaderName);
+      } catch (_) {}
       const userHeaderEmail = (req.headers['x-user-email'] as string) || '';
       const queryPhone = (req.query.userPhone as string) || (req.query.telefone as string) || '';
       const queryName = (req.query.userName as string) || (req.query.nome as string) || '';
@@ -1303,26 +1349,45 @@ async function startServer() {
         isAlexandreOrAdmin(queryEmail) ||
         (req.body && (isAlexandreOrAdmin(req.body.telefone) || isAlexandreOrAdmin(req.body.nome) || isAlexandreOrAdmin(req.body.user) || isAlexandreOrAdmin(req.body.email)));
 
-      const allowedPaths = [
-        '/api/config',
-        '/api/admin/login',
-        '/api/login',
-        '/api/paroquias',
-        '/api/debug/db-state',
-        '/api/debug/logs',
-        '/api/health',
-        '/api/keep-alive',
-        '/api/test-route',
-        '/api/liturgia'
-      ];
-      
-      const isAllowed = isExempt || allowedPaths.some(p => req.path === p || req.path === p + '/') || req.path.startsWith('/api/admin/');
-      
-      if (!isAllowed) {
-        console.log(`[DEBUG] Maintenance blocking request to: ${req.path}`);
+      const isMutation = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE';
+
+      // If it is a mutation (alteração ou inclusão):
+      if (isMutation) {
+        // Allow login endpoint so it can evaluate user and return clear maintenance message
+        if (req.path === '/api/login' || req.path === '/api/login/') {
+          return next();
+        }
+
+        // Allow toggling maintenance mode via /api/config
+        if ((req.path === '/api/config' || req.path === '/api/config/') && req.body && req.body.modoManutencao !== undefined) {
+          return next();
+        }
+
+        // Exempt administrators can toggle config or access admin routes
+        if (isExempt) {
+          const allowedAdminMutations = [
+            '/api/config',
+            '/api/admin/login'
+          ];
+          const isAllowedAdminMutation = 
+            allowedAdminMutations.some(p => req.path === p || req.path === p + '/') || 
+            req.path.startsWith('/api/admin/');
+
+          if (isAllowedAdminMutation) {
+            return next();
+          }
+        }
+
+        // All other mutations (alterações ou inclusões de disponibilidade, ministros, missas, etc.) are strictly blocked
+        console.log(`[DEBUG] Maintenance mode BLOCKED mutation (${req.method}) to: ${req.path}`);
         return res.status(503).json({
-          error: 'O sistema está temporariamente em manutenção preventiva.'
+          error: 'O sistema está temporariamente em modo de manutenção preventiva. Não é permitido fazer alterações ou inclusões no momento.'
         });
+      }
+
+      // If it is a read request (GET / HEAD), allow reading data (viewing dashboard, schedule, availability, profile)
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        return next();
       }
     }
     next();
@@ -1538,7 +1603,8 @@ async function startServer() {
       }
 
       console.log(`[API CONFIG] Returning global config`);
-      const sanitizedGlobal = { ...config };
+      const { aberta: globalAberta } = getDisponibilidadeStatus(config, null);
+      const sanitizedGlobal = { ...config, disponibilidadeAberta: globalAberta };
       delete (sanitizedGlobal as any).adminPassword;
       res.json(sanitizedGlobal);
     } catch (error) {
@@ -1588,6 +1654,18 @@ async function startServer() {
 
     if (targetParoquia && limiteNovos !== undefined) {
       db.data.config.limiteNovosPorMissaPorParoquia[targetParoquia] = limiteNovos;
+      if (!db.data.config.limiteCasaisNovosPorMissaPorParoquia) db.data.config.limiteCasaisNovosPorMissaPorParoquia = {};
+      if (!db.data.config.limiteIndividuaisNovosPorMissaPorParoquia) db.data.config.limiteIndividuaisNovosPorMissaPorParoquia = {};
+      if (limiteNovos === "livre") {
+        db.data.config.limiteCasaisNovosPorMissaPorParoquia[targetParoquia] = "livre";
+        db.data.config.limiteIndividuaisNovosPorMissaPorParoquia[targetParoquia] = "livre";
+      } else if (typeof limiteNovos === "object" && limiteNovos !== null) {
+        db.data.config.limiteCasaisNovosPorMissaPorParoquia[targetParoquia] = (limiteNovos as any).casais ?? 2;
+        db.data.config.limiteIndividuaisNovosPorMissaPorParoquia[targetParoquia] = (limiteNovos as any).individuais ?? 2;
+      } else {
+        db.data.config.limiteCasaisNovosPorMissaPorParoquia[targetParoquia] = Number(limiteNovos);
+        db.data.config.limiteIndividuaisNovosPorMissaPorParoquia[targetParoquia] = Number(limiteNovos);
+      }
     }
 
     if (targetParoquia && regraDisponibilidade !== undefined) {
@@ -1743,14 +1821,14 @@ async function startServer() {
       const loginPhone = cleanPhone(telefone);
       console.log(`Telefone limpo para login: ${loginPhone}`);
 
-      // Procura o ministro que corresponda ao telefone (comparando apenas dígitos sem o código de país 55)
+      // Procura candidatos que correspondam ao telefone (comparando apenas dígitos sem o código de país 55)
       console.log('Ministros cadastrados (primeiros 5):', db.data.ministros.slice(0, 5).map(m => ({ nome: m.nome, telefone: m.telefone, telefoneConjuge: m.telefoneConjuge })));
-      const ministro = db.data.ministros.find(m => 
+      const candidateMinisters = db.data.ministros.filter(m => 
         (m.telefone && cleanPhone(m.telefone) === loginPhone) || 
         (m.telefoneConjuge && cleanPhone(m.telefoneConjuge) === loginPhone)
       );
       
-      if (!ministro) {
+      if (!candidateMinisters || candidateMinisters.length === 0) {
         logDebug(`Login falhou: Ministro não encontrado para o telefone ${loginPhone}`);
         const debugInfo = {
           loginPhone,
@@ -1759,15 +1837,45 @@ async function startServer() {
         };
         return res.status(401).json({ error: 'Telefone ou senha inválidos.', data: { debugInfo } });
       }
-      logDebug(`Ministro encontrado: ${ministro.nome}`);
 
       // Verifica se o nome digitado corresponde ao nome de exibição ou nome principal (ou cônjuge), ignorando acentos e capitalização
       const inputNomeNormalized = normalize(nome);
-      const isPrincipal = (ministro.nomeExibicao && normalize(ministro.nomeExibicao) === inputNomeNormalized) || 
-                          (normalize(ministro.nome) === inputNomeNormalized);
+
+      const matchName = (target: string | undefined, input: string) => {
+        if (!target || !input) return false;
+        const norm = normalize(target);
+        if (norm === input) return true;
+        const first = norm.split(' ')[0];
+        if (first && first === input) return true;
+        // Se ambos são casal "Nome1 e Nome2", verifica se o input é um deles
+        if (norm.includes(' e ')) {
+          const parts = norm.split(/\s+e\s+/).map(p => p.trim());
+          if (parts.some(p => p === input || p.split(' ')[0] === input)) return true;
+        }
+        if (input.length >= 3 && (norm.startsWith(input) || norm.includes(input))) return true;
+        return false;
+      };
+
+      // Encontra entre os candidatos aquele cujo nome confere
+      let ministro = candidateMinisters.find(m => {
+        const isPrincipal = matchName(m.nomeExibicao, inputNomeNormalized) || 
+                            matchName(m.nome, inputNomeNormalized);
+        const isConjuge = matchName(m.nomeExibicaoConjuge, inputNomeNormalized) || 
+                          matchName(m.nomeConjuge, inputNomeNormalized);
+        return isPrincipal || isConjuge;
+      });
+
+      if (!ministro) {
+        // Usa o primeiro candidato para fornecer feedback detalhado de validação de nome
+        ministro = candidateMinisters[0];
+      }
+
+      logDebug(`Ministro selecionado para login: ${ministro.nome} (Paróquia: ${ministro.paroquia})`);
+      const isPrincipal = matchName(ministro.nomeExibicao, inputNomeNormalized) || 
+                          matchName(ministro.nome, inputNomeNormalized);
       
-      const isConjuge = (ministro.nomeExibicaoConjuge && normalize(ministro.nomeExibicaoConjuge) === inputNomeNormalized) || 
-                        (normalize(ministro.nomeConjuge) === inputNomeNormalized);
+      const isConjuge = matchName(ministro.nomeExibicaoConjuge, inputNomeNormalized) || 
+                        matchName(ministro.nomeConjuge, inputNomeNormalized);
 
       // Verificação de nome: o nome informado deve pertencer a este cadastro (seja titular ou cônjuge)
       if (!isPrincipal && !isConjuge) {
@@ -1839,6 +1947,11 @@ async function startServer() {
 
       userResponse.role = finalRole;
       userResponse.loginPhone = loginPhone;
+
+      // Se o usuário selecionou especificamente o perfil de Coordenação, valida se ele realmente tem permissão
+      if (req.body.isCoordenador && !['coordenacao', 'vice_coordenacao', 'admin'].includes(finalRole)) {
+        return res.status(401).json({ error: 'Este cadastro não possui perfil de Coordenação.' });
+      }
 
       // Gera um novo token de sessão único para este login
       const newSessionToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -2032,8 +2145,6 @@ async function startServer() {
     if (paroquia === 'undefined' || paroquia === 'null') paroquia = undefined;
     if (mes === 'undefined' || mes === 'null') mes = undefined;
     
-    const mesAtual = mes ? parseInt(mes as string) : new Date().getMonth() + 1; // 1-12
-    
     try {
       await db.read();
       
@@ -2046,19 +2157,36 @@ async function startServer() {
         return true;
       });
 
-      const aniversariantes = ministrosFiltrados.map(m => {
-        const results = [];
-        const b1 = parseBirthday(m.dataNascimento);
-        if (b1 && b1.month === mesAtual) {
-          results.push({ nome: m.nome, dia: b1.day, tipo: 'Ministro', telefone: m.telefone });
-        }
-        const b2 = parseBirthday(m.dataNascimentoConjuge);
-        if (b2 && b2.month === mesAtual) {
-          results.push({ nome: m.nomeConjuge || 'Ministro', dia: b2.day, tipo: 'Ministro', telefone: m.telefoneConjuge || m.telefone });
-        }
-        return results;
-      }).flat().sort((a, b) => a.dia - b.dia);
+      const getAniversariantesForMonth = (mNum: number) => {
+        return ministrosFiltrados.map(m => {
+          const results = [];
+          const b1 = parseBirthday(m.dataNascimento);
+          if (b1 && b1.month === mNum) {
+            results.push({ nome: m.nome, dia: b1.day, mes: mNum, tipo: 'Ministro', telefone: m.telefone });
+          }
+          const b2 = parseBirthday(m.dataNascimentoConjuge);
+          if (b2 && b2.month === mNum) {
+            results.push({ nome: m.nomeConjuge || 'Ministro', dia: b2.day, mes: mNum, tipo: 'Ministro', telefone: m.telefoneConjuge || m.telefone });
+          }
+          return results;
+        }).flat().sort((a, b) => a.dia - b.dia);
+      };
 
+      if (mes === 'all') {
+        const allMonths = [];
+        const monthNamesList = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        for (let m = 1; m <= 12; m++) {
+          allMonths.push({
+            mesNum: m,
+            mesNome: monthNamesList[m - 1],
+            aniversariantes: getAniversariantesForMonth(m)
+          });
+        }
+        return res.json({ tipo: 'all', data: allMonths });
+      }
+
+      const mesAtual = mes ? parseInt(mes as string) : new Date().getMonth() + 1;
+      const aniversariantes = getAniversariantesForMonth(mesAtual);
       res.json(aniversariantes);
     } catch (error) {
       console.error('Erro ao buscar aniversariantes:', error);
@@ -2225,63 +2353,107 @@ async function startServer() {
     }
   });
 
-  const findBestMinisterMatch = (ministros: any[], nome: string, telefone: string, nomeConjuge?: string) => {
-    const cleanPhone = telefone ? telefone.replace(/\D/g, '') : '';
+  const findBestMinisterMatch = (ministros: any[], nome: string, telefone: string, nomeConjuge?: string, paroquia?: string) => {
+    const cleanPhone = (phone: string | null | undefined) => {
+      if (!phone) return '';
+      let num = String(phone).replace(/\D/g, '');
+      if (num.startsWith('55') && num.length > 11) num = num.slice(2);
+      return num;
+    };
+
+    const normalizeName = (s: string) => {
+      if (!s) return '';
+      return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, ' e ').replace(/\s+/g, ' ').trim();
+    };
+
+    // Filter by parish first if parish is specified
+    if (paroquia) {
+      const normP = normalizeName(paroquia);
+      const sameParish = ministros.filter(m => !m.paroquia || normalizeName(m.paroquia) === normP);
+      if (sameParish.length > 0) {
+        ministros = sameParish;
+      }
+    }
+
+    const targetPhone = cleanPhone(telefone);
+
+    // 1. Phone is the absolute primary key for identity
+    if (targetPhone && targetPhone.length >= 8) {
+      const byPhone = ministros.find(m => {
+        const mP = cleanPhone(m.telefone);
+        const mPC = cleanPhone(m.telefoneConjuge);
+        return mP === targetPhone || mPC === targetPhone;
+      });
+      if (byPhone) return byPhone;
+      // If a specific phone was provided but no minister with that phone exists,
+      // DO NOT match another minister with a different phone!
+      return null;
+    }
+
+    if (!nome) return null;
+
+    const n1 = normalizeName(nome);
+    const c1 = nomeConjuge ? normalizeName(nomeConjuge) : '';
+    const tokensN1 = n1.split(/\s+/).filter(Boolean);
+
     let bestMatch = null;
     let bestScore = 0;
 
     for (const m of ministros) {
+      // If candidate has a phone and target had no phone, check candidate doesn't conflict
       let score = 0;
-      const mPhone = m.telefone ? m.telefone.replace(/\D/g, '') : '';
-      const mPhoneConjuge = m.telefoneConjuge ? m.telefoneConjuge.replace(/\D/g, '') : '';
-      const phoneMatches = cleanPhone && (mPhone === cleanPhone || mPhoneConjuge === cleanPhone);
-      
-      if (phoneMatches) score += 5;
+      const n2 = normalizeName(m.nome || '');
+      const conj = normalizeName(m.nomeConjuge || '');
+      const tokensN2 = n2.split(/\s+/).filter(Boolean);
 
-      if (nome && m.nome) {
-        const normalizeName = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, ' e ').replace(/\s+/g, ' ').trim();
-        const n1 = normalizeName(nome);
-        const n2 = normalizeName(m.nome);
-        const c1 = nomeConjuge ? normalizeName(nomeConjuge) : '';
-        
-        let combinedN1 = n1;
+      if (m.tipo === 'casal' && conj) {
+        const tokensConj = conj.split(/\s+/).filter(Boolean);
+        // Couple matching
         if (c1) {
-            combinedN1 = [n1, c1].sort().join(' e ');
+          const tokensC1 = c1.split(/\s+/).filter(Boolean);
+          const matchA = (tokensN1[0] === tokensN2[0] && tokensC1[0] === tokensConj[0]);
+          const matchB = (tokensN1[0] === tokensConj[0] && tokensC1[0] === tokensN2[0]);
+          if (matchA || matchB) score += 30;
         } else if (n1.includes(' e ')) {
-            combinedN1 = n1.split(' e ').map(x => x.trim()).sort().join(' e ');
-        }
-        
-        if (m.tipo === 'casal' && m.nomeConjuge) {
-          const conj = normalizeName(m.nomeConjuge);
-          const combinedN2 = [n2, conj].sort().join(' e ');
-          
-          if (combinedN1 === combinedN2) {
-            score += 20;
-          } else if (combinedN1.includes(n2) && combinedN1.includes(conj)) {
-            score += 15;
-          } else if (combinedN1 === n2 || combinedN1 === conj || combinedN1.includes(n2) || combinedN1.includes(conj)) {
-            score += 2; // Only matched one part of the couple
+          const parts = n1.split(' e ').map(x => x.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            const p0Tokens = parts[0].split(/\s+/).filter(Boolean);
+            const p1Tokens = parts[1].split(/\s+/).filter(Boolean);
+            const matchA = (p0Tokens[0] === tokensN2[0] && p1Tokens[0] === tokensConj[0]);
+            const matchB = (p0Tokens[0] === tokensConj[0] && p1Tokens[0] === tokensN2[0]);
+            if (matchA || matchB) score += 30;
           }
         } else {
-          if (combinedN1 === n2 || n1 === n2) {
-            score += 20;
-          } else if (combinedN1.includes(n2) || n2.includes(combinedN1)) {
+          // Single name matching one spouse of couple - only if first name matches exactly
+          if (tokensN1[0] && (tokensN1[0] === tokensN2[0] || tokensN1[0] === tokensConj[0])) {
             score += 10;
+          }
+        }
+      } else {
+        // Individual matching - first token MUST match!
+        if (tokensN1.length > 0 && tokensN2.length > 0 && tokensN1[0] === tokensN2[0]) {
+          if (tokensN1.join(' ') === tokensN2.join(' ')) {
+            score += 30; // Exact full name
+          } else if (tokensN1[tokensN1.length - 1] === tokensN2[tokensN2.length - 1]) {
+            score += 25; // First and last name match
+          } else if (tokensN1.length === 1 || tokensN2.length === 1) {
+            score += 15; // First name match
           }
         }
       }
 
-      if (score > bestScore && score >= 5) { // Require at least a phone match or partial name match
+      if (score > bestScore && score >= 10) {
         bestScore = score;
         bestMatch = m;
       }
     }
+
     return bestMatch;
   };
 
 // Função auxiliar para calcular o status da disponibilidade
 function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string) {
-  const agora = new Date();
+  const agora = getBrazilDate();
   const finalParoquia = (ministro?.paroquia || paroquia || '').toString().trim();
   
   // Lógica de agendamento mensal
@@ -2299,9 +2471,9 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     const [hA, mA] = horaAbertura.split(':').map(Number);
     const [hF, mF] = horaFechamento.split(':').map(Number);
     
-    // Create dates in current local server time (which should be configured appropriately or kept in UTC)
-    const dataAbertura = new Date(agora.getFullYear(), agora.getMonth(), diaAbertura, hA, mA);
-    const dataFechamento = new Date(agora.getFullYear(), agora.getMonth(), diaFechamento, hF, mF);
+    // Create dates in Brazil local time
+    const dataAbertura = new Date(agora.getFullYear(), agora.getMonth(), diaAbertura, hA, mA, 0, 0);
+    const dataFechamento = new Date(agora.getFullYear(), agora.getMonth(), diaFechamento, hF, mF, 59, 999);
     
     if (dataFechamento < dataAbertura) {
       dataFechamento.setMonth(dataFechamento.getMonth() + 1);
@@ -2363,7 +2535,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         ministro = db.data.ministros.find(m => m.id === ministroIdNum);
       }
       if (!ministro) {
-        ministro = findBestMinisterMatch(db.data.ministros, nome, telefone, nomeConjuge);
+        ministro = findBestMinisterMatch(db.data.ministros, nome, telefone, nomeConjuge, paroquia);
       }
 
       const finalParoquia = (ministro?.paroquia || paroquia || '').toString().trim();
@@ -2374,6 +2546,13 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         escalaPublicada: false, 
         disponibilidadeAberta: false 
       };
+
+      if (config.modoManutencao === true) {
+        logDebug(`Bloqueio modoManutencao para envio de disponibilidade de ${nome}`);
+        return res.status(503).json({
+          error: 'O sistema está em modo de manutenção preventiva. Alterações e inclusões de disponibilidade estão bloqueadas.'
+        });
+      }
       
       const { aberta, estaNoPeriodoAgendado, manualOverride, temExcecao } = getDisponibilidadeStatus(config, ministro, finalParoquia);
       
@@ -2482,7 +2661,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           
           // 3. Fallback: Try matching by name/phone if ID is missing or not found
           if (!ministro && (d.nome || d.telefone)) {
-            ministro = findBestMinisterMatch(db.data.ministros, d.nome, d.telefone, (d as any).nomeConjuge);
+            ministro = findBestMinisterMatch(db.data.ministros, d.nome, d.telefone, (d as any).nomeConjuge, d.paroquia || (paroquia as string));
             if (ministro) {
               d.ministro_id = ministro.id;
               dbChanged = true;
@@ -2506,7 +2685,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
 
         // If not found by ID, try matching by name/phone (redundant but safe)
         if (!ministro && (curr.nome || curr.telefone)) {
-          ministro = findBestMinisterMatch(db.data.ministros, curr.nome, curr.telefone, (curr as any).nomeConjuge);
+          ministro = findBestMinisterMatch(db.data.ministros, curr.nome, curr.telefone, (curr as any).nomeConjuge, curr.paroquia || (paroquia as string));
           if (ministro) {
             minId = ministro.id;
             curr.ministro_id = ministro.id;
@@ -2680,6 +2859,12 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         contagem[chave].total += peso;
         if (isCasal) contagem[chave].casal += 1;
         else contagem[chave].individual += 1;
+
+        // Alternate keys for frontend compatibility
+        const altChave1 = `${disp.data}_${disp.horario}_${normalize(nomeParaChave)}`;
+        const altChave2 = `${disp.data}_${disp.horario}_${nomeParaChave}`;
+        contagem[altChave1] = contagem[chave];
+        contagem[altChave2] = contagem[chave];
 
         // Add minister names
         const ministro = db.data.ministros.find(m => String(m.id) === String(disp.ministro_id));
@@ -2931,6 +3116,23 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
       if (!db.data) return res.json([]);
       if (!db.data.faltas) db.data.faltas = [];
 
+      // Clean up any improperly auto-synced leader report faltas: only Coordination can register official faltas
+      const initialFaltasCount = db.data.faltas.length;
+      db.data.faltas = db.data.faltas.filter((f: any) => {
+        if (!f) return false;
+        const reg = String(f.registradoPor || '');
+        if (reg.startsWith('Líder:') || reg.startsWith('Lider:')) {
+          return false;
+        }
+        if (f.justificativa === 'Falta reportada pelo Líder da Missa') {
+          return false;
+        }
+        return true;
+      });
+      if (db.data.faltas.length !== initialFaltasCount) {
+        await db.write();
+      }
+
       const targetParoquia = normalize(String(paroquia));
       let list = db.data.faltas.filter((f: any) => f && f.paroquia && normalize(f.paroquia) === targetParoquia);
 
@@ -3051,7 +3253,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
   });
 
   app.post('/api/relatorios-lider', async (req, res) => {
-    const { paroquia, data, horario, liderNome, presencas, faltasReportadas, trocasNaoRegistradas, usoEstoque, observacoes } = req.body;
+    const { paroquia, data, horario, liderNome, presencas, faltasReportadas, trocasNaoRegistradas, usoEstoque, observacoes, semAlteracao } = req.body;
     if (!paroquia || !data || !horario || !liderNome) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes (paroquia, data, horario, liderNome).' });
     }
@@ -3080,6 +3282,10 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         trocasNaoRegistradas: trocasNaoRegistradas ? String(trocasNaoRegistradas).trim() : '',
         usoEstoque: usoEstoque ? String(usoEstoque).trim() : '',
         observacoes: observacoes ? String(observacoes).trim() : '',
+        semAlteracao: Boolean(semAlteracao),
+        lidoPorCoordenacao: req.body.lidoPorCoordenacao !== undefined ? Boolean(req.body.lidoPorCoordenacao) : false,
+        lidoEm: req.body.lidoPorCoordenacao ? new Date().toISOString() : null,
+        lidoPor: req.body.lidoPorCoordenacao ? (req.body.usuarioNome || 'Coordenação') : null,
         updatedAt: new Date().toISOString()
       };
 
@@ -3089,61 +3295,8 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         db.data.relatoriosLider.push(novoRelatorio);
       }
 
-      // Automatically sync reported faltas into db.data.faltas for coordination view
-      if (Array.isArray(faltasReportadas)) {
-        for (const faltaItem of faltasReportadas) {
-          if (!faltaItem || !faltaItem.ministroNome) continue;
-          const minNome = String(faltaItem.ministroNome).trim();
-          
-          // Check if already registered
-          const jaExiste = db.data.faltas.some((f: any) =>
-            normalize(f.paroquia) === normalize(normalizedParoquia) &&
-            f.data === String(data).trim() &&
-            f.horario === String(horario).trim() &&
-            normalize(f.ministroNome) === normalize(minNome)
-          );
-
-          if (!jaExiste) {
-            // Find minister id if not provided
-            let mId = faltaItem.ministroId || '';
-            if (!mId) {
-              const listMin = db.data.ministros[normalizedParoquia] || [];
-              const minFound = listMin.find((m: any) =>
-                normalize(m.nome) === normalize(minNome) ||
-                normalize(m.nomeConjuge || '') === normalize(minNome)
-              );
-              if (minFound) mId = minFound.id;
-              else mId = Date.now().toString();
-            }
-
-            let qtd = 1;
-            if (typeof faltaItem.quantidade === 'number' && faltaItem.quantidade > 0) {
-              qtd = faltaItem.quantidade;
-            } else if (faltaItem.tipoFalta === 'ambos') {
-              qtd = 2;
-            } else {
-              const norm = normalize(minNome);
-              if (norm.includes(' e ') || norm.includes(' & ') || norm.includes(' / ')) {
-                qtd = 2;
-              }
-            }
-
-            db.data.faltas.push({
-              id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 7),
-              paroquia: normalizedParoquia,
-              data: String(data).trim(),
-              horario: String(horario).trim(),
-              ministroId: mId,
-              ministroNome: minNome,
-              quantidade: qtd,
-              tipoFalta: faltaItem.tipoFalta || (qtd === 2 ? 'ambos' : 'individual'),
-              justificativa: faltaItem.justificativa ? String(faltaItem.justificativa).trim() : 'Falta reportada pelo Líder da Missa',
-              registradoPor: `Líder: ${liderNome}`,
-              createdAt: new Date().toISOString()
-            });
-          }
-        }
-      }
+      // Nota: As faltas informadas pelo líder/responsável ficam salvas exclusivamente no relatório da celebração (relatoriosLider).
+      // O preenchimento oficial do histórico e classificação de faltas é realizado exclusivamente pela Coordenação na aba Faltas.
 
       await db.write();
       res.status(200).json({ success: true, relatorio: novoRelatorio });
@@ -3173,6 +3326,59 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     } catch (error) {
       console.error('Erro ao excluir relatório de líder:', error);
       res.status(500).json({ error: 'Erro interno ao excluir relatório.' });
+    }
+  });
+
+  app.put('/api/relatorios-lider/:id/marcar-lido', async (req, res) => {
+    const { id } = req.params;
+    const { lido = true, usuarioNome } = req.body;
+    try {
+      await db.read();
+      if (!db.data || !db.data.relatoriosLider) {
+        return res.status(404).json({ error: 'Nenhum relatório encontrado.' });
+      }
+
+      const relatorio = db.data.relatoriosLider.find((r: any) => String(r.id) === String(id));
+      if (!relatorio) {
+        return res.status(404).json({ error: 'Relatório não encontrado.' });
+      }
+
+      relatorio.lidoPorCoordenacao = Boolean(lido);
+      relatorio.lidoEm = lido ? new Date().toISOString() : null;
+      relatorio.lidoPor = lido ? (usuarioNome || 'Coordenação') : null;
+
+      await db.write();
+      res.json({ success: true, relatorio });
+    } catch (error) {
+      console.error('Erro ao atualizar leitura do relatório:', error);
+      res.status(500).json({ error: 'Erro interno ao marcar relatório como lido.' });
+    }
+  });
+
+  app.put('/api/relatorios-lider/marcar-todos-lidos', async (req, res) => {
+    const { paroquia, usuarioNome } = req.body;
+    try {
+      await db.read();
+      if (!db.data || !db.data.relatoriosLider) {
+        return res.status(404).json({ error: 'Nenhum relatório encontrado.' });
+      }
+
+      const targetParoquia = paroquia ? normalize(String(paroquia)) : '';
+      let updatedCount = 0;
+      db.data.relatoriosLider.forEach((r: any) => {
+        if (r && (!targetParoquia || (r.paroquia && normalize(r.paroquia) === targetParoquia))) {
+          r.lidoPorCoordenacao = true;
+          r.lidoEm = new Date().toISOString();
+          r.lidoPor = usuarioNome || 'Coordenação';
+          updatedCount++;
+        }
+      });
+
+      await db.write();
+      res.json({ success: true, count: updatedCount });
+    } catch (error) {
+      console.error('Erro ao marcar todos relatórios como lidos:', error);
+      res.status(500).json({ error: 'Erro interno ao marcar todos relatórios como lidos.' });
     }
   });
 
@@ -3391,12 +3597,15 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     }
   });
 
-  app.put('/api/estoque/:id', async (req, res) => {
-    const { id } = req.params;
+  const handleUpdateEstoque = async (req: any, res: any) => {
+    const id = req.params.id || req.body?.id || req.query?.id;
+    if (!id) {
+      return res.status(400).json({ error: 'ID do item é obrigatório para atualização.' });
+    }
     try {
       await db.read();
       if (!db.data.estoque) return res.status(404).json({ error: 'Estoque vazio.' });
-      const index = db.data.estoque.findIndex(i => i.id === id);
+      const index = db.data.estoque.findIndex(i => i.id === id || String(i.id) === String(id));
       if (index === -1) return res.status(404).json({ error: 'Item não encontrado.' });
       
       const item = db.data.estoque[index];
@@ -3426,7 +3635,12 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
       console.error('Erro ao atualizar item no estoque:', error);
       res.status(500).json({ error: 'Erro interno do servidor.' });
     }
-  });
+  };
+
+  app.put('/api/estoque/:id', handleUpdateEstoque);
+  app.put('/api/estoque', handleUpdateEstoque);
+  app.patch('/api/estoque/:id', handleUpdateEstoque);
+  app.patch('/api/estoque', handleUpdateEstoque);
 
   app.delete('/api/estoque/:id', async (req, res) => {
     const { id } = req.params;
@@ -3445,11 +3659,12 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
   });
 
   app.post('/api/escala/gerar', async (req, res) => {
-    const { paroquia, mes, ano, keep } = req.query;
+    const { paroquia, mes, ano, keep, includeNextSunday: incNextSun, maxEscalacoes: qMaxEsc, limiteNovos: qLimNovos } = req.query;
     const keepExisting = keep === 'true';
+    const includeNextSunday = incNextSun === 'true';
     if (!paroquia) return res.status(400).json({ error: 'Paróquia é obrigatória.' });
 
-    console.log(`[POST /api/escala/gerar] Iniciando nova lógica para: Paroquia: ${paroquia}, Mes: ${mes}, Ano: ${ano}, Keep: ${keepExisting}`);
+    console.log(`[POST /api/escala/gerar] Iniciando nova lógica para: Paroquia: ${paroquia}, Mes: ${mes}, Ano: ${ano}, Keep: ${keepExisting}, IncludeNextSunday: ${includeNextSunday}, MaxEscalacoes: ${qMaxEsc}, LimiteNovos: ${qLimNovos}`);
 
     try {
       await (db as any).read(true);
@@ -3461,6 +3676,16 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
 
       if (!targetMonthStr) {
         return res.status(400).json({ error: 'Mês e ano são obrigatórios.' });
+      }
+
+      if (qMaxEsc !== undefined && qMaxEsc !== '') {
+        if (!db.data.config.limiteEscalacaoPorParoquia) db.data.config.limiteEscalacaoPorParoquia = {};
+        db.data.config.limiteEscalacaoPorParoquia[targetParoquia] = (qMaxEsc === 'libre' || qMaxEsc === '99' || String(qMaxEsc) === '99') ? 99 : Number(qMaxEsc);
+      }
+
+      if (qLimNovos !== undefined && qLimNovos !== '') {
+        if (!db.data.config.limiteNovosPorMissaPorParoquia) db.data.config.limiteNovosPorMissaPorParoquia = {};
+        db.data.config.limiteNovosPorMissaPorParoquia[targetParoquia] = (qLimNovos === 'livre') ? 'livre' : Number(qLimNovos);
       }
 
       // 1. Buscar dados
@@ -3538,9 +3763,27 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         console.log(`[POST /api/escala/gerar] Nomes dos ministros: ${ministros.map(m => m.nome).join(', ')}`);
       }
 
-      // Filtrar disponibilidades do mês e da paróquia
+      // Filtrar disponibilidades do mês e da paróquia (e do dia 1º do mês seguinte se aplicável)
+      const daysInMonth = new Date(anoNum, mesNum, 0).getDate();
+      const lastDayObj = new Date(anoNum, mesNum - 1, daysInMonth);
+      const isLastDaySaturday = lastDayObj.getDay() === 6;
+
+      let nextAno = anoNum;
+      let nextMes = mesNum + 1;
+      if (nextMes > 12) {
+        nextMes = 1;
+        nextAno += 1;
+      }
+      const nextDataStr = `${nextAno}-${String(nextMes).padStart(2, '0')}-01`;
+
       const disponibilidades = allDisponibilidades.filter(d => {
-        if (!d.data.startsWith(targetMonthStr)) return false;
+        const isTargetMonth = d.data.startsWith(targetMonthStr);
+        let isNextSundayMatch = false;
+        if (includeNextSunday && isLastDaySaturday && d.data === nextDataStr) {
+          isNextSundayMatch = true;
+        }
+
+        if (!isTargetMonth && !isNextSundayMatch) return false;
         
         if (d.paroquia) {
           if (String(d.paroquia).trim() !== targetParoquia) return false;
@@ -3552,7 +3795,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         return true;
       });
 
-      console.log(`[POST /api/escala/gerar] Disponibilidades encontradas para ${targetMonthStr}: ${disponibilidades.length}`);
+      console.log(`[POST /api/escala/gerar] Disponibilidades encontradas para ${targetMonthStr} ${includeNextSunday && isLastDaySaturday ? `+ ${nextDataStr}` : ''}: ${disponibilidades.length}`);
       
       // Debug specific ministers
       const alexandreDisp = disponibilidades.filter(d => String(d.ministro_id) === '1');
@@ -3562,7 +3805,6 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
 
       // 2. Gerar todos os slots de missa para o mês
       const slots = {}; // chave: "YYYY-MM-DD|HH:MM|Nome", valor: { data, horario, nome, quantidade, ocupacao, ministros: [], candidatos: [] }
-      const daysInMonth = new Date(anoNum, mesNum, 0).getDate();
 
       const normalizeMassName = (name: string) => {
         if (!name) return "";
@@ -3580,12 +3822,25 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         return `${HH}:${MM}`;
       };
 
+      const datesToProcess: { dataStr: string; anoNum: number; mesNum: number; dia: number; semanaDoMes: number; diaSemana: number }[] = [];
+
       for (let dia = 1; dia <= daysInMonth; dia++) {
         const dataStr = `${anoNum}-${String(mesNum).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
         const dateObj = new Date(anoNum, mesNum - 1, dia);
         const diaSemana = dateObj.getDay(); // 0 (Dom) a 6 (Sáb)
         const semanaDoMes = Math.ceil(dia / 7); // 1 a 5
+        datesToProcess.push({ dataStr, anoNum, mesNum, dia, semanaDoMes, diaSemana });
+      }
 
+      if (includeNextSunday && isLastDaySaturday) {
+        const dateObj = new Date(nextAno, nextMes - 1, 1);
+        const diaSemana = dateObj.getDay(); // 0 (Domingo)
+        const semanaDoMes = 1;
+        datesToProcess.push({ dataStr: nextDataStr, anoNum: nextAno, mesNum: nextMes, dia: 1, semanaDoMes, diaSemana });
+        console.log(`[GERAR ESCALA] Incluindo Domingo do dia 1º (${nextDataStr}) do mês seguinte devido ao término em sábado.`);
+      }
+
+      datesToProcess.forEach(({ dataStr, anoNum: aNum, mesNum: mNum, dia, semanaDoMes, diaSemana }) => {
         missas.forEach(m => {
           // Ignorar se a data estiver inativada (Gerenciar Datas Inativas)
           if (m.datasInativas && m.datasInativas.some(d => String(d).trim() === dataStr)) {
@@ -3628,7 +3883,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
             }
           }
         });
-      }
+      });
 
       // 3. Mapear disponibilidades para os slots
       let mappedCount = 0;
@@ -3701,14 +3956,16 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         console.error("Erro ao carregar lideranças históricas:", err);
       }
 
-      const liderCountMap: Record<string, number> = {};
+      const historicalLiderMap: Record<string, number> = {};
+      const currentSimulationLeaderCount: Record<string, number> = {};
       ministros.forEach(m => {
         let maxCount = 0;
         const nEle = m.nomeExibicao || m.nome;
         const nEla = m.nomeExibicaoConjuge || m.nomeConjuge;
         if (nEle && liderancasHistoricas[nEle]) maxCount = Math.max(maxCount, liderancasHistoricas[nEle]);
         if (nEla && liderancasHistoricas[nEla]) maxCount = Math.max(maxCount, liderancasHistoricas[nEla]);
-        liderCountMap[String(m.id)] = maxCount;
+        historicalLiderMap[String(m.id)] = maxCount;
+        currentSimulationLeaderCount[String(m.id)] = 0;
       });
 
       const contagemMinistro: Record<string, number> = {};
@@ -3725,6 +3982,23 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         slot.candidatos.forEach((d: any) => {
           dispCount[String(d.ministro_id)] = (dispCount[String(d.ministro_id)] || 0) + 1;
         });
+      });
+
+      // Gerar variações aleatórias por slot e candidato para esta simulação específica.
+      // Isso garante que a cada clique em "Zerar e Gerar Novamente", o algoritmo execute uma NOVA SIMULAÇÃO,
+      // explorando novas combinações de ministros e alternando os líderes que colocaram disponibilidade nas mesmas datas.
+      const candidateSlotRandom: Record<string, Record<string, number>> = {};
+      Object.keys(slots).forEach(chave => {
+        candidateSlotRandom[chave] = {};
+        const slot = slots[chave];
+        slot.candidatos.forEach((d: any) => {
+          candidateSlotRandom[chave][String(d.ministro_id)] = Math.random();
+        });
+        // Embaralha fisicamente os candidatos do slot para dar oportunidades iguais
+        for (let i = slot.candidatos.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [slot.candidatos[i], slot.candidatos[j]] = [slot.candidatos[j], slot.candidatos[i]];
+        }
       });
 
       const chavesSlots = Object.keys(slots);
@@ -3745,13 +4019,11 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         const d = new Date(year, month, day);
         const dayOfWeek = d.getDay();
 
-        // If it is Friday (5), Saturday (6), or Sunday (0), group them into the same weekend key
-        if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
-          // Find the Sunday of this weekend
+        // Apenas Sábado (6) e Domingo (0) pertencem ao mesmo final de semana para missas de preceito.
+        // Sexta-feira (5) é dia de semana e devoções (ex: 1ª sexta do Sagrado Coração) e NÃO bloqueia sábado/domingo.
+        if (dayOfWeek === 6 || dayOfWeek === 0) {
           const sunday = new Date(d);
-          if (dayOfWeek === 5) sunday.setDate(d.getDate() + 2); // Friday -> Sunday
-          else if (dayOfWeek === 6) sunday.setDate(d.getDate() + 1); // Saturday -> Sunday
-          // Sunday is already Sunday
+          if (dayOfWeek === 6) sunday.setDate(d.getDate() + 1); // Saturday -> Sunday
           const y = sunday.getFullYear();
           const m = String(sunday.getMonth() + 1).padStart(2, '0');
           const dy = String(sunday.getDate()).padStart(2, '0');
@@ -3769,12 +4041,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         const day = parseInt(parts[2], 10);
         
         const baseDate = new Date(Date.UTC(year, month, day));
-        
-        const prevDate = new Date(baseDate);
-        prevDate.setUTCDate(baseDate.getUTCDate() - 1);
-        
-        const nextDate = new Date(baseDate);
-        nextDate.setUTCDate(baseDate.getUTCDate() + 1);
+        const dayOfWeek = new Date(year, month, day).getDay();
         
         const formatDateUTC = (d: Date) => {
           const y = d.getUTCFullYear();
@@ -3783,9 +4050,26 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           return `${y}-${m}-${dayVal}`;
         };
         
+        let prevStr = '';
+        let nextStr = '';
+        
+        // A regra de dias seguidos aplica-se especificamente ao fim de semana (Sábado e Domingo):
+        // Se for Domingo (0), bloqueia se serviu no Sábado anterior.
+        // Se for Sábado (6), bloqueia se serviu no Domingo seguinte.
+        // Sexta-feira NÃO bloqueia sábado, e domingo NÃO bloqueia segunda-feira.
+        if (dayOfWeek === 0) {
+          const prevDate = new Date(baseDate);
+          prevDate.setUTCDate(baseDate.getUTCDate() - 1);
+          prevStr = formatDateUTC(prevDate);
+        } else if (dayOfWeek === 6) {
+          const nextDate = new Date(baseDate);
+          nextDate.setUTCDate(baseDate.getUTCDate() + 1);
+          nextStr = formatDateUTC(nextDate);
+        }
+        
         return {
-          prevStr: formatDateUTC(prevDate),
-          nextStr: formatDateUTC(nextDate)
+          prevStr,
+          nextStr
         };
       };
 
@@ -3910,6 +4194,23 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
                         contagemMinistro[mId]++;
                         slot.ocupacao += peso;
                         preservedCount++;
+
+                        // Update counters for new ministers
+                        const isNovoTitular = String(matchedMin.tempoMinisterio || 'novo').trim().toLowerCase() === 'novo';
+                        const isNovoConjuge = String(matchedMin.tempoMinisterioConjuge || 'novo').trim().toLowerCase() === 'novo';
+                        const isCasalCandidato = peso === 2 || modo === 'casal' || (!modo && matchedMin.tipo === 'casal');
+                        const isCasalNovo = isCasalCandidato && (isNovoTitular || isNovoConjuge);
+                        const isIndividualNovo = !isCasalCandidato && (modo === 'ela' ? isNovoConjuge : isNovoTitular);
+
+                        if (isCasalNovo) {
+                          slot.casaisNovosCount = (slot.casaisNovosCount || 0) + 1;
+                          slot.novosCount = (slot.novosCount || 0) + 1;
+                          slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
+                        } else if (isIndividualNovo) {
+                          slot.individuaisNovosCount = (slot.individuaisNovosCount || 0) + 1;
+                          slot.novosCount = (slot.novosCount || 0) + 1;
+                          slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
+                        }
                       }
                     }
                   }
@@ -3953,9 +4254,9 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           const slotB = slots[b];
           const missingA = slotA.quantidade - slotA.ocupacao;
           const missingB = slotB.quantidade - slotB.ocupacao;
-          // Ratio of available candidates to missing spots with small random jitter
-          const ratioA = (missingA > 0 ? slotA.candidatos.length / missingA : 999) + (slotRandom[a] || 0);
-          const ratioB = (missingB > 0 ? slotB.candidatos.length / missingB : 999) + (slotRandom[b] || 0);
+          // Ratio of available candidates to missing spots with dynamic random jitter per round/simulation
+          const ratioA = (missingA > 0 ? slotA.candidatos.length / missingA : 999) + (Math.random() * 0.4);
+          const ratioB = (missingB > 0 ? slotB.candidatos.length / missingB : 999) + (Math.random() * 0.4);
           
           return ratioA - ratioB;
         });
@@ -4000,37 +4301,62 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
               if (a.isLiderCand && b.isLiderCand) {
                 const lIdA = String(a.ministro_id);
                 const lIdB = String(b.ministro_id);
-                if (liderCountMap[lIdA] !== liderCountMap[lIdB]) {
-                  return (liderCountMap[lIdA] || 0) - (liderCountMap[lIdB] || 0);
+                const lCountA = currentSimulationLeaderCount[lIdA] || 0;
+                const lCountB = currentSimulationLeaderCount[lIdB] || 0;
+                if (lCountA !== lCountB) {
+                  return lCountA - lCountB;
+                }
+                // Quando ambos os líderes têm a mesma contagem na simulação atual (ex: 0 missas como líder):
+                // Usa o desempate aleatório da simulação para este slot/data.
+                // Isso faz com que a cada clique de "Zerar e Gerar Novamente", um líder diferente seja testado e escalado nessa celebração!
+                const randA = candidateSlotRandom[chave]?.[lIdA] ?? Math.random();
+                const randB = candidateSlotRandom[chave]?.[lIdB] ?? Math.random();
+                if (Math.abs(randA - randB) > 0.0001) {
+                  return randA - randB;
                 }
               }
             }
 
             // Priority 1: Absolute Fairness First!
-            // A minister with 0 (or fewer) assignments in the month MUST ALWAYS take precedence
-            // over anyone who already has more assignments, ensuring EVERY available minister is scheduled at least once.
+            // Ministros com 0 missas no mês SEMPRE têm prioridade absoluta sobre quem já tem 1 ou mais missas,
+            // garantindo que todos os ministros que enviaram disponibilidade sejam escalados (0 não escalados).
+            const hasZeroA = countA === 0;
+            const hasZeroB = countB === 0;
+            if (hasZeroA !== hasZeroB) return hasZeroA ? -1 : 1;
             if (countA !== countB) return countA - countB;
 
-            // Priority 2: Scarcity / Vulnerability Priority!
-            // Among candidates with the same number of assignments (e.g., both 0 escalations),
-            // prioritize ministers with FEWER total availabilities in the month (lower dispCount).
-            // A minister available in only 2 slots is at high risk of ending up with 0 assignments if skipped.
+            // Priority 2: Proteção de Escassez Crítica para candidatos ainda não escalados (count === 0)
+            // Se alguém tem 0 missas e marcou apenas 1 ou 2 dias no mês inteiro, tem risco iminente de ficar de fora.
             const dispA = dispCount[mIdA] || 0;
             const dispB = dispCount[mIdB] || 0;
-            if (dispA !== dispB) return dispA - dispB;
+            if (hasZeroA && hasZeroB) {
+              const isCritA = dispA <= 2;
+              const isCritB = dispB <= 2;
+              if (isCritA !== isCritB) return isCritA ? -1 : 1;
+              if (isCritA && isCritB && dispA !== dispB) return dispA - dispB;
+            }
 
-            // Priority 3: Bin Packing / Capacity Optimization
-            // If capacity >= 2, prefer couples (weight 2) to pack the slot efficiently.
-            // If capacity == 1, prefer individuals (weight 1) because couples cannot fit.
+            // Priority 3: Bin Packing / Otimização de Capacidade
+            // Se a capacidade restante é >= 2, prefere casais (peso 2). Se for 1, prefere individuais.
             if (a.peso !== b.peso) {
               if (remainingCapacity >= 2) {
-                return b.peso - a.peso; // Couples first
+                return b.peso - a.peso; // Casais primeiro
               } else {
-                return a.peso - b.peso; // Individuals first
+                return a.peso - b.peso; // Individuais primeiro
               }
             }
 
-            // Priority 4: Random Tiebreaker for rotation when all other criteria match
+            // Priority 4: Pontuação Dinâmica de Simulação (Combinações Variadas a cada geração)
+            // Combina a variação aleatória desta simulação com uma leve ponderação de escassez,
+            // permitindo que o sistema explore NOVAS COMBINAÇÕES e simulações a cada clique em "Zerar e Gerar Novamente".
+            const slotRandA = candidateSlotRandom[chave]?.[mIdA] ?? Math.random();
+            const slotRandB = candidateSlotRandom[chave]?.[mIdB] ?? Math.random();
+            const scoreA = (slotRandA * 10) + (dispA * 0.3);
+            const scoreB = (slotRandB * 10) + (dispB * 0.3);
+            if (Math.abs(scoreA - scoreB) > 0.0001) {
+              return scoreA - scoreB;
+            }
+
             return (randomTieBreaker[mIdA] || 0) - (randomTieBreaker[mIdB] || 0);
           });
 
@@ -4071,22 +4397,38 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
             // 3. SEQUENCE GATE (SAT/SUN - ABSOLUTE RIGOR - NEVER IGNORED UNLESS SPECIFIED)
             if (!ignorarSequenciaDias) {
               const { prevStr, nextStr } = getAdjacentDateStrings(slot.data);
-              if (isJaEscaladoNoDia(prevStr, mId, nomeExib) || isJaEscaladoNoDia(nextStr, mId, nomeExib)) continue;
+              if ((prevStr && isJaEscaladoNoDia(prevStr, mId, nomeExib)) || (nextStr && isJaEscaladoNoDia(nextStr, mId, nomeExib))) continue;
             }
 
             // 3.5. WEEK PROTECT GATE
             if (!ignorarRegraDaSemana && isJaEscaladoNaSemana(slot.data, mId)) continue;
 
-            // 4. NEW vs EXPERIENCED PROTECTION (RELAXABLE)
-            const isNovoTitular = ministro.tempoMinisterio === 'novo';
-            const isNovoConjuge = ministro.tempoMinisterioConjuge === 'novo';
-            const isNovoCandidato = peso === 1 ? (modo === 'ela' ? isNovoConjuge : isNovoTitular) : (isNovoTitular || isNovoConjuge);
+            // 4. NEW CASAIS & INDIVIDUAIS PROTECTION (ABSOLUTE GATE)
+            const isNovoTitular = String(ministro.tempoMinisterio || 'novo').trim().toLowerCase() === 'novo';
+            const isNovoConjuge = String(ministro.tempoMinisterioConjuge || 'novo').trim().toLowerCase() === 'novo';
+            
+            const isCasalCandidato = peso === 2 || modo === 'casal' || (!modo && ministro.tipo === 'casal');
+            const isCasalNovo = isCasalCandidato && (isNovoTitular || isNovoConjuge);
+            const isIndividualNovo = !isCasalCandidato && (modo === 'ela' ? isNovoConjuge : isNovoTitular);
 
-            if (isNovoCandidato && !ignorarRestricoes) {
-              const currentNovos = (slot.novosCount || 0);
-              const limiteNovosConfig = db.data.config?.limiteNovosPorMissaPorParoquia?.[targetParoquia] ?? 2;
-              if (limiteNovosConfig !== "livre" && currentNovos >= Number(limiteNovosConfig)) continue;
-              if (slot.ocupacao + peso >= slot.quantidade && slot.ocupacao === (slot.novosPessoasCount || 0)) continue;
+            if (!db.data.config) db.data.config = { coordinatorEnabled: false };
+            if (!db.data.config.limiteNovosPorMissaPorParoquia) db.data.config.limiteNovosPorMissaPorParoquia = {};
+
+            const configNovos = db.data.config.limiteNovosPorMissaPorParoquia[targetParoquia] ?? 4;
+            let maxPessoasNovas = 4;
+            if (configNovos === "livre") {
+              maxPessoasNovas = 999;
+            } else if (typeof configNovos === "number") {
+              maxPessoasNovas = configNovos;
+            } else if (typeof configNovos === "object" && configNovos !== null) {
+              maxPessoasNovas = ((configNovos as any).casais ?? 2) * 2 + ((configNovos as any).individuais ?? 0);
+            }
+
+            const pesoAdicional = isCasalNovo ? 2 : (isIndividualNovo ? 1 : 0);
+
+            if ((isCasalNovo || isIndividualNovo) && configNovos !== "livre") {
+              const currentNovosPessoas = slot.novosPessoasCount || 0;
+              if (currentNovosPessoas + pesoAdicional > Number(maxPessoasNovas)) continue;
             }
 
             // 5. INCOMPATIBILITY GATE (ABSOLUTE RIGOR)
@@ -4101,14 +4443,21 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
             slot.ministros.push({ id: mId, nome: nomeExib, modo });
             slot.ocupacao += peso;
             if (disp.isLiderCand && !slotHasLeader) {
-              liderCountMap[mId] = (liderCountMap[mId] || 0) + 1;
+              currentSimulationLeaderCount[mId] = (currentSimulationLeaderCount[mId] || 0) + 1;
+              slot.preferredLeaderId = mId;
               slotHasLeader = true;
             }
             
             // Register for duplicate protection
             registrarEscalacaoNoDia(slot.data, mId, nomeExib);
 
-            if (isNovoCandidato) {
+            if (isCasalNovo) {
+              slot.casaisNovosCount = (slot.casaisNovosCount || 0) + 1;
+              slot.novosCount = (slot.novosCount || 0) + 1;
+              slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
+            }
+            if (isIndividualNovo) {
+              slot.individuaisNovosCount = (slot.individuaisNovosCount || 0) + 1;
               slot.novosCount = (slot.novosCount || 0) + 1;
               slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
             }
@@ -4155,14 +4504,222 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
       // ROUNDS FOR ROTATION - EXECUTADOS EM DUAS ETAPAS (GRUPO 1 PRIMEIRO, DEPOIS GRUPO 2)
       const initialLimit = Math.min(3, limitConfig);
 
-      // === ETAPA 1: GRUPO 1 (Slots sem sobra, ex: 8/8) ===
+      // === FASE 0: ALOCAÇÃO DE LÍDER / RESPONSÁVEL EM CADA MISSA ===
+      // Toda missa precisa ter um líder ou responsável.
+      // Para evitar que missas sejam preenchidas apenas com não-líderes e fiquem "Aguardando Responsável",
+      // primeiro garantimos que cada celebração com líderes disponíveis receba o seu líder prioritariamente.
+      const chavesParaLider = [...chavesSlots].filter(chave => {
+        const slot = slots[chave];
+        if (slot.ocupacao >= slot.quantidade) return false;
+        const slotJaTemLider = slot.ministros.some((mEsc: any) => {
+          const mObj = ministros.find(m => String(m.id) === String(mEsc.id));
+          if (!mObj) return false;
+          const normM = normalizeModo(mEsc.modo);
+          if (normM === 'ela') return !!mObj.isLiderConjuge || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao';
+          if (normM === 'ele') return !!mObj.isLider || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao';
+          return !!(mObj.isLider || mObj.isLiderConjuge || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao');
+        });
+        return !slotJaTemLider;
+      });
+
+      // Ordenar os slots pela escassez de líderes: missas com MENOS candidatos a líder escolhem primeiro!
+      // Se houver empate, missas cronologicamente anteriores (ex: Sábado antes de Domingo) escolhem primeiro.
+      chavesParaLider.sort((a, b) => {
+        const getLiderCandCount = (slotKey: string) => {
+          const slot = slots[slotKey];
+          return slot.candidatos.filter((d: any) => {
+            const m = ministros.find(min => String(min.id) === String(d.ministro_id));
+            const normModo = normalizeModo(d.modo);
+            if (normModo === 'ela') return !!m?.isLiderConjuge || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao';
+            if (normModo === 'ele') return !!m?.isLider || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao';
+            return !!(m?.isLider || m?.isLiderConjuge || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao');
+          }).length;
+        };
+
+        const countA = getLiderCandCount(a);
+        const countB = getLiderCandCount(b);
+        if (countA !== countB) return countA - countB;
+
+        const slotA = slots[a];
+        const slotB = slots[b];
+        if (slotA.data !== slotB.data) {
+          return slotA.data.localeCompare(slotB.data);
+        }
+        return (slotRandom[a] || 0) - (slotRandom[b] || 0);
+      });
+
+      for (const chave of chavesParaLider) {
+        const slot = slots[chave];
+        if (slot.ocupacao >= slot.quantidade) continue;
+
+        // Verificar se ainda precisa de líder
+        const slotJaTemLider = slot.ministros.some((mEsc: any) => {
+          const mObj = ministros.find(m => String(m.id) === String(mEsc.id));
+          if (!mObj) return false;
+          const normM = normalizeModo(mEsc.modo);
+          if (normM === 'ela') return !!mObj.isLiderConjuge || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao';
+          if (normM === 'ele') return !!mObj.isLider || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao';
+          return !!(mObj.isLider || mObj.isLiderConjuge || mObj.role === 'coordenacao' || mObj.role === 'vice_coordenacao');
+        });
+        if (slotJaTemLider) continue;
+
+        // Filtrar apenas candidatos que são líderes qualificados
+        const lideresDisponiveis = slot.candidatos.map((d: any) => {
+          const m = ministros.find(min => String(min.id) === String(d.ministro_id));
+          const normModo = normalizeModo(d.modo);
+          let p = 1;
+          if (normModo === 'casal' || (!d.modo && m?.tipo === 'casal')) p = 2;
+          const isLiderCand = normModo === 'ela' ? (!!m?.isLiderConjuge || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao') : 
+                              normModo === 'ele' ? (!!m?.isLider || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao') : 
+                              !!(m?.isLider || m?.isLiderConjuge || m?.role === 'coordenacao' || m?.role === 'vice_coordenacao');
+          return { ...d, modo: normModo, peso: p, isLiderCand };
+        }).filter((d: any) => d.isLiderCand);
+
+        if (lideresDisponiveis.length === 0) continue;
+
+        // Ordenar os líderes disponíveis:
+        // Ordenar os líderes disponíveis:
+        // 1. Menor número de lideranças na simulação deste mês (rodízio justo entre todos os líderes aptos)
+        // 2. Menor contagem total de missas já atribuídas ao ministro
+        // 3. Em celebrações com vagas pares, priorizar casais líderes para otimizar composição
+        // 4. Variação dinâmica aleatória por slot e candidato (garante novas simulações a cada "Zerar")
+        // 5. Escassez de datas do líder no mês (dispCount menor atende quem tem menos opções)
+        // 6. Membros da coordenação como critério secundário de suporte se houver empate
+        lideresDisponiveis.sort((a: any, b: any) => {
+          const mIdA = String(a.ministro_id);
+          const mIdB = String(b.ministro_id);
+          const mObjA = ministros.find(m => String(m.id) === mIdA);
+          const mObjB = ministros.find(m => String(m.id) === mIdB);
+
+          const lCountA = currentSimulationLeaderCount[mIdA] || 0;
+          const lCountB = currentSimulationLeaderCount[mIdB] || 0;
+          if (lCountA !== lCountB) return lCountA - lCountB;
+
+          const countA = contagemMinistro[mIdA] || 0;
+          const countB = contagemMinistro[mIdB] || 0;
+          if (countA !== countB) return countA - countB;
+
+          if (slot.quantidade % 2 === 0 && a.peso !== b.peso) {
+            return b.peso - a.peso; // Casal líder primeiro para compor os pares
+          }
+
+          const randA = candidateSlotRandom[chave]?.[mIdA] ?? Math.random();
+          const randB = candidateSlotRandom[chave]?.[mIdB] ?? Math.random();
+          if (Math.abs(randA - randB) > 0.0001) {
+            return randA - randB;
+          }
+
+          const dispA = dispCount[mIdA] || 0;
+          const dispB = dispCount[mIdB] || 0;
+          if (dispA !== dispB) return dispA - dispB;
+
+          const isCoordA = mObjA?.role === 'coordenacao' || mObjA?.role === 'vice_coordenacao';
+          const isCoordB = mObjB?.role === 'coordenacao' || mObjB?.role === 'vice_coordenacao';
+          if (isCoordA !== isCoordB) {
+            return isCoordA ? -1 : 1;
+          }
+
+          return (randomTieBreaker[mIdA] || 0) - (randomTieBreaker[mIdB] || 0);
+        });
+
+        for (const disp of lideresDisponiveis) {
+          const mId = String(disp.ministro_id);
+          const ministro = ministros.find(m => String(m.id) === mId);
+          if (!ministro) continue;
+
+          // Respeito rigoroso ao limite mensal de escalações por ministro (Agendamento Mensal)
+          if (limitConfig !== 99 && (contagemMinistro[mId] || 0) >= limitConfig) continue;
+
+          const modo = normalizeModo(disp.modo);
+          const peso = disp.peso;
+
+          let nomeExib = ministro.nomeExibicao || ministro.nome;
+          if (peso === 2) {
+            nomeExib = `${ministro.nomeExibicao || ministro.nome} e ${ministro.nomeExibicaoConjuge || ministro.nomeConjuge}`;
+          } else if (modo === 'ela') {
+            nomeExib = ministro.nomeExibicaoConjuge || ministro.nomeConjuge;
+          } else if (modo === 'ele') {
+            nomeExib = ministro.nomeExibicao || ministro.nome;
+          }
+
+          if (slot.ocupacao + peso > slot.quantidade) continue;
+
+          // Regra de ministros novos por celebração (Agendamento Mensal)
+          const isNovoTitular = String(ministro.tempoMinisterio || 'novo').trim().toLowerCase() === 'novo';
+          const isNovoConjuge = String(ministro.tempoMinisterioConjuge || 'novo').trim().toLowerCase() === 'novo';
+          const isCasalCandidato = peso === 2 || modo === 'casal' || (!modo && ministro.tipo === 'casal');
+          const isCasalNovo = isCasalCandidato && (isNovoTitular || isNovoConjuge);
+          const isIndividualNovo = !isCasalCandidato && (modo === 'ela' ? isNovoConjuge : isNovoTitular);
+          const pesoAdicional = isCasalNovo ? 2 : (isIndividualNovo ? 1 : 0);
+
+          const configNovos = db.data.config?.limiteNovosPorMissaPorParoquia?.[targetParoquia] ?? 4;
+          let maxPessoasNovas = 4;
+          if (configNovos === "livre") {
+            maxPessoasNovas = 999;
+          } else if (typeof configNovos === "number") {
+            maxPessoasNovas = configNovos;
+          } else if (typeof configNovos === "object" && configNovos !== null) {
+            maxPessoasNovas = ((configNovos as any).casais ?? 2) * 2 + ((configNovos as any).individuais ?? 0);
+          }
+
+          if ((slot.novosPessoasCount || 0) + pesoAdicional > maxPessoasNovas) continue;
+
+          // Gates de segurança
+          if (isJaEscaladoNoDia(slot.data, mId, nomeExib)) continue;
+          const { prevStr, nextStr } = getAdjacentDateStrings(slot.data);
+          if ((prevStr && isJaEscaladoNoDia(prevStr, mId, nomeExib)) || (nextStr && isJaEscaladoNoDia(nextStr, mId, nomeExib))) continue;
+          if (isJaEscaladoNaSemana(slot.data, mId)) continue;
+
+          // Incompatibilidade
+          const temIncompativel = slot.ministros.some((mEsc: any) => {
+            const mEscObj = allMinistros.find(m => String(m.id) === String(mEsc.id));
+            return (ministro.incompatibilidades || []).some(id => String(id) === String(mEsc.id)) ||
+                   (mEscObj?.incompatibilidades || []).some(id => String(id) === mId);
+          });
+          if (temIncompativel) continue;
+
+          // Alocar líder
+          slot.ministros.push({ id: mId, nome: nomeExib, modo });
+          slot.ocupacao += peso;
+          currentSimulationLeaderCount[mId] = (currentSimulationLeaderCount[mId] || 0) + 1;
+          slot.preferredLeaderId = mId;
+          registrarEscalacaoNoDia(slot.data, mId, nomeExib);
+          contagemMinistro[mId] += 1;
+
+          if (isCasalNovo) {
+            slot.casaisNovosCount = (slot.casaisNovosCount || 0) + 1;
+            slot.novosCount = (slot.novosCount || 0) + 1;
+            slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
+          } else if (isIndividualNovo) {
+            slot.individuaisNovosCount = (slot.individuaisNovosCount || 0) + 1;
+            slot.novosCount = (slot.novosCount || 0) + 1;
+            slot.novosPessoasCount = (slot.novosPessoasCount || 0) + peso;
+          }
+
+          break; // 1 líder alocado para esta missa!
+        }
+      }
+
+      // === ETAPA 1: GRUPO 1 (Slots sem sobra / exatos) ===
       console.log(`[POST /api/escala/gerar] === INICIANDO AGENDAMENTO GRUPO 1: Sem Sobra/Exatos (Total: ${chavesSemSobra.length}) ===`);
       
-      // EXCEÇÃO ABSOLUTA: Agendar diretamente TODOS os candidatos das missas sem sobra (ex: 8/8, 4/4)
-      // sem aplicar limite máximo (99) ou regra da semana (true), pois não há excedente para rotacionar/misturar.
-      // Apenas mantemos as regras básicas de segurança física de mesma pessoa no mesmo dia e dias seguidos (Sábado/Domingo).
-      tentarPreencher(99, true, true, false, false, chavesSemSobra);
-      console.log(`[POST /api/escala/gerar] Concluído agendamento direto (exceção) para o Grupo 1`);
+      // Respeitar RIGOROSAMENTE o limite configurado pela coordenação (limitConfig)
+      // e as regras de segurança (mesmo dia, fim de semana consecutivo sábado/domingo).
+      if (limitConfig === 99) {
+        tentarPreencher(99, true, false, false, false, chavesSemSobra);
+      } else {
+        for (let l = 1; l <= initialLimit; l++) {
+          tentarPreencher(l, false, false, false, false, chavesSemSobra);
+        }
+        for (let l = initialLimit + 1; l <= limitConfig; l++) {
+          tentarPreencher(l, false, false, false, false, chavesSemSobra);
+        }
+        // Se ainda restarem vagas em aberto nas missas sem sobra, relaxa a regra da semana MAS MANTÉM o limitConfig
+        for (let l = 1; l <= limitConfig; l++) {
+          tentarPreencher(l, false, true, false, false, chavesSemSobra);
+        }
+      }
+      console.log(`[POST /api/escala/gerar] Concluído agendamento para o Grupo 1`);
 
 
        // === ETAPA 2: GRUPO 2 (Slots com sobra, ex: 12/8) ===
@@ -4193,7 +4750,11 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
        }
  
        // 2.3 Cleanup final do Grupo 2 (experiência, semana, etc.)
-       tentarPreencher(99, true, true, false, false, chavesComSobra); 
+       if (limitConfig === 99) {
+         tentarPreencher(99, true, true, false, false, chavesComSobra); 
+       } else {
+         tentarPreencher(limitConfig, false, true, false, false, chavesComSobra);
+       } 
 
       // 5. Logar ministros que tinham disponibilidade mas não foram escalados
       const ministrosComDisp = new Set(disponibilidades.map(d => String(d.ministro_id)));
@@ -4228,6 +4789,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
 
       // 6. Formatar para o JSON final esperado pelo frontend
       const escalaFinal = {};
+      const currentMonthDesignatedCount: Record<string, number> = {};
       
       const slotsArray = Object.values(slots).sort((a: any, b: any) => {
         if (a.data !== b.data) return a.data.localeCompare(b.data);
@@ -4253,7 +4815,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         });
 
         // 1. Identificar todos os candidatos qualificados a líder no slot
-        const candidatosLider: Array<{ nome: string; isCoord: boolean; count: number; randomVal: number }> = [];
+        const candidatosLider: Array<{ nome: string; isCoord: boolean; mId: string; count: number; randomVal: number }> = [];
 
         slot.ministros.forEach((m: any) => {
           const mId = typeof m === "object" && m !== null ? m.id : undefined;
@@ -4282,39 +4844,40 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
             const isCasal = mObj.tipo === 'casal' || Boolean(mObj.nomeConjuge || mObj.nomeExibicaoConjuge);
             const nomeEle = mObj.nomeExibicao || mObj.nome || "";
             const nomeEla = mObj.nomeExibicaoConjuge || mObj.nomeConjuge || "";
-            const randomVal = randomTieBreaker[String(mObj.id)] || Math.random();
+            const slotKey = `${slot.data}|${slot.horario}|${slot.normalizedNome}`;
+            const randomVal = candidateSlotRandom[slotKey]?.[String(mObj.id)] ?? (randomTieBreaker[String(mObj.id)] || Math.random());
 
             if (isCoord) {
               if (mModoNorm === 'ela' && nomeEla) {
-                candidatosLider.push({ nome: nomeEla, isCoord: true, count: liderancasHistoricas[nomeEla] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEla, isCoord: true, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEla] || 0, randomVal });
               } else if (mModoNorm === 'ele' && nomeEle) {
-                candidatosLider.push({ nome: nomeEle, isCoord: true, count: liderancasHistoricas[nomeEle] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEle, isCoord: true, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
               } else if (isCasal && nomeEle && nomeEla) {
                 // Ambos na coordenação escalados juntos: adicionar ambos individualmente para rodízio e proporcionalidade justa
-                candidatosLider.push({ nome: nomeEle, isCoord: true, count: liderancasHistoricas[nomeEle] || 0, randomVal });
-                candidatosLider.push({ nome: nomeEla, isCoord: true, count: liderancasHistoricas[nomeEla] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEle, isCoord: true, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEla, isCoord: true, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEla] || 0, randomVal });
               } else if (nomeEle) {
-                candidatosLider.push({ nome: nomeEle, isCoord: true, count: liderancasHistoricas[nomeEle] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEle, isCoord: true, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
               }
             } else if (isCasal) {
               if (mModoNorm === 'ela' && mObj.isLiderConjuge && nomeEla) {
-                candidatosLider.push({ nome: nomeEla, isCoord: false, count: liderancasHistoricas[nomeEla] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEla, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEla] || 0, randomVal });
               } else if (mModoNorm === 'ele' && mObj.isLider && nomeEle) {
-                candidatosLider.push({ nome: nomeEle, isCoord: false, count: liderancasHistoricas[nomeEle] || 0, randomVal });
+                candidatosLider.push({ nome: nomeEle, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
               } else if (mModoNorm !== 'ela' && mModoNorm !== 'ele') {
                 // Casal servindo junto
                 if (mObj.isLider && mObj.isLiderConjuge && nomeEle && nomeEla) {
                   // Ambos são líderes cadastrados: candidatar ambos individualmente para rodízio e proporcionalidade
-                  candidatosLider.push({ nome: nomeEle, isCoord: false, count: liderancasHistoricas[nomeEle] || 0, randomVal });
-                  candidatosLider.push({ nome: nomeEla, isCoord: false, count: liderancasHistoricas[nomeEla] || 0, randomVal });
+                  candidatosLider.push({ nome: nomeEle, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
+                  candidatosLider.push({ nome: nomeEla, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEla] || 0, randomVal });
                 } else if (mObj.isLider && nomeEle) {
-                  candidatosLider.push({ nome: nomeEle, isCoord: false, count: liderancasHistoricas[nomeEle] || 0, randomVal });
+                  candidatosLider.push({ nome: nomeEle, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
                 } else if (mObj.isLiderConjuge && nomeEla) {
-                  candidatosLider.push({ nome: nomeEla, isCoord: false, count: liderancasHistoricas[nomeEla] || 0, randomVal });
+                  candidatosLider.push({ nome: nomeEla, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEla] || 0, randomVal });
                 }
               }
             } else if (mObj.isLider && nomeEle) {
-              candidatosLider.push({ nome: nomeEle, isCoord: false, count: liderancasHistoricas[nomeEle] || 0, randomVal });
+              candidatosLider.push({ nome: nomeEle, isCoord: false, mId: String(mObj.id), count: currentMonthDesignatedCount[nomeEle] || 0, randomVal });
             }
           }
         });
@@ -4323,19 +4886,36 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         let designatedLeader = slot.lider || "";
 
         if (!designatedLeader && candidatosLider.length > 0) {
-          // Ordenar pelo menor número de lideranças históricas no mês (rodízio e proporcionalidade justa)
-          // Se houver empate no número de lideranças, prefere coordenação/vice como critério de desempate, e depois ordem aleatória estável
-          candidatosLider.sort((a, b) => {
-            if (a.count !== b.count) return a.count - b.count;
-            if (a.isCoord !== b.isCoord) return a.isCoord ? -1 : 1;
-            return a.randomVal - b.randomVal;
-          });
+          // Se um líder preferido foi escolhido para este slot durante a alocação (com o rodízio e variação da simulação):
+          if (slot.preferredLeaderId) {
+            const pref = candidatosLider.find(c => String(c.mId) === String(slot.preferredLeaderId));
+            if (pref) {
+              designatedLeader = pref.nome;
+            }
+          }
 
-          designatedLeader = candidatosLider[0].nome;
+          if (!designatedLeader) {
+            // Ordenar pelo menor número de lideranças no mês atual gerado (rodízio e proporcionalidade justa)
+            // Em caso de empate, usar randomVal da simulação para alternar nas simulações ao clicar em "Zerar"
+            candidatosLider.sort((a, b) => {
+              if (a.count !== b.count) return a.count - b.count;
+              if (a.isCoord !== b.isCoord) return a.isCoord ? -1 : 1;
+              return a.randomVal - b.randomVal;
+            });
+
+            designatedLeader = candidatosLider[0].nome;
+          }
+        }
+
+        // Se nenhum líder qualificado foi designado entre os escalados, 
+        // deixamos em branco para que a coordenação possa informar manualmente (conforme solicitado).
+        if (!designatedLeader) {
+          designatedLeader = "";
         }
         
         if (designatedLeader) {
           // Incrementar contagem para manter o rodízio equilibrado nas próximas missas do mês
+          currentMonthDesignatedCount[designatedLeader] = (currentMonthDesignatedCount[designatedLeader] || 0) + 1;
           liderancasHistoricas[designatedLeader] = (liderancasHistoricas[designatedLeader] || 0) + 1;
         }
 
@@ -4355,11 +4935,6 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           if (!isALider && isBLider) return 1;
           return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
         });
-
-        // Fallback: if no assigned minister is explicitly flagged as leader, pick first assigned minister
-        if (!designatedLeader && escalaFinal[slot.data][slot.horario].ministros.length > 0) {
-          designatedLeader = escalaFinal[slot.data][slot.horario].ministros[0];
-        }
 
         escalaFinal[slot.data][slot.horario].lider = designatedLeader;
       });
@@ -4423,13 +4998,27 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           details: missasIncompletas,
           naoEscalados: naoEscalados.map(id => {
             const m = allMinistros.find(min => String(min.id) === String(id));
-            return m ? m.nome : id;
+            if (!m) return id;
+            if (m.tipo === 'casal') {
+              return `Casal: ${m.nomeExibicao || m.nome} e ${m.nomeExibicaoConjuge || m.nomeConjuge}`;
+            }
+            return m.nomeExibicao || m.nome;
           })
         });
       }
 
       console.log(`[DEBUG] Escala gerada com sucesso para o mês ${targetMonthStr}.`);
-      res.json(novaEscalaMesclada);
+      res.json({
+        escala: novaEscalaMesclada,
+        naoEscalados: naoEscalados.map(id => {
+          const m = allMinistros.find(min => String(min.id) === String(id));
+          if (!m) return id;
+          if (m.tipo === 'casal') {
+            return `Casal: ${m.nomeExibicao || m.nome} e ${m.nomeExibicaoConjuge || m.nomeConjuge}`;
+          }
+          return m.nomeExibicao || m.nome;
+        })
+      });
     } catch (error) {
       console.error('Erro ao gerar escala (nova versão):', error);
       res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -4482,6 +5071,64 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     } catch (error) {
       console.error('Erro ao atualizar líder da escala:', error);
       res.status(500).json({ error: 'Erro ao atualizar líder da escala.' });
+    }
+  });
+
+  app.post('/api/escala/adicionar-ministro', async (req, res) => {
+    const { paroquia: rawParoquia, data, horario, ministroNome } = req.body;
+    const paroquia = String(rawParoquia || '').trim();
+
+    if (!paroquia || !data || !horario || !ministroNome) {
+      return res.status(400).json({ error: 'Paróquia, data, horario e ministroNome são obrigatórios.' });
+    }
+
+    try {
+      await db.read();
+      if (!db.data.escalaGerada) db.data.escalaGerada = {};
+
+      const parNorm = normalize(paroquia);
+      let targetP = Object.keys(db.data.escalaGerada).find(p => p.toLowerCase() === paroquia.toLowerCase() || normalize(p) === parNorm);
+
+      if (!targetP) {
+        targetP = paroquia;
+        db.data.escalaGerada[targetP] = {};
+      }
+
+      if (!db.data.escalaGerada[targetP][data]) {
+        db.data.escalaGerada[targetP][data] = {};
+      }
+
+      if (!db.data.escalaGerada[targetP][data][horario]) {
+        db.data.escalaGerada[targetP][data][horario] = { ministros: [], limiteManual: 8, nome: 'Missa' };
+      }
+
+      const currentSlot = db.data.escalaGerada[targetP][data][horario];
+      if (Array.isArray(currentSlot)) {
+        db.data.escalaGerada[targetP][data][horario] = {
+          ministros: currentSlot,
+          limiteManual: 8,
+          nome: 'Missa'
+        };
+      }
+
+      const targetSlot = db.data.escalaGerada[targetP][data][horario];
+      if (!targetSlot.ministros) targetSlot.ministros = [];
+
+      const exists = targetSlot.ministros.some((m: any) => {
+        const mStr = typeof m === 'string' ? m : m?.nome || '';
+        return mStr.toLowerCase() === String(ministroNome).toLowerCase();
+      });
+
+      if (!exists) {
+        targetSlot.ministros.push(String(ministroNome).trim());
+        await db.write();
+      }
+
+      console.log(`[POST /api/escala/adicionar-ministro] Ministro ${ministroNome} adicionado para ${paroquia} (${data} às ${horario})`);
+      res.json({ success: true, escala: db.data.escalaGerada[targetP] });
+    } catch (error) {
+      console.error('Erro ao adicionar ministro na escala:', error);
+      res.status(500).json({ error: 'Erro ao adicionar ministro na escala.' });
     }
   });
 
@@ -4955,6 +5602,152 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     }
   });
 
+  const isMinisterEligibleLeader = (min: any, isConjuge = false): boolean => {
+    if (!min) return false;
+    if (min.role === 'coordenacao' || min.role === 'vice_coordenacao' || min.role === 'admin') return true;
+    if (isConjuge) return Boolean(min.isLiderConjuge);
+    return Boolean(min.isLider);
+  };
+
+  const isMinisterMatchingLeaderName = (minOrName: any, currentLeaderStr: string): boolean => {
+    if (!currentLeaderStr || !minOrName) return false;
+    const normLid = normalize(currentLeaderStr);
+    if (!normLid) return false;
+
+    if (typeof minOrName === 'string') {
+      const normM = normalize(minOrName);
+      if (normM === normLid) return true;
+      if (normM.includes(normLid) || normLid.includes(normM)) return true;
+      const parts = normM.split(/\s+(?:e|&|\/)\s+/).map(p => normalize(p)).filter(Boolean);
+      return parts.some(p => p === normLid || normLid.includes(p) || p.includes(normLid));
+    }
+
+    const n1 = normalize(minOrName.nome || '');
+    const n2 = normalize(minOrName.nomeExibicao || minOrName.nome || '');
+    const n3 = normalize(minOrName.nomeConjuge || '');
+    const n4 = normalize(minOrName.nomeExibicaoConjuge || minOrName.nomeConjuge || '');
+    const combined = normalize(`${n2} e ${n4}`);
+
+    return (
+      normLid === n1 ||
+      normLid === n2 ||
+      normLid === n3 ||
+      normLid === n4 ||
+      normLid === combined ||
+      normLid.includes(n2) ||
+      normLid.includes(n1) ||
+      n2.includes(normLid) ||
+      n1.includes(normLid)
+    );
+  };
+
+  const syncSlotLeaderOnSwap = (
+    slot: any,
+    removedMinister: any,
+    incomingMinister: any,
+    allMinisters: any[],
+    paroquia: string
+  ) => {
+    if (!slot || !slot.ministros || !Array.isArray(slot.ministros)) return;
+
+    const currentLeader = String(slot.lider || '').trim();
+    const wasRemovedMinisterLeader = isMinisterMatchingLeaderName(removedMinister, currentLeader);
+
+    // Check if the current leader is still in slot.ministros
+    const isCurrentLeaderStillInSlot = slot.ministros.some((mName: string) =>
+      isMinisterMatchingLeaderName(mName, currentLeader)
+    );
+
+    // If the removed minister was the leader, OR the current leader is no longer in the slot, OR no leader defined:
+    if (wasRemovedMinisterLeader || !isCurrentLeaderStillInSlot || !currentLeader) {
+      let newLeaderName = '';
+
+      // Priority 1: Check if the incoming minister is an eligible leader!
+      const incomingMinObj = typeof incomingMinister === 'object' && incomingMinister !== null
+        ? incomingMinister
+        : allMinisters.find(m =>
+            (!paroquia || !m.paroquia || normalize(m.paroquia) === normalize(paroquia)) &&
+            (normalize(m.nome || '') === normalize(String(incomingMinister)) ||
+             normalize(m.nomeExibicao || '') === normalize(String(incomingMinister)) ||
+             normalize(m.nomeConjuge || '') === normalize(String(incomingMinister)) ||
+             normalize(m.nomeExibicaoConjuge || '') === normalize(String(incomingMinister)) ||
+             normalize(`${m.nomeExibicao || m.nome} e ${m.nomeExibicaoConjuge || m.nomeConjuge}`) === normalize(String(incomingMinister)) ||
+             normalize(String(incomingMinister)).includes(normalize(m.nomeExibicao || m.nome || ''))
+            )
+          );
+
+      if (incomingMinObj) {
+        const isEligible = isMinisterEligibleLeader(incomingMinObj);
+        const isEligibleConjuge = isMinisterEligibleLeader(incomingMinObj, true);
+        if (isEligible || isEligibleConjuge) {
+          if (incomingMinObj.tipo === 'casal') {
+            if (isEligible && isEligibleConjuge) {
+              newLeaderName = `${incomingMinObj.nomeExibicao || incomingMinObj.nome} e ${incomingMinObj.nomeExibicaoConjuge || incomingMinObj.nomeConjuge}`;
+            } else if (isEligible) {
+              newLeaderName = incomingMinObj.nomeExibicao || incomingMinObj.nome;
+            } else {
+              newLeaderName = incomingMinObj.nomeExibicaoConjuge || incomingMinObj.nomeConjuge;
+            }
+          } else {
+            newLeaderName = incomingMinObj.nomeExibicao || incomingMinObj.nome;
+          }
+        }
+      }
+
+      // Priority 2: If incoming minister is not an eligible leader, search other ministers scheduled in the slot
+      if (!newLeaderName) {
+        for (const mName of slot.ministros) {
+          const normM = normalize(mName);
+          const match = allMinisters.find(m =>
+            (!paroquia || !m.paroquia || normalize(m.paroquia) === normalize(paroquia)) &&
+            (normalize(m.nome || '') === normM ||
+             normalize(m.nomeExibicao || '') === normM ||
+             normalize(m.nomeConjuge || '') === normM ||
+             normalize(m.nomeExibicaoConjuge || '') === normM ||
+             normalize(`${m.nomeExibicao || m.nome} e ${m.nomeExibicaoConjuge || m.nomeConjuge}`) === normM ||
+             normM.includes(normalize(m.nomeExibicao || m.nome || '')))
+          );
+          if (match && (isMinisterEligibleLeader(match) || isMinisterEligibleLeader(match, true))) {
+            if (match.tipo === 'casal') {
+              if (isMinisterEligibleLeader(match) && isMinisterEligibleLeader(match, true)) {
+                newLeaderName = `${match.nomeExibicao || match.nome} e ${match.nomeExibicaoConjuge || match.nomeConjuge}`;
+              } else if (isMinisterEligibleLeader(match)) {
+                newLeaderName = match.nomeExibicao || match.nome;
+              } else {
+                newLeaderName = match.nomeExibicaoConjuge || match.nomeConjuge;
+              }
+            } else {
+              newLeaderName = match.nomeExibicao || match.nome;
+            }
+            break;
+          }
+        }
+      }
+
+      // No fallbacks for leaders. If no eligible leader is in the slot, 
+      // leave it blank as requested by the user.
+      if (newLeaderName) {
+        slot.lider = newLeaderName;
+      } else {
+        slot.lider = "";
+      }
+    }
+
+    // Re-sort slot.ministros to ensure the leader stays at index 0 (⭐)
+    if (slot.lider && Array.isArray(slot.ministros) && slot.ministros.length > 0) {
+      const leaderNorm = normalize(slot.lider);
+      slot.ministros.sort((a: string, b: string) => {
+        const normA = normalize(a);
+        const normB = normalize(b);
+        const isALeader = normA === leaderNorm || normA.includes(leaderNorm) || leaderNorm.includes(normA);
+        const isBLeader = normB === leaderNorm || normB.includes(leaderNorm) || leaderNorm.includes(normB);
+        if (isALeader && !isBLeader) return -1;
+        if (!isALeader && isBLeader) return 1;
+        return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+      });
+    }
+  };
+
   app.post('/api/trocas/:id/responder-coordenador', async (req, res) => {
     const { id } = req.params;
     const { resposta } = req.body; // 'aprovar' | 'rejeitar'
@@ -5200,6 +5993,46 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
             }
           }
         }
+
+        // Sincronizar automaticamente o Líder / Responsável pela Celebração após a troca
+        const solMinObj = db.data.ministros.find((m: any) => Number(m.id) === Number(solicitanteId));
+        const destMinObj = db.data.ministros.find((m: any) => Number(m.id) === Number(destinatarioId));
+
+        if (paroquiaEscala[missaOrigemData] && paroquiaEscala[missaOrigemData][missaOrigemHorario]) {
+          const slotOrigem = paroquiaEscala[missaOrigemData][missaOrigemHorario];
+          syncSlotLeaderOnSwap(slotOrigem, solMinObj || troca.solicitanteNome, destMinObj || troca.destinatarioNome, db.data.ministros, paroquia);
+
+          if (db.data.relatoriosLider && Array.isArray(db.data.relatoriosLider)) {
+            const rep = db.data.relatoriosLider.find((r: any) =>
+              normalize(r.paroquia) === normalize(paroquia) &&
+              r.data === missaOrigemData &&
+              r.horario === missaOrigemHorario
+            );
+            if (rep && slotOrigem.lider) {
+              rep.liderNome = slotOrigem.lider;
+            }
+          }
+        }
+
+        if (troca.tipo === 'direta' && troca.missaDestinoData && troca.missaDestinoHorario) {
+          const destData = troca.missaDestinoData;
+          const destHorario = troca.missaDestinoHorario;
+          if (paroquiaEscala[destData] && paroquiaEscala[destData][destHorario]) {
+            const slotDest = paroquiaEscala[destData][destHorario];
+            syncSlotLeaderOnSwap(slotDest, destMinObj || troca.destinatarioNome, solMinObj || troca.solicitanteNome, db.data.ministros, paroquia);
+
+            if (db.data.relatoriosLider && Array.isArray(db.data.relatoriosLider)) {
+              const rep = db.data.relatoriosLider.find((r: any) =>
+                normalize(r.paroquia) === normalize(paroquia) &&
+                r.data === destData &&
+                r.horario === destHorario
+              );
+              if (rep && slotDest.lider) {
+                rep.liderNome = slotDest.lider;
+              }
+            }
+          }
+        }
       }
 
       await db.write();
@@ -5277,6 +6110,12 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         if (slot.tipo === 'casal') {
           if (slot.member === 'c1') return slot.conjuge1 || slot.ministerName?.split(/\s+e\s+/i)[0]?.trim() || slot.name?.split(/\s+e\s+/i)[0]?.trim();
           if (slot.member === 'c2') return slot.conjuge2 || slot.ministerName?.split(/\s+e\s+/i)[1]?.trim() || slot.name?.split(/\s+e\s+/i)[1]?.trim();
+          if (slot.member === 'both') {
+            const c1 = slot.conjuge1 || slot.ministerName?.split(/\s+e\s+/i)[0]?.trim() || slot.name?.split(/\s+e\s+/i)[0]?.trim();
+            const c2 = slot.conjuge2 || slot.ministerName?.split(/\s+e\s+/i)[1]?.trim() || slot.name?.split(/\s+e\s+/i)[1]?.trim();
+            if (c1 && c2 && c1 !== c2) return `${c1} e ${c2}`;
+            return c1 || c2 || (slot.isMinister ? slot.name : slot.ministerName);
+          }
         }
         return slot.isMinister ? slot.name : slot.ministerName;
       };
@@ -5341,6 +6180,19 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           sA.ministros = [nameToInsert];
         }
 
+        // Sincronizar Líder / Responsável no slot da celebração
+        syncSlotLeaderOnSwap(sA, nameToRemove, nameToInsert, db.data.ministros, paroquia);
+        if (db.data.relatoriosLider && Array.isArray(db.data.relatoriosLider)) {
+          const rep = db.data.relatoriosLider.find((r: any) =>
+            normalize(r.paroquia) === normalize(paroquia) &&
+            r.data === slotA.date &&
+            r.horario === slotA.time
+          );
+          if (rep && sA.lider) {
+            rep.liderNome = sA.lider;
+          }
+        }
+
         // Add history
         if (!db.data.trocas) db.data.trocas = [];
         db.data.trocas.push({
@@ -5389,6 +6241,26 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
           const newEntriesB = getReplacementStrings(sB.ministros[idxB], slotB, slotA);
           sB.ministros.splice(idxB, 1, ...newEntriesB);
         }
+      }
+
+      // Sincronizar Líder / Responsável em ambos os slots
+      syncSlotLeaderOnSwap(sA, slotA.ministerName, slotB.ministerName, db.data.ministros, paroquia);
+      syncSlotLeaderOnSwap(sB, slotB.ministerName, slotA.ministerName, db.data.ministros, paroquia);
+
+      if (db.data.relatoriosLider && Array.isArray(db.data.relatoriosLider)) {
+        const repA = db.data.relatoriosLider.find((r: any) =>
+          normalize(r.paroquia) === normalize(paroquia) &&
+          r.data === slotA.date &&
+          r.horario === slotA.time
+        );
+        if (repA && sA.lider) repA.liderNome = sA.lider;
+
+        const repB = db.data.relatoriosLider.find((r: any) =>
+          normalize(r.paroquia) === normalize(paroquia) &&
+          r.data === slotB.date &&
+          r.horario === slotB.time
+        );
+        if (repB && sB.lider) repB.liderNome = sB.lider;
       }
 
       // Add history record in trocas
@@ -7245,6 +8117,38 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     try {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       await db.read();
+      if (!db.data.paroquias || db.data.paroquias.length === 0) {
+        db.data.paroquias = [
+          {
+            id: "1772280333795",
+            nome: "Paróquia Santa Rita de Cássia",
+            cnpj: "",
+            cidade: "Bauru",
+            estado: "SP",
+            coordenador: "Alexandre",
+            telefoneCoordenador: "14997865806",
+          },
+          {
+            id: "1772281505207",
+            nome: "Paróquia São Cristóvão",
+            cnpj: "",
+            cidade: "Bauru",
+            estado: "SP",
+            coordenador: "Josué",
+            telefoneCoordenador: "14999999999",
+          },
+          {
+            id: "1774922106968",
+            nome: "Paróquia Nossa Senhora das Graças",
+            cnpj: "",
+            cidade: "Bauru",
+            estado: "SP",
+            coordenador: "Fernanda e Celiomar",
+            telefoneCoordenador: "14 99113-3422",
+          },
+        ];
+        await db.write();
+      }
       const count = db.data.paroquias?.length || 0;
       logDebug(`[DEBUG /api/paroquias] Paróquias solicitadas. Count: ${count}`);
       res.json(db.data.paroquias || []);
@@ -7502,7 +8406,11 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
 
   // 404 handler for API routes (prevent Vite SPA fallback or static file handler from returning index.html for unmatched API routes)
   app.all('/api/*', (req, res) => {
-    console.warn(`[404 API NOT FOUND] ${req.method} ${req.originalUrl || req.path}`);
+    const errorMsg = `[404 API NOT FOUND] ${req.method} ${req.originalUrl || req.path}`;
+    console.warn(errorMsg);
+    try {
+      fs.appendFileSync('debug.log', `${new Date().toISOString()} - ${errorMsg}\n`);
+    } catch (e) {}
     res.status(404).json({ 
       error: 'Endpoint da API não encontrado',
       method: req.method,
@@ -7525,7 +8433,15 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     const distPath = path.join(process.cwd(), 'dist');
     logDebug(`[SERVER] Modo produção. Servindo arquivos de: ${distPath}`);
     
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      }
+    }));
     app.get('*', (req, res) => {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -7534,23 +8450,49 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
     logDebug(`[SERVER] Servidor ouvindo na porta ${PORT}`);
 
     // Trigger automatic reminders on startup and then periodically in the background
     console.log('[BACKGROUND LEMBRETE] Starting background reminder scheduler...');
-    setTimeout(async () => {
+    const startupReminderTimer = setTimeout(async () => {
       await triggerAllBackgroundReminders();
     }, 5000); // Wait 5 seconds for setup to finish
+    startupReminderTimer.unref();
 
-    setInterval(async () => {
+    const reminderInterval = setInterval(async () => {
       await triggerAllBackgroundReminders();
     }, 1000 * 60 * 15); // Run every 15 minutes
+    reminderInterval.unref();
   });
 
+  server.on('error', (err: any) => {
+    console.error('[SERVER LISTEN ERROR]', err);
+    logDebug(`[SERVER LISTEN ERROR] ${err.message || String(err)}`);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Exiting process...`);
+      process.exit(1);
+    }
+  });
+
+  const handleShutdown = () => {
+    console.log('[SHUTDOWN] Signal received. Closing server gracefully...');
+    server.close(() => {
+      console.log('[SHUTDOWN] Server closed.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.warn('[SHUTDOWN] Force exiting after timeout.');
+      process.exit(0);
+    }, 2000).unref();
+  };
+
+  process.on('SIGTERM', handleShutdown);
+  process.on('SIGINT', handleShutdown);
+
   // Execute one-time fix for existing data
-  setTimeout(async () => {
+  const autofixTimer = setTimeout(async () => {
      try {
         console.log("[AUTO-FIX] Checking for incorrect couple entries...");
         const paroquia = 'Paróquia Santa Rita de Cássia';
@@ -7588,6 +8530,7 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
         console.error("[AUTO-FIX] Error:", err);
      }
   }, 10000); // Wait for DB to be fully ready
+  autofixTimer.unref();
 }
 
 startServer();

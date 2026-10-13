@@ -101,7 +101,9 @@ type Data = {
       horaFechamento?: string;
     }>;
     limiteEscalacaoPorParoquia?: Record<string, number>;
-    limiteNovosPorMissaPorParoquia?: Record<string, number | "livre">;
+    limiteNovosPorMissaPorParoquia?: Record<string, number | "livre" | { casais: number; individuais: number }>;
+    limiteCasaisNovosPorMissaPorParoquia?: Record<string, number | "livre">;
+    limiteIndividuaisNovosPorMissaPorParoquia?: Record<string, number | "livre">;
     regraDisponibilidadePorParoquia?: Record<string, "livre" | "regra2" | "regra3">;
     lastClearAvailabilityDate?: string;
     lembreteAutomaticoPorParoquia?: Record<string, boolean>;
@@ -253,8 +255,13 @@ type Data = {
     liderNome: string;
     presencas?: Record<string, boolean>;
     faltasReportadas?: any[];
+    trocasNaoRegistradas?: string;
     usoEstoque?: string;
     observacoes?: string;
+    semAlteracao?: boolean;
+    lidoPorCoordenacao?: boolean;
+    lidoEm?: string | null;
+    lidoPor?: string | null;
     updatedAt?: string;
   }[];
   eventos?: {

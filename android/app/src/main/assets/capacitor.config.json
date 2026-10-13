@@ -1,0 +1,8 @@
+{
+	"appId": "com.escolaministros.app",
+	"appName": "Portal do Mece",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	}
+}

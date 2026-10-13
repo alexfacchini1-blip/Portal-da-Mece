@@ -1,122 +1,2037 @@
 {
-  "timestamp": "2026-09-01T00:50:29.951Z",
-  "targetParoquia": "Nossa Senhora da Conceição",
-  "targetMonthStr": "2026-09",
-  "totalMinutosAtivos": 0,
-  "ministrosAtivos": [],
-  "totalDisponibilidades": 0,
-  "disponibilidades": [],
+  "timestamp": "2026-09-29T13:36:41.561Z",
+  "targetParoquia": "Paróquia Santa Rita de Cássia",
+  "targetMonthStr": "2026-10",
+  "totalMinutosAtivos": 64,
+  "ministrosAtivos": [
+    {
+      "id": 2,
+      "nome": "Vinícius de Morais Carvalho Saracini",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 3,
+      "nome": "Rafaela Rodrigues da Silva",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 4,
+      "nome": "Taluza Alves Tripoli",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 5,
+      "nome": "Beatriz Costa Bertozzo",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 6,
+      "nome": "Ceine Renê Silva",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 7,
+      "nome": "Adolfo Ferracin Junior",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 8,
+      "nome": "Antonio Carlos Martins Sampaio",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 9,
+      "nome": "Maria Teresa Chiquito Palhares",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 11,
+      "nome": "Ana Cláudia Vasquez Maurício Roda",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 12,
+      "nome": "Rosa Maria Fernandes Scalvi",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 14,
+      "nome": "Silvia Fernanda Rueda Amadeu",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 16,
+      "nome": "Shyrlei Aparecida Anzolin Bernardinelli",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 17,
+      "nome": "Simone Gomes Aversa Rossetto",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 18,
+      "nome": "Maria Vitória Carneiro Pollini Carrara Rodrigues",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 20,
+      "nome": "Sonia Maria Sbeghen Pelegrini",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 21,
+      "nome": "Luis Gustavo de Moraes",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 22,
+      "nome": "Wilson Marques",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 23,
+      "nome": "João Sérgio R Cardoso",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 24,
+      "nome": "Gustavo Henrique Escantamburlo Soares",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 25,
+      "nome": "Valter Kamiya",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 26,
+      "nome": "Rogério Fernandes Barbosa",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 27,
+      "nome": "Cleber Rogério Gonçalves",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 28,
+      "nome": "Lázaro Lourenço Jaccobini",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 29,
+      "nome": "Cristiano Cordeiro",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 30,
+      "nome": "Rodrigo Vendramini",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 31,
+      "nome": "Darzi Luiz Capello",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 32,
+      "nome": "Osvaldo Aparecido Hudinik",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 33,
+      "nome": "Edilson da Silva",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 34,
+      "nome": "Natanael Emídio Júnior",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 37,
+      "nome": "Eliara Yolanda Lima de Castro Lípolis",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 38,
+      "nome": "Maurício Pontes Porto",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 39,
+      "nome": "Claudio Motta Maximino",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 40,
+      "nome": "Júlio César Teixeira de Carvalho",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 41,
+      "nome": "Alan M Ciocca",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 1,
+      "nome": "Alexandre Borelli Facchini",
+      "tipo": "casal",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 50,
+      "nome": "Doroty Mariza Geronimo da Silva",
+      "tipo": "individual",
+      "tempo": "antigo",
+      "afastado": false
+    },
+    {
+      "id": 52,
+      "nome": "Laila Mucheroni Gonçalves Capetti",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 53,
+      "nome": "Marilda Miguel Slompo",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 54,
+      "nome": "Felipe Narazato Pinotti",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 55,
+      "nome": "Lorena Ferreira Novaes",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 56,
+      "nome": "Luciana Avallone Rodrigues",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 57,
+      "nome": "Iabela Avallone Rodrigues",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 58,
+      "nome": "Mariléa Correia Mendonça Toledo",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 59,
+      "nome": "Marina Faleiro de Oliveira",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 60,
+      "nome": "Fernando de Arruda Angelo",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 61,
+      "nome": "Roger Inheta Baggio",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 62,
+      "nome": "Maria Virgínia Morini Machado",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 63,
+      "nome": "Andréa Sacardo Deladonio",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 64,
+      "nome": "Fred Willians Cardia",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 65,
+      "nome": "Clóvis Alexandre Victor Senna",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 66,
+      "nome": "Rafael Augusto Orlandi Dourado",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 67,
+      "nome": "Maria Augusta Barneze Vicentin",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 68,
+      "nome": "Rogério Riad Said",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 69,
+      "nome": "Emerson de Lima Souza",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 70,
+      "nome": "Nilson Ap Chiozzi Garcia",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 71,
+      "nome": "José Rodrigo Ribeiro",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 72,
+      "nome": "Geraldo Bastos da Silva",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 73,
+      "nome": "Carlos Gomes",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 74,
+      "nome": "Marcelo Rochel",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 75,
+      "nome": "Cesar Augusto de Souza Valle",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 76,
+      "nome": "Raquel Nakazato Pinotti",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 77,
+      "nome": "Carlos Alberto Maiello Jr",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 78,
+      "nome": "Carolina Danieli Martins",
+      "tipo": "individual",
+      "tempo": "novo",
+      "afastado": false
+    },
+    {
+      "id": 79,
+      "nome": "Luiz Fernando de Lima Lara",
+      "tipo": "casal",
+      "tempo": "novo",
+      "afastado": false
+    }
+  ],
+  "totalDisponibilidades": 219,
+  "disponibilidades": [
+    {
+      "ministro_id": 66,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 66,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 66,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 66,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 66,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 70,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 70,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 31,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 31,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 31,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 31,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 31,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 8,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 30,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 30,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 30,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 30,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 52,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 52,
+      "data": "2026-10-18",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 52,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 52,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 72,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 72,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 79,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 79,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 4,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 4,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 4,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 4,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 40,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 40,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 40,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 67,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 67,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 67,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 23,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 23,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 55,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 55,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 59,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 57,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 57,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 56,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 56,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 60,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 60,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 60,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 61,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 61,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 61,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 69,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 69,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 69,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 74,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 74,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 74,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 74,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 16,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 6,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 6,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 6,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 6,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 53,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 53,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 26,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 26,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 26,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 63,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 63,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 2,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 58,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 58,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 58,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 39,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 39,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 39,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 38,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 38,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 38,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 38,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 73,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 73,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 68,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 68,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-18",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 32,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 12,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 12,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 12,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 17,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 17,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 17,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 17,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 17,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 75,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 75,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 75,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 14,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 14,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 7,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 7,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 64,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 64,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 65,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 65,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 65,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 41,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 41,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 33,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 33,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 33,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 29,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 29,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 76,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 76,
+      "data": "2026-10-18",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 28,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 28,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 34,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 34,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 3,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 3,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 9,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 9,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 24,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 24,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 22,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 78,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 78,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 25,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 25,
+      "data": "2026-10-18",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 25,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 25,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 25,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 71,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 71,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 77,
+      "data": "2026-10-25",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 77,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 5,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 5,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 11,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 11,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 11,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 54,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 18,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 50,
+      "data": "2026-10-12",
+      "horario": "09:06",
+      "nomeMissa": "Missa de Nossa Senhora Aparecida "
+    },
+    {
+      "ministro_id": 50,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 50,
+      "data": "2026-10-18",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 50,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 50,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 37,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 37,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 37,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 37,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 27,
+      "data": "2026-10-04",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 27,
+      "data": "2026-10-11",
+      "horario": "07:30",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 1,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-02",
+      "horario": "19:30",
+      "nomeMissa": "Sagrado Coração de Jesus"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-03",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-04",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-10",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-11",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-18",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-18",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-22",
+      "horario": "19:30",
+      "nomeMissa": "Missa e Oração da Coroa de Santa Rita"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-24",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-25",
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 20,
+      "data": "2026-10-31",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 21,
+      "data": "2026-10-04",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 21,
+      "data": "2026-10-17",
+      "horario": "17:00",
+      "nomeMissa": "Missa de Sábado"
+    },
+    {
+      "ministro_id": 21,
+      "data": "2026-10-25",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    },
+    {
+      "ministro_id": 21,
+      "data": "2026-10-11",
+      "horario": "19:00",
+      "nomeMissa": "Missa de Domingo"
+    }
+  ],
   "escalaFinal": {
-    "2026-09-05": {
-      "17:00": {
-        "ministros": [],
-        "nome": "Missa de Sábado",
-        "limiteManual": 6,
-        "lider": ""
+    "2026-10-02": {
+      "19:30": {
+        "ministros": [
+          "Rosa",
+          "Guta e Carlão",
+          "Shyrlei"
+        ],
+        "nome": "Sagrado Coração de Jesus",
+        "limiteManual": 4,
+        "lider": "Rosa"
       }
     },
-    "2026-09-06": {
+    "2026-10-03": {
+      "17:00": {
+        "ministros": [
+          "Taluza",
+          "Alan Ciocca e Ana Neri",
+          "Eliara e Junior",
+          "Lázaro e Tânia",
+          "Mavii"
+        ],
+        "nome": "Missa de Sábado",
+        "limiteManual": 8,
+        "lider": "Taluza"
+      }
+    },
+    "2026-10-04": {
       "07:30": {
-        "ministros": [],
+        "ministros": [
+          "Júlio e Ana Michele",
+          "Cleber e Márcia",
+          "Nilson e Tânia G"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 5,
-        "lider": ""
+        "limiteManual": 6,
+        "lider": "Júlio"
       },
       "10:00": {
-        "ministros": [],
+        "ministros": [
+          "Rogério e Aline",
+          "Antônio Carlos",
+          "Beatriz",
+          "Darzi e Irene",
+          "Gustavo Soares",
+          "Rafael e Priscila B",
+          "Sonia"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Aline"
       },
       "19:00": {
-        "ministros": [],
+        "ministros": [
+          "Cláudio e Luciene",
+          "Alexandre e Priscila",
+          "Maurício e Juliana",
+          "Nando e Silmara",
+          "Zeca e Ronéia"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Luciene"
       }
     },
-    "2026-09-12": {
+    "2026-10-10": {
       "17:00": {
-        "ministros": [],
+        "ministros": [
+          "Rodrigo e Eleksandra",
+          "Doroty",
+          "Rafael e Priscila B",
+          "Shyrlei",
+          "Wilson e Regina"
+        ],
         "nome": "Missa de Sábado",
-        "limiteManual": 6,
-        "lider": ""
+        "limiteManual": 8,
+        "lider": "Rodrigo"
       }
     },
-    "2026-09-13": {
+    "2026-10-11": {
       "07:30": {
-        "ministros": [],
+        "ministros": [
+          "Cleber e Márcia",
+          "Laila",
+          "Léa",
+          "Marina Faleiro",
+          "Natanael"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 5,
-        "lider": ""
+        "limiteManual": 6,
+        "lider": "Cleber"
       },
       "10:00": {
-        "ministros": [],
+        "ministros": [
+          "Maurício e Juliana",
+          "Ana Cláudia",
+          "Andréa  e Sérgio ",
+          "Ceine",
+          "Darzi e Irene",
+          "Fernando e Natália"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Juliana"
       },
       "19:00": {
-        "ministros": [],
+        "ministros": [
+          "Alexandre e Priscila",
+          "Lorena",
+          "Luciana",
+          "Nando e Silmara",
+          "Sonia",
+          "Vinícius"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Alexandre"
       }
     },
-    "2026-09-19": {
-      "17:00": {
-        "ministros": [],
-        "nome": "Missa de Sábado",
+    "2026-10-12": {
+      "09:06": {
+        "ministros": [
+          "Antônio Carlos",
+          "Doroty",
+          "Felipe Pinotti",
+          "Júlio",
+          "Roger e Andressa"
+        ],
+        "nome": "Missa de Nossa Senhora Aparecida ",
         "limiteManual": 6,
-        "lider": ""
+        "lider": "Antônio Carlos"
       }
     },
-    "2026-09-20": {
+    "2026-10-17": {
+      "17:00": {
+        "ministros": [
+          "Luís Gustavo e Mariana",
+          "Carlos  e Mari",
+          "Lázaro e Tânia",
+          "Rodrigo e Eleksandra"
+        ],
+        "nome": "Missa de Sábado",
+        "limiteManual": 8,
+        "lider": "Luís Gustavo"
+      }
+    },
+    "2026-10-18": {
       "07:30": {
-        "ministros": [],
+        "ministros": [
+          "Valter e Cristiane",
+          "Mateus e Raquel",
+          "Osvaldo e Maria"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 5,
-        "lider": ""
+        "limiteManual": 6,
+        "lider": "Cristiane"
       },
       "10:00": {
-        "ministros": [],
+        "ministros": [
+          "Eliara e Junior",
+          "Cesar e Aline D",
+          "Guta e Carlão",
+          "Rafaela",
+          "Silvia",
+          "Simone",
+          "Teresa"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Eliara"
       },
       "19:00": {
-        "ministros": [],
+        "ministros": [
+          "Edilson e Valéria",
+          "Adolfo",
+          "Alan Ciocca e Ana Neri",
+          "Fred e Ana",
+          "Geraldo e Natalie"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Edilson"
       }
     },
-    "2026-09-26": {
+    "2026-10-22": {
+      "19:30": {
+        "ministros": [
+          "Sonia",
+          "Carolina",
+          "Marilda",
+          "Silvia"
+        ],
+        "nome": "Missa e Oração da Coroa de Santa Rita",
+        "limiteManual": 4,
+        "lider": "Sonia"
+      }
+    },
+    "2026-10-24": {
       "17:00": {
-        "ministros": [],
+        "ministros": [
+          "Cristiano e Fabiana",
+          "Nilson e Tânia G",
+          "Sérgio e Maria Helena",
+          "Wilson e Regina"
+        ],
         "nome": "Missa de Sábado",
-        "limiteManual": 6,
-        "lider": ""
+        "limiteManual": 8,
+        "lider": "Cristiano"
       }
     },
-    "2026-09-27": {
+    "2026-10-25": {
       "07:30": {
-        "ministros": [],
+        "ministros": [
+          "Valter e Cristiane",
+          "Carlos Jr e Camila",
+          "Marcelo e Milena"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 5,
-        "lider": ""
+        "limiteManual": 6,
+        "lider": "Cristiane"
       },
       "10:00": {
-        "ministros": [],
+        "ministros": [
+          "Ana Cláudia",
+          "Antônio Carlos",
+          "Beatriz",
+          "Emerson e Fernanda",
+          "Rafaela",
+          "Rogério e Bruna",
+          "Simone",
+          "Teresa"
+        ],
         "nome": "Missa de Domingo",
-        "limiteManual": 8,
-        "lider": ""
+        "limiteManual": 10,
+        "lider": "Ana Cláudia"
       },
       "19:00": {
-        "ministros": [],
+        "ministros": [
+          "Luís Gustavo e Mariana",
+          "Cláudio e Luciene",
+          "Edilson e Valéria",
+          "Rosa",
+          "Vinícius",
+          "Zeca e Ronéia"
+        ],
         "nome": "Missa de Domingo",
+        "limiteManual": 10,
+        "lider": "Luís Gustavo"
+      }
+    },
+    "2026-10-31": {
+      "17:00": {
+        "ministros": [
+          "Vinícius",
+          "Alexandre Senna e Ana Cecilia",
+          "Isabela",
+          "Júlio e Ana Michele",
+          "Osvaldo e Maria"
+        ],
+        "nome": "Missa de Sábado",
         "limiteManual": 8,
-        "lider": ""
+        "lider": "Vinícius"
       }
     }
   }

@@ -1,5 +1,5 @@
 {
-  "name": "Escala de Ministros",
+  "name": "Portal do Mece",
   "description": "Escalas litúrgicas, trocas e disponibilidades de ministros para sua paróquia!!",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

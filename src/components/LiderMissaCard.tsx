@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Flag, Check, X, Package, MessageSquare, Send, ShieldCheck, AlertCircle, RefreshCw } from "lucide-react";
-import { isMinisterLeader, isMinisterLiderForUser, normalizeMinisterText } from "../utils";
+import { Flag, Check, X, Package, MessageSquare, Send, ShieldCheck, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  isMinisterLeader, 
+  isMinisterLiderForUser, 
+  normalizeMinisterText,
+  ITENS_ESTOQUE_RELATORIO,
+  parseUsoEstoque,
+  formatUsoEstoque,
+  toTitleCase
+} from "../utils";
 
 interface LiderMissaCardProps {
   isPreview?: boolean;
@@ -54,10 +62,11 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
     return isMinisterLiderForUser(liderName, user, ministrosList);
   }, [isCoord, celebrationHasDefinedLeader, liderName, user, ministrosList]);
 
-  // The relation of ministers ONLY appears if:
-  // - The leader is enabled with the star (⭐) in this celebration
-  // - AND the current user is that leader/responsible (or coordination)
-  const canViewMinistersRelation = isLeaderStarredInMass && isCurrentUserLeader;
+  // The relation of ministers appears if:
+  // - The current user is from coordination (supervisory access)
+  // - OR the current user is the leader/responsible of this mass
+  // - OR the leader is confirmed with star
+  const canViewMinistersRelation = isCoord || isCurrentUserLeader || isLeaderStarredInMass;
 
   const doesMinisterMatchLeader = (minRaw: any, lidRaw: any): boolean => {
     if (!minRaw || !lidRaw) return false;
@@ -87,14 +96,16 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
     return false;
   };
 
-  // Team members list includes assigned ministers.
-  // If the leader is NOT already in the list (neither directly nor as part of a couple), we include the leader.
+  // Team members list includes assigned ministers to check (excluding the leader, who is already confirmed leading the mass)
   const teamMembers = React.useMemo(() => {
     const list: string[] = [];
     const addName = (raw: any) => {
       if (!raw) return;
       const name = typeof raw === "string" ? raw.trim() : (raw.nome || raw.name || "").trim();
-      if (name && !list.includes(name)) {
+      if (!name) return;
+      // Exclude the leader/responsible from the checklist
+      if (doesMinisterMatchLeader(name, liderName)) return;
+      if (!list.includes(name)) {
         list.push(name);
       }
     };
@@ -104,30 +115,20 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
       ministrosList.forEach(addName);
     }
 
-    // Check if leaderName is already represented (individually or in a couple like "Maurício e Juliana")
-    const leaderAlreadyInList = list.some((m) => doesMinisterMatchLeader(m, liderName));
-
-    const normLid = liderName ? normalizeMinisterText(liderName) : "";
-    if (
-      liderName &&
-      !leaderAlreadyInList &&
-      normLid &&
-      normLid !== "nao definido" &&
-      normLid !== "lider da missa" &&
-      normLid !== "coordenacao"
-    ) {
-      addName(liderName);
-    }
-
     return list;
   }, [liderName, ministrosList]);
 
   const [presencas, setPresencas] = useState<{ [key: string]: boolean }>({});
   const [justificativas, setJustificativas] = useState<{ [key: string]: string }>({});
   const [faltaCasalTipo, setFaltaCasalTipo] = useState<{ [key: string]: 'ambos' | 'p1' | 'p2' }>({});
+  const [faltaCasalMembro, setFaltaCasalMembro] = useState<{ [key: string]: { p1Faltou: boolean; p2Faltou: boolean } }>({});
+  const [expandedCouples, setExpandedCouples] = useState<{ [coupleName: string]: boolean }>({});
   const [trocasNaoRegistradas, setTrocasNaoRegistradas] = useState("");
   const [usoEstoque, setUsoEstoque] = useState("");
+  const [selectedEstoqueItems, setSelectedEstoqueItems] = useState<string[]>([]);
+  const [outroEstoque, setOutroEstoque] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [semAlteracao, setSemAlteracao] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -180,8 +181,14 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
             const report = data[0];
             if (report.presencas) setPresencas(report.presencas);
             if (report.trocasNaoRegistradas) setTrocasNaoRegistradas(report.trocasNaoRegistradas);
-            if (report.usoEstoque) setUsoEstoque(report.usoEstoque);
+            if (report.usoEstoque) {
+              setUsoEstoque(report.usoEstoque);
+              const parsed = parseUsoEstoque(report.usoEstoque);
+              setSelectedEstoqueItems(parsed.selected);
+              setOutroEstoque(parsed.outro);
+            }
             if (report.observacoes) setObservacoes(report.observacoes);
+            if (report.semAlteracao) setSemAlteracao(true);
             if (report.faltasReportadas && Array.isArray(report.faltasReportadas)) {
               const justMap: { [key: string]: string } = {};
               const casalTipoMap: { [key: string]: 'ambos' | 'p1' | 'p2' } = {};
@@ -204,17 +211,124 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
     }
   }, [dateStr, timeStr, user.paroquia]);
 
+  const handleToggleSemAlteracao = (checked: boolean) => {
+    setSemAlteracao(checked);
+    setHasUserModified(true);
+    setIsSaved(false);
+
+    if (checked) {
+      // Confirma que não houve falta, não retirou hóstia/vinho e não há avisos
+      const allPresent: { [key: string]: boolean } = {};
+      const clearedCasal: { [key: string]: { p1Faltou: boolean; p2Faltou: boolean } } = {};
+      teamMembers.forEach((m) => {
+        allPresent[m] = true;
+        if (isCoupleSlot(m)) {
+          clearedCasal[m] = { p1Faltou: false, p2Faltou: false };
+        }
+      });
+      setPresencas(allPresent);
+      setFaltaCasalMembro(clearedCasal);
+      setJustificativas({});
+      setTrocasNaoRegistradas("");
+      setUsoEstoque("");
+      setSelectedEstoqueItems([]);
+      setOutroEstoque("");
+      setObservacoes("");
+    }
+  };
+
   const togglePresenca = (minName: string, isPresent: boolean) => {
+    if (semAlteracao) setSemAlteracao(false);
     setPresencas((prev) => ({ ...prev, [minName]: isPresent }));
     if (!isPresent && isCoupleSlot(minName)) {
       setFaltaCasalTipo((prev) => ({ ...prev, [minName]: 'ambos' }));
+      setFaltaCasalMembro((prev) => ({ ...prev, [minName]: { p1Faltou: true, p2Faltou: true } }));
+    } else if (isPresent && isCoupleSlot(minName)) {
+      setFaltaCasalMembro((prev) => ({ ...prev, [minName]: { p1Faltou: false, p2Faltou: false } }));
     }
     setHasUserModified(true);
     setIsSaved(false);
   };
 
+  const toggleCoupleMember = (minName: string, member: 'p1' | 'p2') => {
+    if (semAlteracao) setSemAlteracao(false);
+    const current = faltaCasalMembro[minName] || { p1Faltou: false, p2Faltou: false };
+    const next = {
+      ...current,
+      [member === 'p1' ? 'p1Faltou' : 'p2Faltou']: !current[member === 'p1' ? 'p1Faltou' : 'p2Faltou']
+    };
+    const anyFaltou = next.p1Faltou || next.p2Faltou;
+    setPresencas((prev) => ({ ...prev, [minName]: !anyFaltou }));
+    let cType: 'ambos' | 'p1' | 'p2' = 'ambos';
+    if (next.p1Faltou && next.p2Faltou) cType = 'ambos';
+    else if (next.p1Faltou) cType = 'p1';
+    else if (next.p2Faltou) cType = 'p2';
+    setFaltaCasalTipo((prev) => ({ ...prev, [minName]: cType }));
+    setFaltaCasalMembro((prev) => ({ ...prev, [minName]: next }));
+    setHasUserModified(true);
+    setIsSaved(false);
+  };
+
+  const toggleCoupleExpanded = (coupleName: string) => {
+    setExpandedCouples(prev => ({ ...prev, [coupleName]: !prev[coupleName] }));
+  };
+
+  const setCoupleAttendance = (minName: string, option: 'ambos_presentes' | 'so_p1' | 'so_p2' | 'ambos_faltaram') => {
+    if (semAlteracao) setSemAlteracao(false);
+    let next = { p1Faltou: false, p2Faltou: false };
+    let isPres = true;
+    let cType: 'ambos' | 'p1' | 'p2' = 'ambos';
+
+    if (option === 'ambos_presentes') {
+      next = { p1Faltou: false, p2Faltou: false };
+      isPres = true;
+    } else if (option === 'so_p1') {
+      // Só cônjuge 1 esteve presente (cônjuge 2 faltou)
+      next = { p1Faltou: false, p2Faltou: true };
+      isPres = false;
+      cType = 'p2';
+    } else if (option === 'so_p2') {
+      // Só cônjuge 2 esteve presente (cônjuge 1 faltou)
+      next = { p1Faltou: true, p2Faltou: false };
+      isPres = false;
+      cType = 'p1';
+    } else if (option === 'ambos_faltaram') {
+      next = { p1Faltou: true, p2Faltou: true };
+      isPres = false;
+      cType = 'ambos';
+    }
+
+    setPresencas((prev) => ({ ...prev, [minName]: isPres }));
+    setFaltaCasalTipo((prev) => ({ ...prev, [minName]: cType }));
+    setFaltaCasalMembro((prev) => ({ ...prev, [minName]: next }));
+    setHasUserModified(true);
+    setIsSaved(false);
+  };
+
   const handleJustificativaChange = (minName: string, val: string) => {
+    if (semAlteracao) setSemAlteracao(false);
     setJustificativas((prev) => ({ ...prev, [minName]: val }));
+    setHasUserModified(true);
+    setIsSaved(false);
+  };
+
+  const toggleEstoqueItem = (item: string) => {
+    if (semAlteracao) setSemAlteracao(false);
+    const next = selectedEstoqueItems.includes(item)
+      ? selectedEstoqueItems.filter((i) => i !== item)
+      : [...selectedEstoqueItems, item];
+    setSelectedEstoqueItems(next);
+    const formatted = formatUsoEstoque(next, outroEstoque);
+    setUsoEstoque(formatted);
+    setHasUserModified(true);
+    setIsSaved(false);
+  };
+
+  const handleOutroEstoqueChange = (val: string) => {
+    if (semAlteracao) setSemAlteracao(false);
+    setOutroEstoque(val);
+    const formatted = formatUsoEstoque(selectedEstoqueItems, val);
+    setUsoEstoque(formatted);
     setHasUserModified(true);
     setIsSaved(false);
   };
@@ -327,7 +441,8 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
               </span>
               {isSaved && (
                 <span className="bg-emerald-500/20 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Enviado {lastSavedAt ? `às ${lastSavedAt}` : ""}
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Enviado {lastSavedAt ? `às ${lastSavedAt}` : ""}</span>
                 </span>
               )}
             </div>
@@ -342,12 +457,56 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
       </div>
 
       {canViewMinistersRelation ? (
-        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl mb-6 text-xs text-slate-600 leading-relaxed">
-          🚩 <strong className="text-slate-900">Painel do Responsável pela Missa:</strong> Todos os ministros escalados são considerados presentes automaticamente. Marque apenas quem faltou e preencha as informações da celebração.
+        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl mb-4 text-xs text-slate-600 leading-relaxed">
+          🚩 <strong className="text-slate-900">Painel do Responsável pela Missa:</strong> Todos os ministros escalados são considerados presentes automaticamente. Se a celebração ocorreu sem nenhuma alteração, marque o quadrado abaixo para habilitar o envio.
         </div>
       ) : (
         <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl mb-6 text-xs text-amber-900 leading-relaxed">
           🔒 <strong>Acesso Restrito:</strong> A relação dos ministros desta celebração é visível apenas para o Ministro Líder e Responsável habilitado com a estrela (⭐) na frente na escala.
+        </div>
+      )}
+
+      {/* Quadrado Sem Alteração */}
+      {canViewMinistersRelation && (
+        <div
+          onClick={() => handleToggleSemAlteracao(!semAlteracao)}
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 mb-6 ${
+            semAlteracao
+              ? "bg-emerald-50/90 border-emerald-500 shadow-sm"
+              : "bg-slate-50 border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <button
+              type="button"
+              id="checkbox-sem-alteracao"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleSemAlteracao(!semAlteracao);
+              }}
+              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-xl border-2 flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                semAlteracao
+                  ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                  : "bg-white border-slate-300 hover:border-emerald-500"
+              }`}
+              aria-label="Sem alteração na celebração"
+              aria-checked={semAlteracao}
+              role="checkbox"
+            >
+              {semAlteracao && <Check className="w-4 h-4 stroke-[3] text-white" />}
+            </button>
+            <span className="text-xs sm:text-sm font-black text-slate-900">
+              Sem Alteração (Tudo Normal)
+            </span>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg inline-block ${
+              semAlteracao ? "bg-emerald-600 text-white" : "bg-white text-slate-500 border border-slate-200"
+            }`}>
+              {semAlteracao ? "Tudo Normal" : "Marcar"}
+            </span>
+          </div>
         </div>
       )}
 
@@ -407,9 +566,176 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
                 ) : (
                   <div className="space-y-2.5">
                 {teamMembers.map((minName, idx) => {
-                  const hasFaltou = presencas[minName] === false;
+                  const isCouple = isCoupleSlot(minName);
                   const isLeaderRow = doesMinisterMatchLeader(minName, liderName);
 
+                  if (isCouple) {
+                    const [p1, p2] = splitCoupleNames(minName);
+                    const p1Faltou = Boolean(faltaCasalMembro[minName]?.p1Faltou);
+                    const p2Faltou = Boolean(faltaCasalMembro[minName]?.p2Faltou);
+                    const hasAnyFaltou = p1Faltou || p2Faltou;
+                    const isExpanded = Boolean(expandedCouples[minName]);
+
+                    const currentStatus: 'ambos_presentes' | 'so_p1' | 'so_p2' | 'ambos_faltaram' =
+                      !hasAnyFaltou
+                        ? 'ambos_presentes'
+                        : p1Faltou && p2Faltou
+                        ? 'ambos_faltaram'
+                        : p1Faltou
+                        ? 'so_p2'
+                        : 'so_p1';
+
+                    return (
+                      <div
+                        key={idx}
+                        id={`ministro-attendance-row-${idx}`}
+                        className={`rounded-xl border transition-all ${
+                          !hasAnyFaltou
+                            ? "bg-white border-slate-200 hover:border-slate-300 shadow-2xs"
+                            : p1Faltou && p2Faltou
+                            ? "bg-red-50/90 border-red-300 text-red-950 shadow-xs"
+                            : "bg-amber-50/90 border-amber-300 text-amber-950 shadow-xs"
+                        }`}
+                      >
+                        {/* Nome do Casal normal - Ao clicar abre as opções */}
+                        <button
+                          type="button"
+                          id={`casal-header-btn-${idx}`}
+                          onClick={() => toggleCoupleExpanded(minName)}
+                          className="w-full flex items-center justify-between p-3 text-xs sm:text-sm text-left cursor-pointer transition hover:bg-slate-50/60 rounded-xl"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${
+                                !hasAnyFaltou
+                                  ? "bg-white border-slate-300"
+                                  : p1Faltou && p2Faltou
+                                  ? "bg-red-600 border-red-600 text-white shadow-xs"
+                                  : "bg-amber-500 border-amber-500 text-white font-bold shadow-xs"
+                              }`}
+                            >
+                              {hasAnyFaltou && (
+                                p1Faltou && p2Faltou ? (
+                                  <Check className="w-4 h-4 stroke-[3] text-white" />
+                                ) : (
+                                  <span className="text-xs font-black leading-none text-white">!</span>
+                                )
+                              )}
+                            </div>
+                            <span className={`truncate ${!hasAnyFaltou ? "font-bold text-slate-800" : "font-black text-slate-900"}`}>
+                              {toTitleCase(minName)}
+                            </span>
+                            <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200 shrink-0">
+                              Casal
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                !hasAnyFaltou
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                  : p1Faltou && p2Faltou
+                                  ? "bg-red-600 text-white"
+                                  : "bg-amber-100 text-amber-900 border border-amber-300"
+                              }`}
+                            >
+                              {!hasAnyFaltou
+                                ? "✓ Ambos Presentes"
+                                : p1Faltou && p2Faltou
+                                ? "⚠️ Ambos Faltaram"
+                                : p1Faltou
+                                ? `⚠️ Só ${p2}`
+                                : `⚠️ Só ${p1}`}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Opções expandidas para o casal */}
+                        {isExpanded && (
+                          <div className="p-3 pt-0 border-t border-slate-100 mt-1">
+                            <p className="text-[10px] font-semibold text-slate-500 mb-2 px-0.5">
+                              Selecione a presença do casal na celebração:
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setCoupleAttendance(minName, 'ambos_presentes')}
+                                className={`p-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  currentStatus === 'ambos_presentes'
+                                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800'
+                                }`}
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                Ambos
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setCoupleAttendance(minName, 'so_p1')}
+                                className={`p-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
+                                  currentStatus === 'so_p1'
+                                    ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-800'
+                                }`}
+                                title={`Apenas ${toTitleCase(p1)} esteve presente (${toTitleCase(p2)} faltou)`}
+                              >
+                                Só {toTitleCase(p1)}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setCoupleAttendance(minName, 'so_p2')}
+                                className={`p-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
+                                  currentStatus === 'so_p2'
+                                    ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-800'
+                                }`}
+                                title={`Apenas ${toTitleCase(p2)} esteve presente (${toTitleCase(p1)} faltou)`}
+                              >
+                                Só {toTitleCase(p2)}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setCoupleAttendance(minName, 'ambos_faltaram')}
+                                className={`p-2 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  currentStatus === 'ambos_faltaram'
+                                    ? 'bg-red-600 text-white border-red-700 shadow-2xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-red-50 hover:text-red-800'
+                                }`}
+                              >
+                                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                Ambos Faltaram
+                              </button>
+                            </div>
+
+                            {hasAnyFaltou && (
+                              <div className="mt-3 pt-2 border-t border-slate-200">
+                                <input
+                                  type="text"
+                                  id={`falta-justificativa-${idx}`}
+                                  placeholder={`Justificativa da falta (${p1Faltou && p2Faltou ? 'ambos' : p1Faltou ? p1 : p2}) - opcional...`}
+                                  value={justificativas[minName] || ""}
+                                  onChange={(e) => handleJustificativaChange(minName, e.target.value)}
+                                  className="w-full bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Individual minister
+                  const hasFaltou = presencas[minName] === false;
                   return (
                     <div
                       key={idx}
@@ -451,7 +777,7 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
                                 hasFaltou ? "text-red-900 font-extrabold" : "text-slate-800 hover:text-slate-950"
                               }`}
                             >
-                              {minName}
+                              {toTitleCase(minName)}
                             </span>
                             {isLeaderRow && (
                               <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1 shrink-0">
@@ -483,61 +809,6 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
 
                       {hasFaltou && (
                         <div className="mt-2.5 pt-2.5 border-t border-red-200/80 space-y-2 animate-in fade-in duration-200">
-                          {isCoupleSlot(minName) && (
-                            <div className="space-y-1.5 bg-red-100/50 p-2.5 rounded-xl border border-red-200">
-                              <span className="text-[11px] font-bold text-red-900 block">
-                                Quem do casal faltou?
-                              </span>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                                <button
-                                  type="button"
-                                  id={`falta-casal-ambos-${idx}`}
-                                  onClick={() => {
-                                    setFaltaCasalTipo((prev) => ({ ...prev, [minName]: 'ambos' }));
-                                    setIsSaved(false);
-                                  }}
-                                  className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
-                                    (faltaCasalTipo[minName] || 'ambos') === 'ambos'
-                                      ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                                      : 'bg-white text-red-900 border-red-200 hover:bg-red-50'
-                                  }`}
-                                >
-                                  👥 Ambos (2 faltas)
-                                </button>
-                                <button
-                                  type="button"
-                                  id={`falta-casal-p1-${idx}`}
-                                  onClick={() => {
-                                    setFaltaCasalTipo((prev) => ({ ...prev, [minName]: 'p1' }));
-                                    setIsSaved(false);
-                                  }}
-                                  className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
-                                    faltaCasalTipo[minName] === 'p1'
-                                      ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                                      : 'bg-white text-red-900 border-red-200 hover:bg-red-50'
-                                  }`}
-                                >
-                                  👤 Apenas {splitCoupleNames(minName)[0]} (1 falta)
-                                </button>
-                                <button
-                                  type="button"
-                                  id={`falta-casal-p2-${idx}`}
-                                  onClick={() => {
-                                    setFaltaCasalTipo((prev) => ({ ...prev, [minName]: 'p2' }));
-                                    setIsSaved(false);
-                                  }}
-                                  className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
-                                    faltaCasalTipo[minName] === 'p2'
-                                      ? 'bg-red-600 text-white border-red-700 shadow-xs'
-                                      : 'bg-white text-red-900 border-red-200 hover:bg-red-50'
-                                  }`}
-                                >
-                                  👤 Apenas {splitCoupleNames(minName)[1]} (1 falta)
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
                           <input
                             type="text"
                             id={`falta-justificativa-${idx}`}
@@ -586,23 +857,58 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
 
           {/* SECTION 3: Estoque */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-            <div className="flex items-center gap-2 mb-1">
-              <Package className="w-4 h-4 text-blue-600" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                3. Consumo de Estoque
-              </h4>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-blue-600" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  3. Consumo de Estoque
+                </h4>
+              </div>
+              <span className="text-[10px] text-slate-400 font-normal">Habilite os itens utilizados</span>
             </div>
-            <textarea
-              rows={2}
+
+            {/* 4 Quadrados de tamanho médio */}
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {ITENS_ESTOQUE_RELATORIO.map((item) => {
+                const isChecked = selectedEstoqueItems.includes(item);
+                return (
+                  <button
+                    type="button"
+                    key={item}
+                    disabled={!canViewMinistersRelation}
+                    onClick={() => toggleEstoqueItem(item)}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                      !canViewMinistersRelation
+                        ? "bg-slate-100/70 border-slate-200 text-slate-400 cursor-not-allowed"
+                        : isChecked
+                        ? "bg-blue-50/90 border-blue-400 text-blue-900 font-semibold shadow-xs cursor-pointer"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 cursor-pointer"
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center border transition-colors shrink-0 ${
+                        !canViewMinistersRelation
+                          ? "bg-slate-200 border-slate-300 text-transparent"
+                          : isChecked
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-white border-slate-300 text-transparent"
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                    <span className="text-xs leading-tight font-medium">{item}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <input
+              type="text"
               disabled={!canViewMinistersRelation}
-              value={usoEstoque}
-              onChange={(e) => {
-                setUsoEstoque(e.target.value);
-                setHasUserModified(true);
-                setIsSaved(false);
-              }}
-              placeholder={canViewMinistersRelation ? "Ex: 1 pacote de hóstias, 1 garrafa de vinho..." : "Acesso restrito ao Ministro Líder (⭐)..."}
-              className={`w-full border rounded-xl p-2.5 text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 leading-relaxed ${
+              value={outroEstoque}
+              onChange={(e) => handleOutroEstoqueChange(e.target.value)}
+              placeholder={canViewMinistersRelation ? "Outro item ou detalhe (opcional)..." : "Acesso restrito ao Ministro Líder (⭐)..."}
+              className={`w-full border rounded-xl px-3 py-2 text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                 !canViewMinistersRelation ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-900 border-slate-200"
               }`}
             />
@@ -639,19 +945,21 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
         <span className="text-[11px] text-slate-500/70 font-medium">
           {!canViewMinistersRelation
             ? "Apenas o Ministro Líder e Responsável (⭐) desta celebração pode enviar o relatório."
-            : !hasAnyInformationFilled && !isSaved
-            ? "Preencha alguma informação (falta, troca, estoque ou observação) para habilitar o envio."
+            : !hasAnyInformationFilled && !semAlteracao && !isSaved
+            ? "Marque 'Sem Alteração' ou preencha alguma ocorrência para habilitar o envio."
             : isSaved
             ? "✓ Relatório sincronizado e enviado à coordenação."
+            : semAlteracao
+            ? "✓ Sem alteração confirmado! Envio habilitado para a coordenação."
             : "⚠️ Você possui alterações prontas para envio."}
         </span>
 
         <button
           type="button"
           onClick={handleSubmitRelatorio}
-          disabled={loading || isPreview || !canViewMinistersRelation || (!hasAnyInformationFilled && !hasUserModified && !isSaved)}
+          disabled={loading || isPreview || !canViewMinistersRelation || (!hasAnyInformationFilled && !semAlteracao && !hasUserModified && !isSaved)}
           className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg ${
-            isPreview || !canViewMinistersRelation || (!hasAnyInformationFilled && !hasUserModified && !isSaved)
+            isPreview || !canViewMinistersRelation || (!hasAnyInformationFilled && !semAlteracao && !hasUserModified && !isSaved)
               ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none"
               : isSaved
               ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
@@ -661,12 +969,12 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
           {loading ? (
             <>
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Enviando...
+              <span>Enviando...</span>
             </>
           ) : (
             <>
               <Send className="w-3.5 h-3.5" />
-              {isSaved ? "Atualizar Relatório da Missa" : "Enviar Relatório à Coordenação"}
+              <span>{isSaved ? "Atualizar Relatório da Missa" : "Enviar Relatório à Coordenação"}</span>
             </>
           )}
         </button>

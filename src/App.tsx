@@ -5,9 +5,12 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { hasCoordAccess, areMinistersOverlapping, isMinisterMatchingUser, isMinisterLiderForUser, isMinisterLeader, formatMinisterWithLeader, renderMinisterWithStar, fetchAndCacheMinistros, safeJson, safeFetchJson } from "./utils";
+import { hasCoordAccess, isCoordenadorOrVice, areMinistersOverlapping, isMinisterMatchingUser, isMinisterLiderForUser, isMinisterLeader, formatMinisterWithLeader, renderMinisterWithStar, fetchAndCacheMinistros, getScheduledWhoForUser, safeJson, safeFetchJson } from "./utils";
+import { calcularStatusDisponibilidade, getBrazilDate } from "./utils/disponibilidade";
+import { getSantoDoDia } from "./utils/santos";
 import { createPortal } from "react-dom";
 import LiderView from "./components/LiderView";
+import { NotificationBell } from "./components/NotificationBell";
 import {
   format,
   startOfWeek,
@@ -31,6 +34,7 @@ import {
   addMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { APP_VERSION } from "./version";
 
 function formatMessageDateDisplay(dateStr: string): string {
   if (!dateStr) return "";
@@ -131,6 +135,7 @@ import {
   DollarSign,
   Flag,
   Star,
+  Fingerprint,
   Sparkles,
 } from "lucide-react";
 import pptxgen from "pptxgenjs";
@@ -1548,7 +1553,25 @@ const getExpectedSlots = async (
     `[DEBUG] getExpectedSlots iniciado para paróquia: "${paroquiaNameProp}", mês: ${mesParam}, ano: ${anoParam}`,
   );
   const slots = [];
-  const paroquiaName = (paroquiaNameProp || "").trim();
+  let paroquiaName = (paroquiaNameProp || "").trim();
+  let userPhoneQuery = "";
+
+  if (typeof window !== "undefined") {
+    try {
+      const savedUser = window.sessionStorage?.getItem("user") || window.localStorage?.getItem("user");
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        if (!paroquiaName && u.paroquia) {
+          paroquiaName = String(u.paroquia).trim();
+        }
+        const p = u.telefone || u.loginPhone;
+        if (p) {
+          const cleanP = String(p).replace(/\D/g, "");
+          if (cleanP) userPhoneQuery = `&userPhone=${encodeURIComponent(cleanP)}`;
+        }
+      }
+    } catch (_) {}
+  }
 
   // Base default slots (Standard)
   const MISSAS_PADRAO = [
@@ -1607,18 +1630,18 @@ const getExpectedSlots = async (
 
   try {
     const data = await safeFetchJson<any[]>(
-      `/api/missas-temporarias?paroquia=${encodeURIComponent(paroquiaName)}`,
+      `/api/missas-temporarias?paroquia=${encodeURIComponent(paroquiaName)}${userPhoneQuery}`,
       undefined,
       []
     );
-    const missasTemporarias = Array.isArray(data) ? data : [];
+    let missasTemporarias = Array.isArray(data) ? data : [];
     console.log(
       `[DEBUG] getExpectedSlots: Recebeu ${missasTemporarias.length} missas temporárias.`,
     );
 
-    // if (missasTemporarias.length === 0) {
-    //   missasTemporarias = MISSAS_PADRAO;
-    // }
+    if (missasTemporarias.length === 0) {
+      missasTemporarias = MISSAS_PADRAO;
+    }
 
     missasTemporarias.forEach((mt) => {
       const isFixa = mt.frequencia === "semanal";
@@ -1788,7 +1811,9 @@ const getExpectedSlots = async (
     return dateA.getTime() - dateB.getTime();
   });
 
-  slotsCache.set(cacheKey, { slots, timestamp: Date.now() });
+  if (slots.length > 0) {
+    slotsCache.set(cacheKey, { slots, timestamp: Date.now() });
+  }
   return slots;
 };
 
@@ -2146,7 +2171,8 @@ const CadastroView = ({ user, onSave, isTab, voltar, onSetView }: any) => {
                     name="nomeExibicao"
                     value={formData.nomeExibicao}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-liturgy-500 outline-none transition-all font-bold text-liturgy-600"
+                    disabled={!hasCoordAccess(user)}
+                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-liturgy-500 outline-none transition-all font-bold text-liturgy-600 ${!hasCoordAccess(user) ? "opacity-75 cursor-not-allowed" : ""}`}
                     required
                   />
                 </div>
@@ -2284,7 +2310,8 @@ const CadastroView = ({ user, onSave, isTab, voltar, onSetView }: any) => {
                       name="nomeExibicaoConjuge"
                       value={formData.nomeExibicaoConjuge}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-liturgy-500 outline-none transition-all font-bold text-pink-600"
+                      disabled={!hasCoordAccess(user)}
+                      className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-liturgy-500 outline-none transition-all font-bold text-pink-600 ${!hasCoordAccess(user) ? "opacity-75 cursor-not-allowed" : ""}`}
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3521,7 +3548,7 @@ const checkPeriodoAgendado = (config: any, userParoquia?: string) => {
   if (!diaAbertura || !horaAbertura || !diaFechamento || !horaFechamento)
     return false;
 
-  const agora = new Date();
+  const agora = getBrazilDate();
   const [hA, mA] = horaAbertura.split(":").map(Number);
   const [hF, mF] = horaFechamento.split(":").map(Number);
 
@@ -3800,6 +3827,10 @@ function CoordenacaoView({
   setDownloadOptionMode,
   regraDisponibilidade: initialRegraDisponibilidade,
   onTabChange,
+  modoManutencao: modoManutencaoProp = false,
+  statusDisponibilidade: statusDisponibilidadeProp = null as any,
+  selectMinisterModal,
+  setSelectMinisterModal,
 }) {
   const [dailyGospel, setDailyGospel] = useState<{
     text: string;
@@ -3820,6 +3851,11 @@ function CoordenacaoView({
   const [classicWebMode, setClassicWebMode] = useState<boolean>(false);
   const currentMonthStr = format(new Date(), "yyyy-MM");
   const [showGerarEscalaModal, setShowGerarEscalaModal] = useState(false);
+  const [incluirDomingoSeguinte, setIncluirDomingoSeguinte] = useState<boolean>(true);
+  const checkLastDayIsSaturday = (m: number, a: number) => {
+    const lastDay = new Date(a, m, 0);
+    return lastDay.getDay() === 6;
+  };
   const [showConferenciaModal, setShowConferenciaModal] = useState(false);
   const [conferenciaMes, setConferenciaMes] = useState<number>(0);
   const [conferenciaAno, setConferenciaAno] = useState<number>(0);
@@ -3827,6 +3863,13 @@ function CoordenacaoView({
   const [loadingConferencia, setLoadingConferencia] = useState<boolean>(false);
   const [mesGerar, setMesGerar] = useState(Number(mesSelecionado));
   const [anoGerar, setAnoGerar] = useState(Number(anoSelecionado));
+  const [modoManutencao, setModoManutencao] = useState<boolean>(!!modoManutencaoProp);
+
+  useEffect(() => {
+    if (typeof modoManutencaoProp === "boolean") {
+      setModoManutencao(modoManutencaoProp);
+    }
+  }, [modoManutencaoProp]);
 
   // Real-time discreet clock state for Coordination view
   const [liveDateTime, setLiveDateTime] = useState({
@@ -4008,6 +4051,8 @@ function CoordenacaoView({
   // States for tabs
   const [disponibilidades, setDisponibilidades] = useState([]);
   const [aniversariantes, setAniversariantes] = useState([]);
+  const [niverFiltroTipo, setNiverFiltroTipo] = useState<number | "all">(new Date().getMonth() + 1);
+  const [aniversariantesTotal, setAniversariantesTotal] = useState<any[]>([]);
 
   const anyBirthdayToday = useMemo(() => {
     const today = new Date();
@@ -4046,8 +4091,8 @@ function CoordenacaoView({
           const response = await fetch(
             `/api/disponibilidade/${encodeURIComponent(user.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
           );
-          if (response.ok) {
-            const data = await response.json();
+          const data = await safeJson<any[]>(response, null);
+          if (Array.isArray(data)) {
             const ids = data.map((d: any) => {
               const id = normalizeId(`${d.data}-${d.horario}-${d.nomeMissa}`);
               return { id, modo: d.modo || "individual", data: d.data, horario: d.horario, nomeMissa: d.nomeMissa };
@@ -4056,7 +4101,7 @@ function CoordenacaoView({
             setSlotsSelecionados(ids);
           }
         } catch (error) {
-          console.error("Erro ao buscar disponibilidade:", error);
+          console.warn("Aviso ao buscar disponibilidade:", error);
         }
       };
       
@@ -4140,7 +4185,7 @@ function CoordenacaoView({
   const [diaFechamento, setDiaFechamento] = useState<number | "">("");
   const [horaFechamento, setHoraFechamento] = useState("");
   const [maxEscalacoes, setMaxEscalacoes] = useState<number | "libre">(3);
-  const [limiteNovos, setLimiteNovos] = useState<number | "livre">(2);
+  const [limiteNovos, setLimiteNovos] = useState<number | "livre">(4);
   const [regraDisponibilidade, setRegraDisponibilidade] = useState<
     "livre" | "regra2" | "regra3"
   >("regra2");
@@ -4152,6 +4197,34 @@ function CoordenacaoView({
       setRegraDisponibilidade(initialRegraDisponibilidade);
     }
   }, [initialRegraDisponibilidade]);
+
+  const statusDisponibilidade = useMemo(() => {
+    if (statusDisponibilidadeProp) return statusDisponibilidadeProp;
+    return calcularStatusDisponibilidade({
+      diaAbertura,
+      horaAbertura,
+      diaFechamento,
+      horaFechamento,
+      disponibilidadeAberta,
+      manualOverride,
+      hasSubmitted: hasSubmittedGlobal,
+      mesAlvo: mesSelecionado,
+      anoAlvo: anoSelecionado,
+    });
+  }, [
+    statusDisponibilidadeProp,
+    diaAbertura,
+    horaAbertura,
+    diaFechamento,
+    horaFechamento,
+    disponibilidadeAberta,
+    manualOverride,
+    hasSubmittedGlobal,
+    mesSelecionado,
+    anoSelecionado,
+  ]);
+
+  const activeMensagemDisp = mensagemDisponibilidade || statusDisponibilidade.mensagem;
   const [stats, setStats] = useState({
     totalMinistros: 0,
     totalDisponibilidades: 0,
@@ -5261,7 +5334,7 @@ function CoordenacaoView({
           `/api/stats?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}&t=${now}`,
         ),
         fetch(
-          `/api/ministros/aniversariantes?paroquia=${encodeURIComponent(user.paroquia)}&mes=${new Date().getMonth() + 1}&t=${now}`,
+          `/api/ministros/aniversariantes?paroquia=${encodeURIComponent(user.paroquia)}&mes=${niverFiltroTipo}&t=${now}`,
         ),
         fetch(
           `/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia)}&t=${now}`,
@@ -5311,8 +5384,10 @@ function CoordenacaoView({
             config.limiteNovos !== undefined
               ? config.limiteNovos === "livre"
                 ? "livre"
-                : Number(config.limiteNovos)
-              : 2;
+                : typeof config.limiteNovos === "object"
+                  ? ((config.limiteNovos as any).casais ?? 2) * 2 + ((config.limiteNovos as any).individuais ?? 0)
+                  : Number(config.limiteNovos)
+              : 4;
           setLimiteNovos(loadedNovos);
           const loadedRegra =
             config.regraDisponibilidade !== undefined
@@ -5337,8 +5412,15 @@ function CoordenacaoView({
       }
 
       if (niverRes.status === "fulfilled" && niverRes.value && niverRes.value.ok) {
-        const niverData = await safeJson(niverRes.value, []);
-        if (niverData) setAniversariantes(niverData);
+        const niverData = await safeJson<any>(niverRes.value, []);
+        if (niverData) {
+          if (niverFiltroTipo === "all") {
+            setAniversariantesTotal(niverData.data || []);
+            setAniversariantes((niverData.data || []).flatMap((m: any) => m.aniversariantes || []));
+          } else {
+            setAniversariantes(Array.isArray(niverData) ? niverData : []);
+          }
+        }
       }
 
       if (ministrosRes.status === "fulfilled" && ministrosRes.value && ministrosRes.value.ok) {
@@ -5400,11 +5482,12 @@ function CoordenacaoView({
     activeTab,
     mesSelecionado,
     anoSelecionado,
+    niverFiltroTipo,
   ]);
 
   useEffect(() => {
     fetchData(true);
-  }, [activeTab, mesSelecionado, anoSelecionado, fetchData]);
+  }, [activeTab, mesSelecionado, anoSelecionado, niverFiltroTipo, fetchData]);
 
   const handleToggleDisponibilidade = async () => {
     const newState = !disponibilidadeAberta;
@@ -5435,10 +5518,10 @@ function CoordenacaoView({
       setTimeout(() => setMessage(""), 3000);
 
       // Re-fetch to ensure consistency with backend
-      const res = await fetch("/api/config");
+      const res = await fetch(`/api/config?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`);
       if (res.ok) {
         const config = await res.json();
-        const isNoPeriodo = checkPeriodoAgendado(config);
+        const isNoPeriodo = checkPeriodoAgendado(config, user.paroquia);
         const manualOverride =
           config.disponibilidadeAbertaPorParoquia?.[user.paroquia];
         const isAberta =
@@ -5520,25 +5603,28 @@ function CoordenacaoView({
     setShowGerarEscalaModal(false);
     setLoading(true); // Show loading state
     try {
+      const includeSunday = checkLastDayIsSaturday(mesGerar, anoGerar) && incluirDomingoSeguinte;
+      const maxEscParam = maxEscalacoes === "libre" ? 99 : maxEscalacoes;
       const response = await fetch(
-        `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesGerar}&ano=${anoGerar}&keep=${keepExisting ? "true" : "false"}`,
+        `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesGerar}&ano=${anoGerar}&keep=${keepExisting ? "true" : "false"}&includeNextSunday=${includeSunday ? "true" : "false"}&maxEscalacoes=${maxEscParam}&limiteNovos=${encodeURIComponent(limiteNovos)}&t=${Date.now()}`,
         { method: "POST" },
       );
 
       let novaEscala: any;
       let warningMsg: string | null = null;
       let warningDet: string | null = null;
+      let naoEscalados: string[] = [];
 
       if (response.ok) {
         const resData = await response.json();
+        novaEscala = resData.escala;
+        naoEscalados = resData.naoEscalados || [];
+        
         if (response.status === 206 || resData?.warning === "INCOMPLETE_SCHEDULE") {
-          novaEscala = resData.escala || resData;
           if (resData.warning === "INCOMPLETE_SCHEDULE" && Array.isArray(resData.details)) {
             warningMsg = "Vagas em Aberto";
             warningDet = resData.details.join("\n");
           }
-        } else {
-          novaEscala = resData;
         }
       }
 
@@ -5563,15 +5649,23 @@ function CoordenacaoView({
         setConferenciaAno(anoGerar);
         setShowConferenciaModal(true);
 
+        const naoEscaladosInfo = naoEscalados.length > 0
+          ? `\n\nMinistros que enviaram disponibilidade mas NÃO foram escalados (${naoEscalados.length}):\n${naoEscalados.join(', ')}`
+          : `\n\nTodos os ministros que enviaram disponibilidade foram escalados (0 não escalados).`;
+
         if (warningMsg) {
           onAlert(
             `Aviso: ${warningMsg}`,
-            `A escala foi gerada, mas algumas missas não possuem ministros suficientes para preencher todas as vagas:\n\n${warningDet}`,
+            `A escala foi gerada, mas algumas missas não possuem ministros suficientes para preencher todas as vagas:\n\n${warningDet}${naoEscaladosInfo}`,
           );
           setMessage(
             "Escala gerada com avisos: Faltam ministros para algumas missas.",
           );
         } else {
+          onAlert(
+            "Escala Gerada com Sucesso",
+            `A escala de ${monthNames[mesGerar - 1]} / ${anoGerar} foi gerada.${naoEscaladosInfo}`
+          );
           setMessage(
             `Escala de ${monthNames[mesGerar - 1]} / ${anoGerar} gerada com sucesso! Prossiga com a conferência.`,
           );
@@ -5632,14 +5726,18 @@ function CoordenacaoView({
   ) => {
     setLoadingConferencia(true);
     try {
+      const includeSunday = checkLastDayIsSaturday(mes, ano) && incluirDomingoSeguinte;
+      const maxEscParam = maxEscalacoes === "libre" ? 99 : maxEscalacoes;
       const response = await fetch(
-        `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mes}&ano=${ano}&keep=${keepExisting ? "true" : "false"}`,
+        `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mes}&ano=${ano}&keep=${keepExisting ? "true" : "false"}&includeNextSunday=${includeSunday ? "true" : "false"}&maxEscalacoes=${maxEscParam}&limiteNovos=${encodeURIComponent(limiteNovos)}&t=${Date.now()}`,
         { method: "POST" },
       );
 
       if (response.status === 206 || response.ok) {
         const data = await response.json();
-        const novaEscala = response.status === 206 ? data.escala : data;
+        const novaEscala = data.escala || data;
+        const naoEscalados = data.naoEscalados || [];
+        
         setEscala(novaEscala);
         if (setEscalaApp) setEscalaApp(novaEscala);
 
@@ -5655,11 +5753,20 @@ function CoordenacaoView({
         );
         setEscalaConferencia(filtered);
 
+        const naoEscaladosInfo = naoEscalados.length > 0
+          ? `\n\nMinistros que enviaram disponibilidade mas NÃO foram escalados (${naoEscalados.length}):\n${naoEscalados.join(', ')}`
+          : `\n\nTodos os ministros que enviaram disponibilidade foram escalados (0 não escalados).`;
+
         if (response.status === 206 && data.warning === "INCOMPLETE_SCHEDULE") {
           const detalhes = data.details.join("\n");
           onAlert(
             "Aviso: Vagas em Aberto na Nova Geração",
-            `A escala foi recalculada, mas algumas missas não possuem ministros suficientes:\n\n${detalhes}`,
+            `A escala foi recalculada, mas algumas missas não possuem ministros suficientes:\n\n${detalhes}${naoEscaladosInfo}`,
+          );
+        } else {
+          onAlert(
+            "Escala Recalculada com Sucesso",
+            `Uma nova combinação de escala foi gerada.${naoEscaladosInfo}`
           );
         }
         setMessage("Nova combinação de escala recalculada com sucesso!");
@@ -5770,6 +5877,81 @@ function CoordenacaoView({
       }
     } catch (err) {
       console.error("Erro ao atualizar configuração:", err);
+    }
+  };
+
+  const updateAgendamentoField = async (field: 'maxEscalacoes' | 'limiteNovos' | 'regraDisponibilidade', value: any) => {
+    try {
+      const payload: any = {
+        paroquia: user.paroquia,
+        diaAbertura,
+        horaAbertura,
+        diaFechamento,
+        horaFechamento,
+        maxEscalacoes: field === 'maxEscalacoes' ? (value === "libre" ? 99 : Number(value)) : (maxEscalacoes === "libre" ? 99 : Number(maxEscalacoes)),
+        limiteNovos: field === 'limiteNovos' ? (value === "livre" ? "livre" : Number(value)) : (limiteNovos === "livre" ? "livre" : Number(limiteNovos)),
+        regraDisponibilidade: field === 'regraDisponibilidade' ? value : regraDisponibilidade,
+      };
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.error("Erro ao sincronizar agendamento:", err);
+    }
+  };
+
+  const handleAdicionarMinistroManual = (data: string, horario: string) => {
+    const normTargetHorario = normalizeHorario(horario);
+    const disponiveisNestaData: string[] = [];
+    (disponibilidades || []).forEach((m: any) => {
+      const temDisp = (m.disponibilidade || []).some((d: any) => {
+        const sameDate = d.data === data;
+        const sameHorario = !d.horario || normalizeHorario(d.horario) === normTargetHorario;
+        return sameDate && sameHorario;
+      });
+      if (temDisp) {
+        const nomeM = m.nomeExibicao || m.nome || (m.nomeConjuge ? `${m.nome} e ${m.nomeConjuge}` : "");
+        if (nomeM && !disponiveisNestaData.includes(nomeM)) disponiveisNestaData.push(nomeM);
+      }
+    });
+
+    const allNames = (allMinisters || []).map((m: any) => m.nomeExibicao || m.nome || (m.nomeConjuge ? `${m.nome} e ${m.nomeConjuge}` : "")).filter(Boolean);
+
+    setSelectMinisterModal({
+      aberto: true,
+      data,
+      horario,
+      disponiveis: disponiveisNestaData,
+      todosMinistros: allNames,
+      onSelect: (nome) => enviarAdicaoMinistro(data, horario, nome),
+    });
+  };
+
+  const enviarAdicaoMinistro = async (data: string, horario: string, ministroNome: string) => {
+    try {
+      const res = await fetch("/api/escala/adicionar-ministro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paroquia: user.paroquia,
+          data,
+          horario,
+          ministroNome,
+        }),
+      });
+      if (res.ok) {
+        setMessage("Ministro adicionado com sucesso!");
+        setTimeout(() => setMessage(""), 3000);
+        fetchEscalaConferencia(conferenciaMes, conferenciaAno);
+      } else {
+        const err = await res.json();
+        onAlert("Erro", err.error || "Erro ao adicionar ministro.");
+      }
+    } catch (e) {
+      console.error(e);
+      onAlert("Erro", "Erro ao conectar com o servidor.");
     }
   };
 
@@ -5958,6 +6140,103 @@ function CoordenacaoView({
     } else {
       setDownloadOptionMode({ aberta: true, escala: escala });
     }
+  };
+
+  const handlePrintAniversariantes = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const tituloRelatorio = niverFiltroTipo === "all" 
+      ? "Relação Geral de Aniversariantes - Todos os Meses" 
+      : `Relação de Aniversariantes - ${monthNames[Number(niverFiltroTipo) - 1]}`;
+
+    let htmlContent = `
+      <html>
+        <head>
+          <title>${tituloRelatorio}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h1 { text-align: center; font-size: 20px; margin-bottom: 5px; }
+            h2 { text-align: center; font-size: 14px; color: #666; margin-top: 0; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 13px; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .text-center { text-align: center; }
+            h3 { font-size: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; margin-top: 25px; color: #1e3a8a; }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Portal do Mece - Paróquia ${user?.paroquia || ''}</h1>
+          <h2>${tituloRelatorio}</h2>
+    `;
+
+    if (niverFiltroTipo === "all") {
+      aniversariantesTotal.forEach(grupo => {
+        if (grupo.aniversariantes && grupo.aniversariantes.length > 0) {
+          htmlContent += `<h3>${grupo.mesNome}</h3>`;
+          htmlContent += `
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 80px;" class="text-center">Dia</th>
+                  <th>Ministro(a)</th>
+                  <th style="width: 150px;">Telefone</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          grupo.aniversariantes.forEach((n: any) => {
+            htmlContent += `
+              <tr>
+                <td class="text-center"><strong>${String(n.dia).padStart(2, '0')}/${String(grupo.mesNum).padStart(2, '0')}</strong></td>
+                <td>${n.nome}</td>
+                <td>${n.telefone || '-'}</td>
+              </tr>
+            `;
+          });
+          htmlContent += `</tbody></table>`;
+        }
+      });
+    } else {
+      htmlContent += `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;" class="text-center">Dia</th>
+              <th>Ministro(a)</th>
+              <th style="width: 150px;">Telefone</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      [...aniversariantes].sort((a, b) => parseInt(a.dia) - parseInt(b.dia)).forEach((n: any) => {
+        htmlContent += `
+          <tr>
+            <td class="text-center"><strong>${String(n.dia).padStart(2, '0')}/${String(niverFiltroTipo).padStart(2, '0')}</strong></td>
+            <td>${n.nome}</td>
+            <td>${n.telefone || '-'}</td>
+          </tr>
+        `;
+      });
+      htmlContent += `</tbody></table>`;
+    }
+
+    htmlContent += `
+          <div style="margin-top: 30px; text-align: center; font-size: 11px; color: #888;">
+            Portal do Mece • Gerado em ${new Date().toLocaleDateString('pt-BR')}
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const unreadCount = directMessages.filter((m) => !m.lida).length;
@@ -6253,7 +6532,7 @@ function CoordenacaoView({
     },
     {
       id: "faltas",
-      label: "Faltas",
+      label: "Faltas/Trocas",
       icon: UserX,
       type: "coordenacao",
       scope: "faltas",
@@ -6352,6 +6631,10 @@ function CoordenacaoView({
       return isCoord || isTesoureiro;
     }
 
+    if (tab.id === "faltas") {
+      return isCoordenadorOrVice(user);
+    }
+
     if (isActualCoord) {
       return tab.id !== "testes";
     }
@@ -6406,6 +6689,7 @@ function CoordenacaoView({
             </div>
 
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <button
                 onClick={() => setClassicWebMode(!classicWebMode)}
                 className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all shadow-sm"
@@ -6449,6 +6733,7 @@ function CoordenacaoView({
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
+                const isSantoTabDia = tab.id === "santo" && getSantoDoDia().isDiaDeSanto;
                 return (
                   <button
                     key={tab.id}
@@ -6469,16 +6754,20 @@ function CoordenacaoView({
                       setViewAsMinister(false);
                     }}
                     className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl transition-all relative ${
-                      isActive
-                        ? `${themeClasses.light} ${themeClasses.text} border ${themeClasses.border} shadow-sm font-black`
-                        : "text-slate-600 hover:bg-slate-100 border border-transparent hover:text-slate-900"
+                      isSantoTabDia
+                        ? "bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-950 border border-yellow-400 ring-2 ring-yellow-400/80 shadow-[0_0_12px_rgba(250,204,21,0.6)] font-black santo-dia-glow"
+                        : isActive
+                          ? `${themeClasses.light} ${themeClasses.text} border ${themeClasses.border} shadow-sm font-black`
+                          : "text-slate-600 hover:bg-slate-100 border border-transparent hover:text-slate-900"
                     }`}
                   >
                     {tab.id === "santo" ? (
                       <img
                         src="/santa_rita_cassia.jpg"
                         alt="Santo"
-                        className="w-4 h-4 object-cover object-center rounded-full inline-block"
+                        className={`w-4 h-4 object-cover object-center rounded-full inline-block ${
+                          isSantoTabDia ? "ring-1 ring-amber-500 drop-shadow-xs" : ""
+                        }`}
                         referrerPolicy="no-referrer"
                       />
                     ) : tab.id === "comunhao" ? (
@@ -6501,11 +6790,15 @@ function CoordenacaoView({
                     <span className="text-xs font-bold leading-none">
                       {tab.label}
                     </span>
-                    {tab.badge > 0 && (
+                    {tab.badge > 0 ? (
                       <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center justify-center shadow-sm">
                         {tab.badge}
                       </span>
-                    )}
+                    ) : isSantoTabDia ? (
+                      <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[7px] font-black px-1 py-0.5 rounded-full flex items-center justify-center shadow-xs">
+                        ⭐
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -6618,6 +6911,29 @@ function CoordenacaoView({
                 </select>
               </div>
             </div>
+
+            {checkLastDayIsSaturday(mesGerar, anoGerar) && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl mb-6 text-xs space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-black block text-amber-950 mb-0.5">Fim de Semana Dividido (Mês termina em Sábado)</strong>
+                    <p className="leading-relaxed">
+                      O último dia de {format(new Date(anoGerar, mesGerar - 1, 1), "MMMM", { locale: ptBR })} de {anoGerar} cai em um <strong>Sábado</strong>. Deseja incluir o <strong>Domingo (dia 1º do mês seguinte)</strong> para completar a escala daquele fim de semana?
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-200/60 font-bold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={incluirDomingoSeguinte}
+                    onChange={(e) => setIncluirDomingoSeguinte(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Sim, incluir o domingo do dia 1º para completar o fim de semana</span>
+                </label>
+              </div>
+            )}
 
             <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm">
               <div className="flex gap-2">
@@ -6892,9 +7208,9 @@ function CoordenacaoView({
                                   }`}
                                 >
                                   <div className="flex justify-between items-start mb-3">
-                                    <div>
+                                    <div className="min-w-0">
                                       <span
-                                        className={`text-base font-black leading-none block ${
+                                        className={`text-base font-black leading-none block mb-1.5 ${
                                           isDomingo
                                             ? "text-red-600"
                                             : "text-slate-900"
@@ -6902,10 +7218,25 @@ function CoordenacaoView({
                                       >
                                         {horario}
                                       </span>
+                                      {missa.lider ? (
+                                        <div className="flex items-center gap-1 bg-slate-900/5 px-2 py-0.5 rounded-lg border border-slate-900/5 max-w-[140px]">
+                                          <ShieldCheck className="w-2.5 h-2.5 text-blue-700 shrink-0" />
+                                          <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                                            {missa.lider}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/10 max-w-[140px]">
+                                          <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                          <span className="text-[9px] font-black text-amber-600 uppercase">
+                                            Aguardando Responsável
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                    <div className="flex flex-col items-end gap-1.5 min-w-0">
                                       <span
-                                        className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                                        className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider whitespace-nowrap ${
                                           isDomingo
                                             ? "bg-red-50 text-red-700"
                                             : "bg-slate-100 text-slate-500"
@@ -6914,7 +7245,7 @@ function CoordenacaoView({
                                         {missa.nome || "Missa"}
                                       </span>
                                       <span
-                                        className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
+                                        className={`text-[9px] font-black px-2 py-0.5 rounded-full border whitespace-nowrap ${
                                           isCardIncomplete
                                             ? "bg-red-100 text-red-800 border-red-300 font-black animate-pulse"
                                             : "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -6970,7 +7301,9 @@ function CoordenacaoView({
                                         Array.from({ length: Math.max(0, cardLimite - cardHeadcount) }).map((_, missingIdx) => (
                                           <div
                                             key={`aguardando-${missingIdx}`}
-                                            className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border-2 border-red-300 bg-red-100/90 text-red-700 shadow-xs animate-pulse"
+                                            onClick={() => handleAdicionarMinistroManual(data, horario)}
+                                            title="Clique para adicionar ministro manualmente"
+                                            className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border-2 border-red-300 bg-red-100/90 text-red-700 shadow-xs animate-pulse cursor-pointer hover:bg-red-200 transition-all group"
                                           >
                                             <div className="flex items-center gap-2 min-w-0">
                                               <div className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0 animate-ping" />
@@ -7069,8 +7402,14 @@ function CoordenacaoView({
                   isTab={true}
                   onSetTab={setActiveTab}
                   liturgyColor={liturgyTheme}
-                  showPreAberturaMessage={showPreAberturaMessage}
-                  mensagemDisponibilidade={mensagemDisponibilidade}
+                  showPreAberturaMessage={showPreAberturaMessage || statusDisponibilidade.showPreAbertura}
+                  mensagemDisponibilidade={activeMensagemDisp}
+                  diaAbertura={diaAbertura}
+                  horaAbertura={horaAbertura}
+                  diaFechamento={diaFechamento}
+                  horaFechamento={horaFechamento}
+                  manualOverride={manualOverride}
+                  statusDisponibilidade={statusDisponibilidade}
                   onAlert={onAlert}
                   classicWebMode={classicWebMode}
                   onToggleClassicWebMode={(val) => {
@@ -7109,8 +7448,14 @@ function CoordenacaoView({
                     isTab={true}
                     onSetTab={setActiveTab}
                     liturgyColor={liturgyTheme}
-                    showPreAberturaMessage={showPreAberturaMessage}
-                    mensagemDisponibilidade={mensagemDisponibilidade}
+                    showPreAberturaMessage={showPreAberturaMessage || statusDisponibilidade.showPreAbertura}
+                    mensagemDisponibilidade={activeMensagemDisp}
+                    diaAbertura={diaAbertura}
+                    horaAbertura={horaAbertura}
+                    diaFechamento={diaFechamento}
+                    horaFechamento={horaFechamento}
+                    manualOverride={manualOverride}
+                    statusDisponibilidade={statusDisponibilidade}
                     classicWebMode={classicWebMode}
                     onToggleClassicWebMode={(val) => {
                       setClassicWebMode(val);
@@ -7123,7 +7468,7 @@ function CoordenacaoView({
                 ) : (
                   <div className="space-y-4">
                     {/* Pre Abertura Alert for Coordinators */}
-                    {showPreAberturaMessage && !disponibilidadeAberta && (
+                    {(showPreAberturaMessage || statusDisponibilidade.showPreAbertura) && !disponibilidadeAberta && !activeMensagemDisp && (
                       <div className="p-4 bg-liturgy-50 border border-liturgy-200 rounded-2xl flex items-center gap-3 text-liturgy-800 shadow-sm animate-in fade-in">
                         <Info className="w-5 h-5 text-liturgy-600 flex-shrink-0" />
                         <p className="font-bold text-sm leading-tight">
@@ -7132,30 +7477,68 @@ function CoordenacaoView({
                       </div>
                     )}
 
-                    {mensagemDisponibilidade && (
+                    {/* Mensagem Especial do Dia do Santo */}
+                    {getSantoDoDia().isDiaDeSanto && getSantoDoDia().santoDoDia && (
+                      <div
+                        onClick={() => setActiveTab("santo")}
+                        className="p-4 bg-gradient-to-r from-amber-500/15 via-yellow-400/20 to-amber-500/15 border-2 border-yellow-400 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-yellow-500/10 cursor-pointer hover:border-yellow-500 transition-all duration-300 hover:scale-[1.008] animate-in fade-in group"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-amber-400/30 border border-yellow-400 flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+                            {getSantoDoDia().santoDoDia?.imagemUrl ? (
+                              <img
+                                src={getSantoDoDia().santoDoDia?.imagemUrl}
+                                alt="Santo do Dia"
+                                className="w-full h-full object-cover scale-110"
+                              />
+                            ) : (
+                              <span className="text-xl">⭐</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                                ✨ Dia do Santo • {getSantoDoDia().santoDoDia?.dataFesta}
+                              </span>
+                            </div>
+                            <h4 className="text-sm sm:text-base font-black text-amber-950 mt-0.5 leading-tight">
+                              Hoje celebramos {getSantoDoDia().todosSantosDoDia.map(s => s.nome).join(' e ')}!
+                            </h4>
+                            <p className="text-xs font-semibold text-amber-900/90 mt-0.5">
+                              Toque no ícone de Santos para ler sua história e oração.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 text-white font-bold text-xs shrink-0 shadow-xs group-hover:brightness-105 transition-all">
+                          Ler História →
+                        </div>
+                      </div>
+                    )}
+
+                    {activeMensagemDisp && !(escalaPublicada && !disponibilidadeAberta) && (
                       <div
                         className={`p-4 border rounded-2xl flex items-center gap-3 shadow-sm animate-in fade-in ${
-                          mensagemDisponibilidade.tipo === "warning"
+                          activeMensagemDisp.tipo === "warning"
                             ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                            : mensagemDisponibilidade.tipo === "error"
+                            : activeMensagemDisp.tipo === "error"
                               ? "bg-red-50 border-red-200 text-red-800"
-                              : mensagemDisponibilidade.tipo === "success"
+                              : activeMensagemDisp.tipo === "success"
                                 ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                                 : "bg-blue-50 border-blue-200 text-blue-800"
                         }`}
                       >
                         <div className="flex-shrink-0">
-                          {mensagemDisponibilidade.tipo === "success" ? (
+                          {activeMensagemDisp.tipo === "success" ? (
                             <Check className="w-5 h-5 text-emerald-600" />
-                          ) : mensagemDisponibilidade.tipo === "warning" ||
-                            mensagemDisponibilidade.tipo === "error" ? (
+                          ) : activeMensagemDisp.tipo === "warning" ||
+                            activeMensagemDisp.tipo === "error" ? (
                             <AlertCircle className="w-5 h-5 text-red-500" />
                           ) : (
                             <Info className="w-5 h-5 text-blue-600" />
                           )}
                         </div>
                         <p className="font-bold text-sm leading-tight">
-                          {mensagemDisponibilidade.texto}
+                          {activeMensagemDisp.texto}
                         </p>
                       </div>
                     )}
@@ -7295,42 +7678,70 @@ function CoordenacaoView({
                                   "Sábado",
                                 ];
                                 const fullWeekday = weekdays[dateObj.getDay()];
+                                const whoScheduled = getScheduledWhoForUser(assign, user);
+                                const isLiderThisMissa = isMinisterLiderForUser(assign.lider, user, Array.isArray(assign.ministros) ? assign.ministros : []);
 
                                 return (
                                   <div
                                     key={idx}
-                                    className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200/80 shadow-sm transition-all hover:bg-white"
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200/80 shadow-sm transition-all hover:bg-white"
                                   >
-                                    <div
-                                      className={`${themeClasses.light} ${themeClasses.text} w-16 h-16 rounded-[1.25rem] flex flex-col items-center justify-center flex-shrink-0 border border-slate-200 shadow-sm px-2`}
-                                    >
-                                      <span className="text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 opacity-70">
-                                        Dia
-                                      </span>
-                                      <span className="text-xl font-black leading-none">
-                                        {dayNum}
-                                      </span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="text-base font-black text-slate-900 leading-tight truncate">
-                                        {fullWeekday}
-                                      </h4>
-                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
-                                        <span
-                                          className={`font-black ${themeClasses.text} bg-stone-100 flex items-center gap-1 px-2 py-0.5 rounded-lg border border-stone-200/30`}
-                                        >
-                                          <Clock className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-                                          Horário:{" "}
-                                          {assign.time || assign.horario}
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                                      <div
+                                        className={`${themeClasses.light} ${themeClasses.text} w-16 h-16 rounded-[1.25rem] flex flex-col items-center justify-center flex-shrink-0 border border-slate-200 shadow-sm px-2`}
+                                      >
+                                        <span className="text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 opacity-70">
+                                          Dia
                                         </span>
-                                        <span className="text-slate-500 font-medium truncate max-w-[150px] sm:max-w-none">
-                                          {assign.nome || "Missa"}
+                                        <span className="text-xl font-black leading-none">
+                                          {dayNum}
                                         </span>
                                       </div>
-                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                        {user.paroquia}
-                                      </p>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="text-base font-black text-slate-900 leading-tight truncate">
+                                          {fullWeekday}
+                                        </h4>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
+                                          <span
+                                            className={`font-black ${themeClasses.text} bg-stone-100 flex items-center gap-1 px-2 py-0.5 rounded-lg border border-stone-200/30`}
+                                          >
+                                            <Clock className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+                                            Horário:{" "}
+                                            {assign.time || assign.horario}
+                                          </span>
+                                          <span className="text-slate-500 font-medium truncate max-w-[150px] sm:max-w-none">
+                                            {assign.nome || "Missa"}
+                                          </span>
+                                        </div>
+
+                                        {whoScheduled && whoScheduled.label && (
+                                          <div className="mt-2 flex items-center gap-1.5">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-50 border border-stone-200/80 text-slate-800 shadow-2xs">
+                                              {whoScheduled.type === "casal" ? (
+                                                <Users className={`w-3.5 h-3.5 ${themeClasses.text} shrink-0`} />
+                                              ) : (
+                                                <User className={`w-3.5 h-3.5 ${themeClasses.text} shrink-0`} />
+                                              )}
+                                              <span>{whoScheduled.fullLabel}</span>
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                          {user.paroquia}
+                                        </p>
+                                      </div>
                                     </div>
+
+                                    {/* Lado direito: Badge de Responsável da Missa com Estrela */}
+                                    {isLiderThisMissa && (
+                                      <div className="flex items-center sm:justify-end shrink-0 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-stone-100">
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-900 border border-amber-400/40 rounded-xl text-xs font-black uppercase tracking-wider shadow-2xs">
+                                          <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
+                                          <span>Responsável da Missa</span>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -7545,7 +7956,7 @@ function CoordenacaoView({
                               },
                               {
                                 id: "faltas",
-                                label: "Faltas",
+                                label: "Faltas/Trocas",
                                 subtitle: "Ranking e ausências",
                                 icon: UserX,
                                 badge: 0,
@@ -7581,6 +7992,7 @@ function CoordenacaoView({
                               const IconComp = item.icon;
                               const isNiverHoje = item.id === "aniversariantes" && anyBirthdayToday.length > 0;
                               const isEscalado = item.id === "escala" && Array.isArray(weekendAssignments) && weekendAssignments.length > 0;
+                              const isSantoHoje = item.id === "santo" && getSantoDoDia().isDiaDeSanto;
 
                               return (
                                 <button
@@ -7600,20 +8012,28 @@ function CoordenacaoView({
                                       ? "bg-red-500/10 backdrop-blur-md border-red-300/70 ring-2 ring-red-500/20 shadow-[0_4px_16px_rgba(239,68,68,0.1),inset_0_1px_1px_rgba(255,255,255,0.7)]"
                                       : isEscalado
                                         ? "bg-red-500/15 backdrop-blur-md border-red-400/80 ring-2 ring-red-500/25 shadow-[0_4px_16px_rgba(239,68,68,0.15),inset_0_1px_1px_rgba(255,255,255,0.7)] hover:bg-red-500/25"
-                                        : item.id === "versao_web"
-                                          ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                                          : liturgyTheme === "purple"
-                                            ? "bg-purple-900/[0.04] backdrop-blur-md border-purple-300/40 hover:bg-purple-900/[0.08] hover:border-purple-400/60 shadow-[0_4px_16px_rgba(147,51,234,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                            : liturgyTheme === "rose"
-                                              ? "bg-rose-900/[0.04] backdrop-blur-md border-rose-300/40 hover:bg-rose-900/[0.08] hover:border-rose-400/60 shadow-[0_4px_16px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                              : liturgyTheme === "white"
-                                                ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                                                : liturgyTheme === "emerald"
-                                                  ? "bg-emerald-900/[0.04] backdrop-blur-md border-emerald-300/40 hover:bg-emerald-900/[0.08] hover:border-emerald-400/60 shadow-[0_4px_16px_rgba(16,185,129,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                                  : "bg-blue-900/[0.04] backdrop-blur-md border-blue-300/40 hover:bg-blue-900/[0.08] hover:border-blue-400/60 shadow-[0_4px_16px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                        : isSantoHoje
+                                          ? "bg-gradient-to-br from-amber-200/90 via-yellow-100/95 to-amber-300/90 border-yellow-400 ring-2 ring-yellow-400/70 shadow-[0_0_22px_rgba(250,204,21,0.75),inset_0_1px_2px_rgba(255,255,255,0.9)] hover:shadow-[0_0_30px_rgba(250,204,21,0.95)] santo-dia-glow"
+                                          : item.id === "versao_web"
+                                            ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                            : liturgyTheme === "purple"
+                                              ? "bg-purple-900/[0.04] backdrop-blur-md border-purple-300/40 hover:bg-purple-900/[0.08] hover:border-purple-400/60 shadow-[0_4px_16px_rgba(147,51,234,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                              : liturgyTheme === "rose"
+                                                ? "bg-rose-900/[0.04] backdrop-blur-md border-rose-300/40 hover:bg-rose-900/[0.08] hover:border-rose-400/60 shadow-[0_4px_16px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                                : liturgyTheme === "white"
+                                                  ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                                  : liturgyTheme === "emerald"
+                                                    ? "bg-emerald-900/[0.04] backdrop-blur-md border-emerald-300/40 hover:bg-emerald-900/[0.08] hover:border-emerald-400/60 shadow-[0_4px_16px_rgba(16,185,129,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                                    : "bg-blue-900/[0.04] backdrop-blur-md border-blue-300/40 hover:bg-blue-900/[0.08] hover:border-blue-400/60 shadow-[0_4px_16px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
                                   }`}
                                 >
-                                  {isNiverHoje ? (
+                                  {isSantoHoje ? (
+                                    <div className="absolute top-2 right-2 flex items-center justify-center z-10 animate-bounce">
+                                      <span className="relative inline-flex items-center justify-center bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-md border border-amber-200">
+                                        ⭐
+                                      </span>
+                                    </div>
+                                  ) : isNiverHoje ? (
                                     <div className="absolute top-2 right-2 flex h-3 w-3 z-10">
                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                       <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
@@ -7633,23 +8053,25 @@ function CoordenacaoView({
                                         ? "bg-gradient-to-b from-red-500/20 to-red-500/5 border-red-300/70 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.12)] animate-bounce"
                                         : isEscalado
                                           ? "bg-gradient-to-b from-red-500/25 to-red-500/10 border-red-400/80 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.15)]"
-                                          : item.id === "versao_web"
-                                            ? "bg-gradient-to-b from-white/80 to-white/30 border-white/80 text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.9),0_2px_6px_rgba(0,0,0,0.04)]"
-                                            : item.id === "santo"
-                                              ? "bg-transparent border-transparent shadow-none"
-                                              : item.id === "comunhao"
-                                                ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
-                                                : item.id === "financeiro"
+                                          : isSantoHoje
+                                            ? "bg-gradient-to-b from-amber-300 to-yellow-400 border-yellow-300 text-amber-950 shadow-[0_0_15px_rgba(250,204,21,0.9),inset_0_1px_2px_rgba(255,255,255,0.95)] ring-2 ring-yellow-400 santo-shimmer-effect"
+                                            : item.id === "versao_web"
+                                              ? "bg-gradient-to-b from-white/80 to-white/30 border-white/80 text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.9),0_2px_6px_rgba(0,0,0,0.04)]"
+                                              : item.id === "santo"
+                                                ? "bg-transparent border-transparent shadow-none"
+                                                : item.id === "comunhao"
                                                   ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
-                                                  : liturgyTheme === "purple"
-                                                  ? "bg-gradient-to-b from-purple-500/20 to-purple-500/5 border-purple-200/60 text-purple-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(147,51,234,0.08)]"
-                                                  : liturgyTheme === "rose"
-                                                    ? "bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-200/60 text-rose-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(244,63,94,0.08)]"
-                                                    : liturgyTheme === "white"
-                                                      ? "bg-gradient-to-b from-white/90 to-white/40 border-white text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
-                                                      : liturgyTheme === "emerald"
-                                                        ? "bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-200/60 text-emerald-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(16,185,129,0.08)]"
-                                                        : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-200/60 text-blue-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(59,130,246,0.08)]"
+                                                  : item.id === "financeiro"
+                                                    ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
+                                                    : liturgyTheme === "purple"
+                                                    ? "bg-gradient-to-b from-purple-500/20 to-purple-500/5 border-purple-200/60 text-purple-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(147,51,234,0.08)]"
+                                                    : liturgyTheme === "rose"
+                                                      ? "bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-200/60 text-rose-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(244,63,94,0.08)]"
+                                                      : liturgyTheme === "white"
+                                                        ? "bg-gradient-to-b from-white/90 to-white/40 border-white text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
+                                                        : liturgyTheme === "emerald"
+                                                          ? "bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-200/60 text-emerald-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(16,185,129,0.08)]"
+                                                          : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-200/60 text-blue-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(59,130,246,0.08)]"
                                     }`}
                                   >
                                     {item.id === "santo" ? (
@@ -7874,11 +8296,17 @@ function CoordenacaoView({
                                     </>
                                   ) : (
                                     <>
-                                      <span className="text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-slate-900 line-clamp-2 text-center px-0.5">
+                                      <span className={`text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-center line-clamp-2 px-0.5 ${
+                                        isSantoHoje ? "text-amber-950 font-black" : "text-slate-900"
+                                      }`}>
                                         {item.label}
                                       </span>
-                                      <span className="text-[8px] sm:text-[10px] text-slate-400 font-bold mt-0.5 leading-none block">
-                                        {item.subtitle}
+                                      <span className={`text-[8px] sm:text-[10px] font-bold mt-0.5 leading-none block ${
+                                        isSantoHoje
+                                          ? "text-amber-900 font-black uppercase tracking-wider bg-amber-400/80 px-1.5 py-0.5 rounded-full border border-amber-500/50 shadow-xs"
+                                          : "text-slate-400"
+                                      }`}>
+                                        {isSantoHoje ? "Festa Hoje" : item.subtitle}
                                       </span>
                                     </>
                                   )}
@@ -8007,7 +8435,7 @@ function CoordenacaoView({
                   </div>
                 )}
 
-              {activeTab === "faltas" && hasCoordAccess(user) && (
+              {activeTab === "faltas" && isCoordenadorOrVice(user) && (
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="p-6">
                     <CoordenacaoFaltasView
@@ -8512,30 +8940,51 @@ function CoordenacaoView({
 
               {activeTab === "aniversariantes" && (
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-blue-600 shadow-md">
                         <Gift className="w-4.5 h-4.5" />
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900">
-                          Aniversariantes de {monthNames[new Date().getMonth()]}
+                          {niverFiltroTipo === "all" ? "Relação Geral de Aniversariantes (Todos os Meses)" : `Aniversariantes de ${monthNames[Number(niverFiltroTipo) - 1]}`}
                         </h3>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                           Lista de comemorações
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setActiveTab("home")}
-                      className="text-xs font-bold text-slate-600 hover:text-slate-700 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/50 shadow-sm cursor-pointer flex items-center gap-1"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                      Voltar
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <select
+                        value={niverFiltroTipo}
+                        onChange={(e) => setNiverFiltroTipo(e.target.value === "all" ? "all" : Number(e.target.value))}
+                        className="text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 outline-none shadow-xs cursor-pointer"
+                      >
+                        <option value="all">📅 Todos os Meses (Total)</option>
+                        {monthNames.map((mName, mIdx) => (
+                          <option key={mIdx + 1} value={mIdx + 1}>
+                            {mName}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handlePrintAniversariantes}
+                        className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all px-3 py-2 rounded-xl shadow-sm cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        Imprimir Relação
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("home")}
+                        className="text-xs font-bold text-slate-600 hover:text-slate-700 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-200/50 shadow-sm cursor-pointer flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        Voltar
+                      </button>
+                    </div>
                   </div>
                   <div className="p-6">
-                    {aniversariantes.length === 0 ? (
+                    {(!aniversariantes || aniversariantes.length === 0) ? (
                       <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                         <Gift className="w-8 h-8 text-slate-300 mx-auto mb-2 animate-bounce" />
                         <p className="text-slate-500 font-medium text-xs">
@@ -8545,7 +8994,8 @@ function CoordenacaoView({
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {[...aniversariantes]
+                        {[...(aniversariantes || [])]
+                          .filter(niver => niver && niver.dia)
                           .sort((a, b) => parseInt(a.dia) - parseInt(b.dia))
                           .map((niver, i) => {
                             const now = new Date();
@@ -9117,6 +9567,7 @@ function CoordenacaoView({
                       const hasSubmitted =
                         (initialSlotsSelecionados || []).length > 0;
                       const isLocked =
+                        modoManutencao ||
                         (hasSubmitted && !hasException) ||
                         (!disponibilidadeAberta && !hasException);
                       const hideForm = isLocked;
@@ -9125,7 +9576,17 @@ function CoordenacaoView({
                         <div className="bg-slate-50 min-h-[600px] w-full flex flex-col p-4 sm:p-6 font-sans">
                           {hideForm ? (
                             <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                              {hasSubmitted ? (
+                              {modoManutencao ? (
+                                <div className="mb-6 p-6 bg-rose-50 border border-rose-200 rounded-2xl max-w-lg shadow-sm">
+                                  <Lock className="w-10 h-10 text-rose-600 mb-4 mx-auto" />
+                                  <p className="font-bold text-xl text-rose-800">
+                                    Sistema em Manutenção Preventiva
+                                  </p>
+                                  <p className="text-sm text-rose-700 mt-2">
+                                    O sistema está temporariamente em manutenção preventiva. Alterações e inclusões de disponibilidade estão bloqueadas.
+                                  </p>
+                                </div>
+                              ) : hasSubmitted ? (
                                 <div className="mb-6 p-6 bg-emerald-50 border border-emerald-200 rounded-2xl max-w-lg shadow-sm">
                                   <CheckCircle2 className="w-10 h-10 text-emerald-600 mb-4 mx-auto" />
                                   <p className="font-bold text-xl text-emerald-800">
@@ -9186,6 +9647,28 @@ function CoordenacaoView({
                                   <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 text-sm font-bold animate-pulse flex items-center gap-2 mb-4">
                                     <Check className="w-4 h-4" />
                                     {parentMessage}
+                                  </div>
+                                )}
+                                {Object.keys(slotsPorDiaMap).length === 0 && (
+                                  <div className="py-12 px-4 text-center bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-3 mb-6">
+                                    <Clock className="w-8 h-8 text-blue-500 animate-spin" />
+                                    <p className="text-base font-bold text-slate-700">Carregando horários de missas do mês...</p>
+                                    <p className="text-xs text-slate-500 max-w-md">
+                                      Buscando as celebrações e horários disponíveis para o agendamento de {monthNames[mesSelecionado - 1]}.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        if (setSlotsDisponiveisApp) {
+                                          const s = await getExpectedSlots(user?.paroquia, mesSelecionado, anoSelecionado);
+                                          setSlotsDisponiveisApp(s);
+                                        }
+                                      }}
+                                      className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm inline-flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                      Recarregar Horários
+                                    </button>
                                   </div>
                                 )}
                                 <div className="grid grid-cols-1 gap-8">
@@ -9305,9 +9788,10 @@ function CoordenacaoView({
                                                                   slot,
                                                                 );
                                                               const servCountData =
-                                                                ocupacao[
-                                                                  occupancyKey
-                                                                ] || 0;
+                                                                ocupacao[occupancyKey] ??
+                                                                ocupacao[`${slot.data}_${slot.horario}_${slot.nome}`] ??
+                                                                ocupacao[`${slot.data}_${slot.horario}_${slot.nomeMissa}`] ??
+                                                                0;
                                                               const servCount =
                                                                 typeof servCountData ===
                                                                 "object"
@@ -9626,7 +10110,10 @@ function CoordenacaoView({
                                               const occupancyKey =
                                                 getChaveOcupacao(slot);
                                               const servCountData =
-                                                ocupacao[occupancyKey] || 0;
+                                                ocupacao[occupancyKey] ??
+                                                ocupacao[`${slot.data}_${slot.horario}_${slot.nome}`] ??
+                                                ocupacao[`${slot.data}_${slot.horario}_${slot.nomeMissa}`] ??
+                                                0;
                                               const servCount =
                                                 typeof servCountData ===
                                                 "object"
@@ -10447,7 +10934,8 @@ function CoordenacaoView({
                           const n1Submitted =
                             status?.him ||
                             (n1 && submittedNames.has(n1)) ||
-                            (n1Display && submittedNames.has(n1Display));
+                            (n1Display && submittedNames.has(n1Display)) ||
+                            m.disponibilidadeConfirmada;
                           const himDone =
                             n1Submitted || n1Scheduled || m.afastado;
 
@@ -10463,7 +10951,8 @@ function CoordenacaoView({
                             const n2Submitted =
                               status?.her ||
                               (n2 && submittedNames.has(n2)) ||
-                              (n2Display && submittedNames.has(n2Display));
+                              (n2Display && submittedNames.has(n2Display)) ||
+                              m.disponibilidadeConfirmada;
                             herDone =
                               n2Submitted || n2Scheduled || m.afastadoConjuge;
                           }
@@ -10517,7 +11006,8 @@ function CoordenacaoView({
                           const n1Submitted =
                             status?.him ||
                             (n1 && submittedNames.has(n1)) ||
-                            (n1Display && submittedNames.has(n1Display));
+                            (n1Display && submittedNames.has(n1Display)) ||
+                            m.disponibilidadeConfirmada;
                           const himDone =
                             n1Submitted || n1Scheduled || m.afastado;
 
@@ -10533,7 +11023,8 @@ function CoordenacaoView({
                             const n2Submitted =
                               status?.her ||
                               (n2 && submittedNames.has(n2)) ||
-                              (n2Display && submittedNames.has(n2Display));
+                              (n2Display && submittedNames.has(n2Display)) ||
+                              m.disponibilidadeConfirmada;
                             herDone =
                               n2Submitted || n2Scheduled || m.afastadoConjuge;
                           }
@@ -10997,7 +11488,7 @@ function CoordenacaoView({
                                   ? dataVal
                                   : 0;
                             const customLimit =
-                              slot && slot.limiteManual ? slot.limiteManual : 8;
+                              slot && slot.limiteManual ? Number(slot.limiteManual) : 10;
 
                             const isLeitor = key.includes("leitor");
 
@@ -11162,7 +11653,7 @@ function CoordenacaoView({
                                                 <div
                                                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLider ? "bg-blue-900" : m.tipo === "casal" ? "bg-rose-400" : "bg-sky-400"}`}
                                                 ></div>
-                                                {renderMinisterWithStar(ministerName, dataVal.lider, undefined, { className: `text-[10px] font-bold truncate capitalize ${isLider ? "text-blue-950 font-black" : "text-slate-700"}`, lowercase: true })}
+                                                {renderMinisterWithStar(toTitleCase(ministerName), dataVal.lider, undefined, { className: `text-[10px] font-bold truncate ${isLider ? "text-blue-950 font-black" : "text-slate-700"}` })}
                                               </div>
                                               
                                             </div>
@@ -11330,7 +11821,10 @@ function CoordenacaoView({
                                   <button
                                     key={opt}
                                     type="button"
-                                    onClick={() => setMaxEscalacoes(opt as any)}
+                                    onClick={() => {
+                                      setMaxEscalacoes(opt as any);
+                                      updateAgendamentoField('maxEscalacoes', opt);
+                                    }}
                                     className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all border ${
                                       maxEscalacoes === opt
                                         ? "bg-slate-900 text-white border-transparent shadow-sm scale-[1.02]"
@@ -11351,16 +11845,17 @@ function CoordenacaoView({
                                 Limite de Ministros Novos por Missa
                               </h4>
                               <p className="text-xs text-slate-400 mb-4 font-medium leading-relaxed">
-                                Escolha quantos ministros novos (casal ou
-                                individual) podem ser escalados em cada missa no
-                                máximo durante a geração automática da escala.
+                                Escolha quantos ministros novos (independente de ser casal ou individual) podem ser escalados em cada missa no máximo durante a geração automática da escala.
                               </p>
-                              <div className="flex flex-wrap gap-2 animate-fade-in">
-                                {["livre", 1, 2, 3].map((opt) => (
+                              <div className="flex flex-wrap gap-2 items-center animate-fade-in">
+                                {[2, 4, 6, "livre"].map((opt) => (
                                   <button
                                     key={opt}
                                     type="button"
-                                    onClick={() => setLimiteNovos(opt as any)}
+                                    onClick={() => {
+                                      setLimiteNovos(opt as any);
+                                      updateAgendamentoField('limiteNovos', opt);
+                                    }}
                                     className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all border ${
                                       limiteNovos === opt
                                         ? "bg-slate-900 text-white border-transparent shadow-sm scale-[1.02]"
@@ -11403,9 +11898,10 @@ function CoordenacaoView({
                                   <button
                                     key={opt.value}
                                     type="button"
-                                    onClick={() =>
-                                      setRegraDisponibilidade(opt.value as any)
-                                    }
+                                    onClick={() => {
+                                      setRegraDisponibilidade(opt.value as any);
+                                      updateAgendamentoField('regraDisponibilidade', opt.value);
+                                    }}
                                     className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all border ${
                                       regraDisponibilidade === opt.value
                                         ? "bg-slate-900 text-white border-transparent shadow-sm scale-[1.02]"
@@ -11917,7 +12413,21 @@ function CoordenacaoView({
                                                     >
                                                       {horario}
                                                     </span>
-
+                                                    {missa.lider ? (
+                                                      <div className="flex items-center gap-1 bg-blue-600/5 px-1.5 py-0.5 rounded-md border border-blue-600/5 mt-1 max-w-[120px]">
+                                                        <ShieldCheck className="w-2.5 h-2.5 text-blue-700 shrink-0" />
+                                                        <span className="text-[8px] font-black text-blue-700 uppercase truncate">
+                                                          {missa.lider}
+                                                        </span>
+                                                      </div>
+                                                    ) : (
+                                                      <div className="flex items-center gap-1 bg-amber-600/5 px-1.5 py-0.5 rounded-md border border-amber-600/10 mt-1 max-w-[120px]">
+                                                        <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                                        <span className="text-[8px] font-black text-amber-600 uppercase">
+                                                          Sem Responsável
+                                                        </span>
+                                                      </div>
+                                                    )}
                                                   </div>
                                                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                                     <span
@@ -13331,13 +13841,16 @@ function CoordenacaoView({
                                 <button
                                   key={idx}
                                   onClick={() => {
+                                    const c1 = m.nomeExibicao || m.nome;
+                                    const c2 = m.nomeExibicaoConjuge || m.nomeConjuge;
+                                    const coupleName = m.tipo === "casal" && c1 && c2 && c1 !== c2 ? `${c1} e ${c2}` : (m.nomeExibicao || m.nome);
                                     setQuickSwapSlotB({ 
                                       isMinister: true, 
-                                      name: m.nomeExibicao || m.nome,
+                                      name: coupleName,
                                       id: m.id,
                                       tipo: m.tipo,
-                                      conjuge1: m.nomeExibicao || m.nome,
-                                      conjuge2: m.nomeExibicaoConjuge || m.nomeConjuge
+                                      conjuge1: c1,
+                                      conjuge2: c2
                                     });
                                     setQuickSwapMemberB("both");
                                   }}
@@ -15669,8 +16182,8 @@ function AdminView({
                           <tr key={m.id} className="hover:bg-slate-50/50">
                             <td className="px-4 py-3.5">
                               <div className="font-bold text-slate-800">
-                                {m.nome}
-                                {m.tipo === "casal" && m.nomeConjuge ? ` e ${m.nomeConjuge}` : ""}
+                                {toTitleCase(m.nome)}
+                                {m.tipo === "casal" && m.nomeConjuge ? ` e ${toTitleCase(m.nomeConjuge)}` : ""}
                               </div>
                             </td>
                             <td className="px-4 py-3.5">
@@ -17221,19 +17734,118 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
   }, []);
 
   // Login state
+  const nomeInputRef = useRef<HTMLInputElement>(null);
   const [localNome, setLocalNome] = useState("");
   const [localTelefone, setLocalTelefone] = useState("");
-  const [loginEstado, setLoginEstado] = useState("");
-  const [loginCidade, setLoginCidade] = useState("");
-  const [loginParoquia, setLoginParoquia] = useState("");
-  const [isCasal, setIsCasal] = useState(false);
-  const [isCoordenador, setIsCoordenador] = useState(false);
   const [senha, setSenha] = useState("");
   const [showLoginSenha, setShowLoginSenha] = useState(false);
   const [showCadSenha, setShowCadSenha] = useState(false);
   const [error, setError] = useState("");
   const [resetMessage, setResetMessage] = useState("");
   const [resetError, setResetError] = useState("");
+
+  useEffect(() => {
+    // Garante que todos os campos de login sempre iniciem rigorosamente em branco
+    setLocalNome("");
+    setLocalTelefone("");
+    setSenha("");
+    setError("");
+
+    if (activeTab === "login") {
+      const focusNome = () => {
+        if (nomeInputRef.current) {
+          nomeInputRef.current.focus({ preventScroll: true });
+        }
+      };
+      // Tenta focar em múltiplos intervalos para garantir no mobile e após transições
+      focusNome();
+      const timeouts = [100, 300, 600, 1000].map(t => setTimeout(focusNome, t));
+      return () => timeouts.forEach(clearTimeout);
+    }
+  }, [activeTab]);
+
+  // Biometric login state & WebAuthn handler
+  const [hasBiometricSaved, setHasBiometricSaved] = useState(false);
+  const [biometricUser, setBiometricUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mece_biometric_user");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.nome) {
+          setHasBiometricSaved(true);
+          setBiometricUser(parsed);
+          // SEGURANÇA: NUNCA executa login automático aqui!
+          // O usuário precisa obrigatoriamente acionar o botão e passar pelo sensor biométrico (digital/face).
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setError("");
+    try {
+      if (!biometricUser) {
+        setError("Nenhum dado salvo para biometria neste aparelho. Faça o login com sua senha uma vez primeiro.");
+        return;
+      }
+
+      // Validação Biométrica Real via WebAuthn nativo do sistema operacional / aparelho (Face ID, Touch ID, Digital)
+      if (typeof window !== "undefined" && window.PublicKeyCredential) {
+        try {
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+
+          // Solicita obrigatoriamente a verificação do usuário através do sensor biométrico nativo do aparelho
+          await navigator.credentials.get({
+            publicKey: {
+              challenge,
+              timeout: 60000,
+              userVerification: "required",
+              rpId: window.location.hostname || undefined,
+            },
+          });
+        } catch (bioErr: any) {
+          console.warn("Validação biométrica não concluída:", bioErr);
+          if (bioErr.name === "NotAllowedError" || bioErr.name === "AbortError") {
+            setError("Autenticação biométrica cancelada ou não reconhecida. Por favor, digite sua senha.");
+            return;
+          }
+          setError("Sensor biométrico não autorizado ou indisponível neste navegador. Digite sua senha.");
+          return;
+        }
+      } else {
+        setError("Este aparelho ou navegador não possui suporte a autenticação biométrica nativa.");
+        return;
+      }
+
+      // Somente após o sensor biométrico ser APROVADO fisicamente no aparelho:
+      setLocalNome(biometricUser.nome);
+      setLocalTelefone(biometricUser.telefone);
+      if (biometricUser.senha) setSenha(biometricUser.senha);
+
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: biometricUser.nome,
+          telefone: biometricUser.telefone,
+          senha: biometricUser.senha || "",
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        onLogin(data.user || biometricUser);
+        return;
+      } else {
+        setError(data.error || "Erro ao realizar acesso por biometria.");
+      }
+    } catch (err) {
+      console.error("Erro na autenticação biométrica:", err);
+      setError("Erro ao autenticar por biometria. Digite sua senha.");
+    }
+  };
 
   // Cadastro state
   const [cadIsCasal, setCadIsCasal] = useState(false);
@@ -17369,11 +17981,6 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
       return;
     }
 
-    if (!loginParoquia && trimmedLocalNome.toLowerCase() !== "admin") {
-      setError("Por favor, selecione sua paróquia.");
-      return;
-    }
-
     const phoneDigits = trimmedLocalTelefone.replace(/\D/g, "");
     if (
       phoneDigits.length !== 11 &&
@@ -17385,13 +17992,8 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
       return;
     }
 
-    if (
-      trimmedSenha.length !== 3 &&
-      /^\d+$/.test(trimmedSenha) &&
-      !isCoordenador &&
-      trimmedLocalNome.toLowerCase() !== "admin"
-    ) {
-      setError("A senha deve ter exatamente 3 números.");
+    if (!trimmedSenha && trimmedLocalNome.toLowerCase() !== "admin") {
+      setError("Por favor, digite sua senha de acesso.");
       return;
     }
 
@@ -17399,8 +18001,6 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
       console.log("Regular user login attempt:", {
         nome: trimmedLocalNome,
         telefone: trimmedLocalTelefone,
-        senha: trimmedSenha,
-        paroquia: loginParoquia,
       });
       const response = await fetch("/api/login", {
         method: "POST",
@@ -17409,7 +18009,6 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
           nome: trimmedLocalNome,
           telefone: trimmedLocalTelefone,
           senha: trimmedSenha,
-          paroquia: loginParoquia,
         }),
       });
 
@@ -17429,6 +18028,14 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
 
       if (response.ok) {
         const u = data.user;
+        try {
+          localStorage.setItem("mece_biometric_user", JSON.stringify({
+            nome: trimmedLocalNome,
+            telefone: trimmedLocalTelefone,
+            senha: trimmedSenha,
+            ...u
+          }));
+        } catch (e) {}
         onLogin(u, !!data.reset);
       } else {
         if (response.status === 503) {
@@ -17567,8 +18174,6 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
           setCadSenha("");
           setCadRole("ministro");
           setCadIsCasal(false);
-          setIsCasal(false);
-          setIsCoordenador(false);
           setCadMessage("");
         }, 3000);
       } else {
@@ -17581,24 +18186,116 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
 
   return (
     <div
-      className={`theme-${liturgyTheme} min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-8 font-sans bg-white`}
+      className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #fdfbf7 0%, #f7f2ea 40%, #ebdccb 100%)'
+      }}
     >
+      {/* Ondas fluídas multicamadas ao fundo no tom Ouro Champagne e Marfim Eucarístico */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {/* Brilho suave e acolhedor superior */}
+        <div
+          className="absolute -top-32 left-1/2 -translate-x-1/2 w-[34rem] h-[34rem] rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'rgba(254, 240, 138, 0.35)' }}
+        />
+
+        {/* Camadas orgânicas fluídas na metade inferior em degradê dourado nobre acetinado */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 sm:h-3/5 w-full">
+          <svg
+            className="w-full h-full"
+            viewBox="0 0 1440 600"
+            preserveAspectRatio="none"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Onda 1: Camada suave de topo champagne luminoso */}
+            <path
+              d="M0,220 C320,130 540,310 880,210 C1200,120 1340,240 1440,200 L1440,600 L0,600 Z"
+              fill="url(#gold-wave-1)"
+              opacity="0.65"
+            />
+            {/* Onda 2: Curva intermediária mel dourado */}
+            <path
+              d="M0,290 C260,370 560,220 860,300 C1140,370 1320,270 1440,290 L1440,600 L0,600 Z"
+              fill="url(#gold-wave-2)"
+              opacity="0.8"
+            />
+            {/* Onda 3: Âmbar litúrgico suave */}
+            <path
+              d="M0,360 C360,280 620,440 980,340 C1240,270 1360,380 1440,350 L1440,600 L0,600 Z"
+              fill="url(#gold-wave-3)"
+              opacity="0.9"
+            />
+            {/* Onda 4: Dourado bronze acetinado */}
+            <path
+              d="M0,430 C280,480 600,380 920,440 C1180,490 1340,410 1440,430 L1440,600 L0,600 Z"
+              fill="url(#gold-wave-4)"
+              opacity="0.95"
+            />
+            {/* Onda 5: Base sólida no tom nobre de bronze acolhedor */}
+            <path
+              d="M0,490 C340,450 680,530 1020,480 C1260,440 1370,510 1440,490 L1440,600 L0,600 Z"
+              fill="url(#gold-wave-5)"
+            />
+
+            <defs>
+              <linearGradient id="gold-wave-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fdfbf7" />
+                <stop offset="100%" stopColor="#f5f0e6" />
+              </linearGradient>
+              <linearGradient id="gold-wave-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f5f0e6" />
+                <stop offset="100%" stopColor="#ebe4d8" />
+              </linearGradient>
+              <linearGradient id="gold-wave-3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ebe4d8" />
+                <stop offset="100%" stopColor="#dfd5c4" />
+              </linearGradient>
+              <linearGradient id="gold-wave-4" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#dfd5c4" />
+                <stop offset="100%" stopColor="#d1c4ae" />
+              </linearGradient>
+              <linearGradient id="gold-wave-5" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#d1c4ae" />
+                <stop offset="100%" stopColor="#bfae96" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-blue-900/[0.03] backdrop-blur-md border border-red-300/40 p-6 sm:p-8 rounded-3xl shadow-[0_8px_32px_rgba(135,31,38,0.07)] w-full max-w-md"
+        transition={{ duration: 0.25 }}
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.78)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 20px 60px rgba(180, 83, 9, 0.22), 0 4px 20px rgba(0, 0, 0, 0.08)',
+          border: '1.5px solid rgba(255, 255, 255, 0.95)'
+        }}
+        className="relative z-10 w-full max-w-sm sm:max-w-md p-6 sm:p-8 rounded-[2.5rem] flex flex-col justify-between"
       >
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <div className="text-center mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
             Portal do Mece
           </h1>
-          <p className="text-slate-500 text-sm mt-2">
+          <p className="text-stone-600 text-xs sm:text-sm mt-1 font-medium">
             Identifique-se para acessar a escala
           </p>
         </div>
 
-        <div className="flex p-1 bg-red-900/[0.05] rounded-2xl mb-6 border border-red-200/50">
+        {/* Tabs de alternância Login e Suporte em estilo pill translúcido */}
+        <div
+          style={{
+            backgroundColor: 'rgba(231, 229, 228, 0.65)',
+            border: '1px solid rgba(255, 255, 255, 0.9)'
+          }}
+          className="flex p-1 backdrop-blur-md rounded-full mb-6 max-w-[210px] mx-auto shadow-sm"
+        >
           <button
+            type="button"
             onClick={() => {
               setActiveTab("login");
               setError("");
@@ -17608,50 +18305,48 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
               setLocalTelefone("");
               setSenha("");
             }}
-            className={`flex-1 py-2.5 text-xs sm:text-sm font-black rounded-xl transition-all ${activeTab === "login" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "text-slate-500 hover:text-slate-800"}`}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-full transition-all duration-200 ${
+              activeTab === "login"
+                ? "bg-[#292524] text-white shadow-sm"
+                : "text-stone-600 hover:text-stone-900"
+            }`}
           >
             Login
           </button>
           <button
-            onClick={() => {
-              setActiveTab("cadastro");
-              setError("");
-              setCadMessage("");
-              setResetMessage("");
-            }}
-            className={`flex-1 py-2.5 text-xs sm:text-sm font-black rounded-xl transition-all ${activeTab === "cadastro" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Novo Cadastro
-          </button>
-          <button
+            type="button"
             onClick={() => {
               setActiveTab("suporte");
               setError("");
               setCadMessage("");
               setResetMessage("");
             }}
-            className={`flex-1 py-2.5 text-xs sm:text-sm font-black rounded-xl transition-all ${activeTab === "suporte" ? "bg-red-500/80 text-white shadow-lg shadow-red-500/20" : "text-slate-500 hover:text-slate-800"}`}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-full transition-all duration-200 ${
+              activeTab === "suporte"
+                ? "bg-[#292524] text-white shadow-sm"
+                : "text-stone-600 hover:text-stone-900"
+            }`}
           >
             Suporte
           </button>
         </div>
 
         {activeTab === "suporte" ? (
-          <div className="text-left py-2 px-2 text-slate-700">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 text-center">
+          <div className="text-left py-2 px-2 text-stone-700">
+            <h2 className="text-xl font-bold text-stone-900 mb-4 text-center">
               Suporte e Informações
             </h2>
-            <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
-              <p className="font-bold text-slate-800">
+            <div className="space-y-4 text-sm text-stone-600 leading-relaxed">
+              <p className="font-bold text-stone-800">
                 Este sistema foi desenvolvido para modernizar e simplificar a
                 gestão das comunidades paroquiais:
               </p>
 
               <div className="space-y-3">
                 <div className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                   <p>
-                    <strong className="text-slate-900">
+                    <strong className="text-stone-900">
                       Organização Litúrgica:
                     </strong>{" "}
                     Centraliza a gestão de escalas de ministros e a coleta de
@@ -17659,9 +18354,9 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                   <p>
-                    <strong className="text-slate-900">
+                    <strong className="text-stone-900">
                       Controle de Trocas:
                     </strong>{" "}
                     Gerencia pedidos de substituição entre ministros com um
@@ -17669,9 +18364,9 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                   <p>
-                    <strong className="text-slate-900">
+                    <strong className="text-stone-900">
                       Painel de controle integrado:
                     </strong>{" "}
                     Oferece acesso rápido ao Evangelho do Dia e escalas
@@ -17681,30 +18376,55 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-slate-100 flex flex-col items-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+              <div className="pt-6 border-t border-amber-200/50 flex flex-col items-center">
+                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">
                   Contato para adesão ou suporte
                 </p>
-                <p className="text-sm font-medium text-slate-900 tracking-tight">
+                <p className="text-sm font-semibold text-[#b45309] tracking-tight">
                   portaldomece@gmail.com
                 </p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-8 text-center uppercase tracking-tighter">
+            <p className="text-[10px] text-stone-500 mt-6 text-center uppercase tracking-tighter">
               © 2026 ABF • Todos os direitos reservados
             </p>
           </div>
         ) : activeTab === "login" ? (
           <form
             onSubmit={handleLoginSubmit}
-            className="space-y-6"
+            className="space-y-4"
             autoComplete="off"
           >
+            {/* Emblema oficial dos Ministros Extraordinários da Comunhão Eucarística */}
+            <div className="flex justify-center mb-4">
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #fde047 50%, #ffffff 100%)',
+                  boxShadow: '0 8px 30px rgba(217, 119, 6, 0.35)'
+                }}
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 flex items-center justify-center"
+              >
+                <div className="w-full h-full rounded-full overflow-hidden border-2 border-white bg-[#1c1917] shadow-inner flex items-center justify-center">
+                  <picture className="w-full h-full block">
+                    <source srcSet="/logo-mece.webp?v=20261003_v5" type="image/webp" />
+                    <source srcSet="/logo-mece.png?v=20261003_v5" type="image/png" />
+                    <img
+                      src="/logo-mece.jpg?v=20261003_v5"
+                      alt="Ministros Extraordinários da Comunhão Eucarística"
+                      className="w-full h-full object-cover object-center scale-105"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </picture>
+                </div>
+              </div>
+            </div>
+
             {modoManutencao && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2.5 font-medium leading-relaxed">
+              <div className="p-3 bg-amber-50/90 border border-amber-200 text-amber-900 rounded-2xl text-xs flex items-start gap-2.5 font-medium leading-relaxed">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 text-rose-600 shrink-0 mt-0.5"
+                  className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -17724,263 +18444,158 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
             )}
 
             {resetMessage && (
-              <div className="p-4 mb-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-sm">
+              <div className="p-3 bg-emerald-50/90 border border-emerald-100 text-emerald-800 rounded-2xl text-xs font-medium">
                 {resetMessage}
               </div>
             )}
 
             {resetError && (
-              <div className="p-4 mb-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">
+              <div className="p-3 bg-red-50/90 border border-red-100 text-red-700 rounded-2xl text-xs font-medium">
                 {resetError}
               </div>
             )}
 
             {error && (
-              <div className="p-4 mb-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">
+              <div className="p-3 bg-red-50/90 border border-red-100 text-red-700 rounded-2xl text-xs font-medium">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
-                Como quer ser chamado (na escala)
-              </label>
+            {/* Três campos mantidos em estilo cápsula translúcida suave perolada */}
+            <div className="space-y-3">
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
+                  ref={nomeInputRef}
+                  id="login-nome"
+                  name="nome"
+                  tabIndex={1}
                   type="text"
                   value={localNome}
                   onChange={(e) => setLocalNome(toTitleCase(e.target.value))}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
-                  placeholder="Seu nome de exibição"
+                  style={{
+                    backgroundColor: 'rgba(254, 243, 199, 0.55)',
+                    border: '1.5px solid rgba(217, 119, 6, 0.25)',
+                  }}
+                  className="w-full px-5 py-3.5 focus:bg-white backdrop-blur-md focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 rounded-2xl text-sm font-medium text-stone-900 placeholder:text-stone-500 transition-all outline-none shadow-sm"
+                  placeholder="Nome na escala"
                   autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  data-lpignore="true"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
-                Telefone (DDD + 9 números)
-              </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
+                  id="login-telefone"
+                  name="telefone"
+                  tabIndex={2}
                   type="tel"
                   value={localTelefone}
                   onChange={(e) =>
                     setLocalTelefone(formatPhone(e.target.value))
                   }
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
-                  placeholder="(14) 99999-9999"
+                  style={{
+                    backgroundColor: 'rgba(254, 243, 199, 0.55)',
+                    border: '1.5px solid rgba(217, 119, 6, 0.25)',
+                  }}
+                  className="w-full px-5 py-3.5 focus:bg-white backdrop-blur-md focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 rounded-2xl text-sm font-medium text-stone-900 placeholder:text-stone-500 transition-all outline-none shadow-sm"
+                  placeholder="Telefone (DDD + 9 números)"
                   autoComplete="off"
+                  data-lpignore="true"
                 />
               </div>
-            </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer mb-0">
-                <input
-                  type="checkbox"
-                  checked={isCasal}
-                  onChange={(e) => {
-                    setIsCasal(e.target.checked);
-                    if (e.target.checked) setIsCoordenador(false);
-                  }}
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300"
-                />
-                <span className="text-slate-700 font-medium">Ministros</span>
-              </label>
-
-              <div className="border-t border-slate-200 my-2"></div>
-
-              <label className="flex items-center gap-3 cursor-pointer mb-0">
-                <input
-                  type="checkbox"
-                  checked={isCoordenador}
-                  onChange={(e) => {
-                    setIsCoordenador(e.target.checked);
-                    if (e.target.checked) setIsCasal(false);
-                  }}
-                  className="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300"
-                />
-                <span className="text-slate-700 font-medium">Coordenação</span>
-              </label>
-            </div>
-
-            {localNome.trim().toLowerCase() !== "admin" && (
-              <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-2">
-                  <MapPin className="w-4 h-4 text-liturgy-500" />
-                  Localização da Paróquia
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Estado
-                    </label>
-                    <select
-                      value={loginEstado}
-                      onChange={(e) => {
-                        setLoginEstado(e.target.value);
-                        setLoginCidade("");
-                        setLoginParoquia("");
-                      }}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-liturgy-500/20 outline-none text-sm font-medium text-slate-700"
-                    >
-                      <option value="">Selecione...</option>
-                      {Array.isArray(paroquias) &&
-                        Array.from(
-                          new Set(
-                            paroquias.map((p) => p.estado).filter(Boolean),
-                          ),
-                        )
-                          .sort()
-                          .map((estado) => (
-                            <option key={estado} value={estado}>
-                              {estado}
-                            </option>
-                          ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Cidade
-                    </label>
-                    <select
-                      value={loginCidade}
-                      onChange={(e) => {
-                        setLoginCidade(e.target.value);
-                        setLoginParoquia("");
-                      }}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-liturgy-500/20 outline-none text-sm font-medium text-slate-700"
-                      disabled={!loginEstado}
-                    >
-                      <option value="">Selecione...</option>
-                      {Array.from(
-                        new Set(
-                          paroquias
-                            .filter((p) => p.estado === loginEstado)
-                            .map((p) => p.cidade)
-                            .filter(Boolean),
-                        ),
-                      )
-                        .sort()
-                        .map((cidade) => (
-                          <option key={cidade} value={cidade}>
-                            {cidade}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Paróquia
-                  </label>
-                  <select
-                    value={loginParoquia}
-                    onChange={(e) => setLoginParoquia(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-liturgy-500/20 outline-none text-sm font-medium text-slate-700"
-                    disabled={!loginCidade}
-                  >
-                    <option value="">Selecione sua paróquia...</option>
-                    {paroquias
-                      .filter(
-                        (p) =>
-                          p.estado === loginEstado && p.cidade === loginCidade,
-                      )
-                      .sort((a, b) => a.nome.localeCompare(b.nome))
-                      .map((p) => (
-                        <option key={p.id} value={p.nome}>
-                          {p.nome}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="block text-sm font-medium text-slate-700">
-                  Senha
-                </label>
-              </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
+                  id="login-senha"
+                  name="senha"
+                  tabIndex={3}
                   type={showLoginSenha ? "text" : "password"}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  maxLength={
-                    localNome.trim().toLowerCase() === "admin"
-                      ? 15
-                      : 30
-                  }
-                  className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all font-mono"
+                  maxLength={30}
+                  style={{
+                    backgroundColor: 'rgba(254, 243, 199, 0.55)',
+                    border: '1.5px solid rgba(217, 119, 6, 0.25)',
+                  }}
+                  className="w-full pl-5 pr-12 py-3.5 focus:bg-white backdrop-blur-md focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 rounded-2xl text-sm font-mono text-stone-900 placeholder:text-stone-500 transition-all outline-none shadow-sm"
                   placeholder={
                     localNome.trim().toLowerCase() === "admin"
-                      ? "8-15 caracteres"
-                      : isCoordenador
-                        ? "Mín. 6 carac. (Músc/mínc/símbolos)"
-                        : "3 números"
+                      ? "Senha de administrador"
+                      : "Senha"
                   }
                   autoComplete="new-password"
+                  data-lpignore="true"
                 />
                 <button
                   type="button"
                   onClick={() => setShowLoginSenha(!showLoginSenha)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800 focus:outline-none p-1 transition-colors"
                 >
                   {showLoginSenha ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            {resetMessage && (
-              <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-sm text-center font-medium">
-                {resetMessage}
-              </div>
+            {/* Link "Esqueceu a senha?" alinhado à direita */}
+            <div className="flex items-center justify-end text-xs pt-1 px-1">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs font-semibold text-[#b45309] hover:text-[#78350f] hover:underline transition-colors cursor-pointer"
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
+
+            {/* Botão de Acesso por Biometria / Face ID */}
+            {hasBiometricSaved && (
+              <button
+                type="button"
+                onClick={handleBiometricLogin}
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                  boxShadow: '0 8px 24px rgba(217, 119, 6, 0.3)'
+                }}
+                className="w-full py-3.5 px-6 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200 active:scale-[0.99] hover:brightness-110 cursor-pointer flex items-center justify-center gap-2 mt-4"
+              >
+                <Fingerprint className="w-5 h-5 text-amber-100" />
+                Entrar com Biometria / Face ID
+              </button>
             )}
 
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm text-center">
-                {error}
-              </div>
-            )}
-
+            {/* Botão Entrar estilo cápsula escura de alto contraste nobre */}
             <button
               type="submit"
-              className="w-full bg-red-600 text-white py-3 rounded-xl hover:bg-red-700 transition duration-300 font-semibold shadow-sm shadow-red-200 flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)',
+                boxShadow: '0 8px 24px rgba(180, 83, 9, 0.28)'
+              }}
+              className="w-full py-3.5 px-6 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200 active:scale-[0.99] hover:brightness-110 cursor-pointer mt-4"
             >
-              <LogIn className="w-4 h-4" />
               Entrar
             </button>
 
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="w-full text-center text-sm text-slate-500 hover:text-red-600 transition-colors mt-4"
-            >
-              Esqueceu a senha?
-            </button>
-
-            <div className="pt-6 border-t border-slate-100 flex justify-center">
+            <div className="pt-3 text-center flex flex-col items-center gap-1">
               <button
                 type="button"
                 onClick={() => setView("privacy")}
-                className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                className="text-[10px] font-bold text-stone-500 hover:text-stone-800 uppercase tracking-widest transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <ShieldCheck className="w-3 h-3" />
+                <ShieldCheck className="w-3 h-3 text-[#b45309]" />
                 Política de Privacidade
               </button>
+              <span className="text-[10px] font-semibold text-stone-600 tracking-wider select-none">
+                Versão {APP_VERSION}
+              </span>
             </div>
           </form>
-        ) : (
+        ) : activeTab === "cadastro" ? (
           <form onSubmit={handleCadastroSubmit} className="space-y-6">
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer flex-1">
@@ -18301,7 +18916,7 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
               Cadastrar
             </button>
           </form>
-        )}
+        ) : null}
       </motion.div>
     </div>
   );
@@ -18603,6 +19218,21 @@ function EscalaView({
                                       >
                                         {horario}
                                       </span>
+                                      {missa.lider ? (
+                                        <div className="flex items-center gap-1.5 bg-blue-600 text-white px-2 py-0.5 rounded-lg shadow-sm shadow-blue-200 mt-1.5 animate-in fade-in zoom-in duration-300">
+                                          <ShieldCheck className="w-3 h-3 text-blue-50 shrink-0" />
+                                          <span className="text-[9px] font-black uppercase tracking-tighter truncate max-w-[90px]">
+                                            {missa.lider}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-lg border border-slate-200 mt-1.5 italic">
+                                          <AlertCircle className="w-3 h-3 text-slate-300 shrink-0" />
+                                          <span className="text-[9px] font-bold uppercase tracking-tighter whitespace-nowrap">
+                                            Aguardando
+                                          </span>
+                                        </div>
+                                      )}
                                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1 block">
                                         Horário
                                       </span>
@@ -18848,15 +19478,59 @@ export default function App() {
     return targetDate.getFullYear();
   });
   const [disponibilidadeAberta, setDisponibilidadeAberta] = useState<boolean>(true);
+  const [diaAberturaGlobal, setDiaAberturaGlobal] = useState<number | "">("");
+  const [horaAberturaGlobal, setHoraAberturaGlobal] = useState<string>("");
+  const [diaFechamentoGlobal, setDiaFechamentoGlobal] = useState<number | "">("");
+  const [horaFechamentoGlobal, setHoraFechamentoGlobal] = useState<string>("");
   const [manualOverride, setManualOverride] = useState<boolean>(false);
   const [ocupacao, setOcupacao] = useState<any>({});
   const [slotsDisponiveis, setSlotsDisponiveis] = useState<any[]>([]);
   const [showPreAberturaMessage, setShowPreAberturaMessage] = useState<boolean>(false);
   const [mensagemDisponibilidade, setMensagemDisponibilidade] = useState<string>("");
+
+  const hasSubmittedApp = (initialSlotsSelecionados || []).length > 0;
+
+  const statusDisponibilidadeApp = useMemo(() => {
+    return calcularStatusDisponibilidade({
+      diaAbertura: diaAberturaGlobal,
+      horaAbertura: horaAberturaGlobal,
+      diaFechamento: diaFechamentoGlobal,
+      horaFechamento: horaFechamentoGlobal,
+      disponibilidadeAberta,
+      manualOverride,
+      hasSubmitted: hasSubmittedApp,
+      mesAlvo: mesSelecionado,
+      anoAlvo: anoSelecionado,
+    });
+  }, [
+    diaAberturaGlobal,
+    horaAberturaGlobal,
+    diaFechamentoGlobal,
+    horaFechamentoGlobal,
+    disponibilidadeAberta,
+    manualOverride,
+    hasSubmittedApp,
+    mesSelecionado,
+    anoSelecionado,
+  ]);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [birthdayMessage, setBirthdayMessage] = useState<string>("");
   const [modoManutencao, setModoManutencao] = useState<boolean>(false);
+  const [selectMinisterModal, setSelectMinisterModal] = useState<{
+    aberto: boolean;
+    data: string;
+    horario: string;
+    disponiveis: string[];
+    todosMinistros: string[];
+    onSelect?: (nome: string) => void;
+  }>({
+    aberto: false,
+    data: "",
+    horario: "",
+    disponiveis: [],
+    todosMinistros: [],
+  });
   const [activeCoordenacaoTab, setActiveCoordenacaoTab] = useState<string>("dashboard");
   const [escalaPublicada, setEscalaPublicada] = useState<boolean>(false);
   const [escalaPublicadaPorMes, setEscalaPublicadaPorMes] = useState<any>({});
@@ -18884,8 +19558,13 @@ export default function App() {
     if (typeof msgOrConfirm === "function") {
       onConfirm = msgOrConfirm;
     } else if (typeof msgOrConfirm === "string") {
-      titulo = tituloOrMsg;
-      mensagem = msgOrConfirm;
+      if (msgOrConfirm === "success" || msgOrConfirm === "error" || msgOrConfirm === "info" || msgOrConfirm === "warning") {
+        titulo = msgOrConfirm === "success" ? "Sucesso" : msgOrConfirm === "error" ? "Atenção" : "Aviso";
+        mensagem = tituloOrMsg;
+      } else {
+        titulo = tituloOrMsg;
+        mensagem = msgOrConfirm;
+      }
       if (onConfirmParam) onConfirm = onConfirmParam;
     }
 
@@ -18893,31 +19572,108 @@ export default function App() {
   };
 
   const renderModal = () => {
-    if (!modalConfirm?.aberto) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-        <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-900 mb-2">{modalConfirm.titulo}</h3>
-          <p className="text-sm text-slate-600 mb-6">{modalConfirm.mensagem}</p>
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => {
-                if (modalConfirm.onCancel) modalConfirm.onCancel();
-                setModalConfirm(null);
-              }}
-              className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 cursor-pointer"
+      <>
+        {modalConfirm?.aberto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">{modalConfirm.titulo}</h3>
+              <p className="text-sm text-slate-600 mb-6 leading-relaxed">{modalConfirm.mensagem}</p>
+              <div className="flex justify-end gap-3">
+                {modalConfirm.onCancel && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (modalConfirm.onCancel) modalConfirm.onCancel();
+                      setModalConfirm(null);
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    modalConfirm.onConfirm();
+                    setModalConfirm(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 cursor-pointer"
+                >
+                  {modalConfirm.onCancel ? "Confirmar" : "OK"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {renderSelectMinisterModal()}
+      </>
+    );
+  };
+
+  const renderSelectMinisterModal = () => {
+    if (!selectMinisterModal.aberto) return null;
+    const { data, horario, disponiveis, todosMinistros, onSelect } = selectMinisterModal;
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Selecionar Ministro</h3>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{data} • {horario}</p>
+            </div>
+            <button 
+              onClick={() => setSelectMinisterModal(prev => ({ ...prev, aberto: false }))}
+              className="p-2 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
-              Cancelar
+              <X className="w-5 h-5 text-slate-400" />
             </button>
-            <button
-              onClick={() => {
-                modalConfirm.onConfirm();
-                setModalConfirm(null);
-              }}
-              className="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 cursor-pointer"
-            >
-              Confirmar
-            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2 thin-scrollbar">
+            {disponiveis.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3 pl-1">Ministros Disponíveis</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {disponiveis.map((nome, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (onSelect) onSelect(nome);
+                        setSelectMinisterModal(prev => ({ ...prev, aberto: false }));
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-blue-100 bg-blue-50/50 hover:bg-blue-100 hover:border-blue-200 transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="text-sm font-bold text-slate-800">{nome}</span>
+                      <div className="flex items-center gap-2">
+                         <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">Selecionar</span>
+                         <Check className="w-4 h-4 text-blue-600" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 pl-1">Todos os Ministros (Exceção)</p>
+              <div className="grid grid-cols-1 gap-2">
+                {todosMinistros.filter(n => !disponiveis.includes(n)).map((nome, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      if (onSelect) onSelect(nome);
+                      setSelectMinisterModal(prev => ({ ...prev, aberto: false }));
+                    }}
+                    className="w-full text-left p-3 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-slate-100 hover:border-slate-200 transition-all flex items-center justify-between group cursor-pointer"
+                  >
+                    <span className="text-sm font-medium text-slate-600">{nome}</span>
+                    <Plus className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -18932,12 +19688,30 @@ export default function App() {
     fetchInitialData(userData);
   };
 
-  const getChaveOcupacao = (data: string, horario?: string, nomeMissa?: string) => {
-    return `${data}_${horario || ""}_${nomeMissa || ""}`;
+  const getChaveOcupacao = (dataOrSlot: any, horario?: string, nomeMissa?: string) => {
+    let d = "";
+    let h = "";
+    let n = "";
+    if (dataOrSlot && typeof dataOrSlot === "object") {
+      d = dataOrSlot.data || "";
+      h = dataOrSlot.horario || "";
+      n = dataOrSlot.nome || dataOrSlot.nomeMissa || "";
+    } else {
+      d = String(dataOrSlot || "");
+      h = String(horario || "");
+      n = String(nomeMissa || "");
+    }
+    const cleanD = d.trim();
+    const cleanH = h.trim();
+    const cleanN = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return `${cleanD}-${cleanH}-${cleanN}`;
   };
 
   const getLimiteVagas = (slot: any) => {
-    return slot && slot.limiteManual !== undefined ? Number(slot.limiteManual) : 6;
+    if (slot && slot.limiteManual !== undefined && !isNaN(Number(slot.limiteManual)) && Number(slot.limiteManual) > 0) {
+      return Number(slot.limiteManual);
+    }
+    return 10;
   };
 
   const fetchMensagensRecebidas = async () => {};
@@ -18955,8 +19729,8 @@ export default function App() {
       const ministroResponse = await fetch(
         `/api/ministros/${encodeURIComponent(userData.loginPhone || userData.telefone)}`,
       );
-      if (ministroResponse.ok) {
-        const ministroData = await ministroResponse.json();
+      const ministroData = await safeJson(ministroResponse, null);
+      if (ministroData) {
         setUser((prev) => {
           if (!prev) return prev;
           const updated = { ...prev, ...ministroData };
@@ -18969,8 +19743,8 @@ export default function App() {
       const response = await fetch(
         `/api/disponibilidade/${encodeURIComponent(userData.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
       );
-      if (response.ok) {
-        const data = await response.json();
+      const data = await safeJson<any[]>(response, null);
+      if (Array.isArray(data)) {
         const ids = data.map((d) => {
           const id = normalizeId(`${d.data}-${d.horario}-${d.nomeMissa}`);
           return { id, modo: d.modo || "individual" };
@@ -18983,12 +19757,39 @@ export default function App() {
       const escalaResponse = await fetch(
         `/api/escala?paroquia=${encodeURIComponent(userData.paroquia)}`,
       );
-      if (escalaResponse.ok) {
-        const escalaData = await escalaResponse.json();
+      const escalaData = await safeJson(escalaResponse, null);
+      if (escalaData) {
         setEscala(escalaData);
       }
+
+      // 4. Buscar config da paróquia (horários e datas de disponibilidade)
+      if (userData.paroquia) {
+        const configResponse = await fetch(
+          `/api/config?paroquia=${encodeURIComponent(userData.paroquia)}&t=${Date.now()}`,
+        );
+        const configData = await safeJson<any>(configResponse, null);
+        if (configData) {
+          const isNoPeriodo = checkPeriodoAgendado(configData, userData.paroquia);
+          const manualOverrideVal = configData.disponibilidadeAbertaPorParoquia?.[userData.paroquia];
+          if (manualOverrideVal !== undefined) setManualOverride(manualOverrideVal);
+          const isAberta = manualOverrideVal !== undefined
+            ? manualOverrideVal
+            : (typeof configData.disponibilidadeAberta === "boolean" ? configData.disponibilidadeAberta : isNoPeriodo);
+          setDisponibilidadeAberta(isAberta);
+          if (configData.diaAbertura !== undefined)
+            setDiaAberturaGlobal(configData.diaAbertura);
+          if (configData.horaAbertura !== undefined)
+            setHoraAberturaGlobal(configData.horaAbertura);
+          if (configData.diaFechamento !== undefined)
+            setDiaFechamentoGlobal(configData.diaFechamento);
+          if (configData.horaFechamento !== undefined)
+            setHoraFechamentoGlobal(configData.horaFechamento);
+          if (configData.regraDisponibilidade)
+            setRegraDisponibilidadeGlobal(configData.regraDisponibilidade);
+        }
+      }
     } catch (error) {
-      console.error("Erro ao buscar dados iniciais:", error);
+      console.warn("Aviso ao buscar dados iniciais:", error);
     } // End of data fetching block
   };
 
@@ -19119,6 +19920,7 @@ export default function App() {
 
   const handleLogout = () => {
     sessionStorage.removeItem("user");
+    localStorage.removeItem("mece_biometric_user");
     setUser(null);
     setNeedsPasswordReset(false);
     setView("login");
@@ -19154,17 +19956,34 @@ export default function App() {
     fetchAndCacheMinistros(user?.paroquia);
   }, [user?.paroquia]);
 
-  // Global Real-Time Maintenance Mode Sync
+  // Global Real-Time Maintenance Mode & Config Sync
   useEffect(() => {
     const fetchGlobalConfig = async () => {
       try {
-        const res = await fetch(`/api/config?t=${Date.now()}`);
+        const paroquiaQuery = user?.paroquia ? `&paroquia=${encodeURIComponent(user.paroquia)}` : "";
+        const res = await fetch(`/api/config?t=${Date.now()}${paroquiaQuery}`);
         if (res.ok) {
           const text = await res.text();
           try {
             const data = JSON.parse(text);
-            if (data && typeof data.modoManutencao === "boolean") {
-              setModoManutencao(data.modoManutencao);
+            if (data) {
+              if (typeof data.modoManutencao === "boolean") {
+                setModoManutencao(data.modoManutencao);
+              }
+              const isNoPeriodo = checkPeriodoAgendado(data, user?.paroquia);
+              const manualOverrideVal = user?.paroquia && data.disponibilidadeAbertaPorParoquia
+                ? data.disponibilidadeAbertaPorParoquia[user.paroquia]
+                : undefined;
+              if (manualOverrideVal !== undefined) setManualOverride(manualOverrideVal);
+              const isAberta = manualOverrideVal !== undefined
+                ? manualOverrideVal
+                : (typeof data.disponibilidadeAberta === "boolean" ? data.disponibilidadeAberta : isNoPeriodo);
+              setDisponibilidadeAberta(isAberta);
+              if (data.diaAbertura !== undefined) setDiaAberturaGlobal(data.diaAbertura);
+              if (data.horaAbertura !== undefined) setHoraAberturaGlobal(data.horaAbertura);
+              if (data.diaFechamento !== undefined) setDiaFechamentoGlobal(data.diaFechamento);
+              if (data.horaFechamento !== undefined) setHoraFechamentoGlobal(data.horaFechamento);
+              if (data.regraDisponibilidade) setRegraDisponibilidadeGlobal(data.regraDisponibilidade);
             }
           } catch (e) {
             // Ignore parse error
@@ -19191,7 +20010,7 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener("maintenance_mode_active", handleMaintenanceEvent);
     };
-  }, []);
+  }, [user?.paroquia]);
 
   const handleDownloadBackup = async () => {
     try {
@@ -19312,9 +20131,8 @@ export default function App() {
         const res = await fetch(
           `/api/ministros/${encodeURIComponent(targetUser.telefone || "")}`,
         );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.excecaoAcessoAte !== targetUser.excecaoAcessoAte) {
+        const data = await safeJson(res, null);
+        if (data && data.excecaoAcessoAte !== targetUser.excecaoAcessoAte) {
             if (viewAsUser) {
               setViewAsUser((prev: any) =>
                 prev
@@ -19333,7 +20151,6 @@ export default function App() {
               });
             }
           }
-        }
       } catch (err) {
         console.warn("Aviso ao verificar exceção:", err);
       }
@@ -19355,23 +20172,23 @@ export default function App() {
 
   // Fetch personal availability for the minister in parent App component
   useEffect(() => {
-    const isDisp = view === "disponibilidade";
     const targetUser = viewAsUser || user;
-    if (isDisp && targetUser?.telefone) {
+    if (targetUser?.telefone) {
       const fetchMinisterAvailability = async () => {
-        setSlotsSelecionados([]);
         try {
           const response = await fetch(
             `/api/disponibilidade/${encodeURIComponent(targetUser.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
           );
-          if (response.ok) {
-            const data = await response.json();
+          const data = await safeJson<any[]>(response, null);
+          if (Array.isArray(data)) {
             const ids = data.map((d: any) => {
               const id = normalizeId(`${d.data}-${d.horario}-${d.nomeMissa}`);
               return { id, modo: d.modo || "individual", data: d.data, horario: d.horario, nomeMissa: d.nomeMissa };
             });
             setInitialSlotsSelecionados(ids);
-            setSlotsSelecionados(ids);
+            if (view === "disponibilidade") {
+              setSlotsSelecionados(ids);
+            }
           }
         } catch (error) {
           console.warn("Aviso ao buscar disponibilidade do ministro:", error);
@@ -19463,19 +20280,19 @@ export default function App() {
     // Verificação robusta de coordenação/admin (case-insensitive)
     const isCoordenador = hasCoordAccess(user);
 
-    // Determinar mensagens e número mínimo de datas com base na regra ativa
-    const minDates =
+    const minPeriods =
       regraDisponibilidadeGlobal === "livre"
         ? 1
         : regraDisponibilidadeGlobal === "regra3"
           ? 3
           : 2;
+
     const ruleMessageZero =
       regraDisponibilidadeGlobal === "livre"
         ? "Selecione pelo menos uma missa/data."
         : regraDisponibilidadeGlobal === "regra3"
-          ? "Selecione pelo menos três missas em datas não sequenciais."
-          : "Selecione pelo menos duas missas em datas não sequenciais.";
+          ? "Selecione datas em pelo menos 3 fins de semana ou períodos diferentes (sábado e domingo do mesmo fim de semana contam como 1 período)."
+          : "Selecione datas em pelo menos 2 fins de semana ou períodos diferentes.";
 
     if (slotsSelecionados.length === 0) {
       if (isCoordenador)
@@ -19508,43 +20325,42 @@ export default function App() {
       .filter(Boolean)
       .sort() as string[];
 
-    if (!isCoordenador && datasSelecionadas.length < minDates) {
-      return {
-        valid: false,
-        message:
-          regraDisponibilidadeGlobal === "livre"
-            ? "Selecione pelo menos uma data para prosseguir."
-            : regraDisponibilidadeGlobal === "regra3"
-              ? "Selecione pelo menos três datas diferentes para prosseguir."
-              : "Selecione pelo menos duas datas diferentes para prosseguir.",
-      };
-    }
-
     if (regraDisponibilidadeGlobal === "livre") {
+      if (!isCoordenador && datasSelecionadas.length < 1) {
+        return {
+          valid: false,
+          message: "Selecione pelo menos uma data para prosseguir.",
+        };
+      }
       return { valid: true, message: "" };
     }
 
-    // Verificar se a seleção não é composta apenas por datas sequenciais (blocos)
-    let temSaltoValido = false;
-    for (let i = 0; i < datasSelecionadas.length - 1; i++) {
-      const d1 = new Date(datasSelecionadas[i] + "T00:00:00");
-      const d2 = new Date(datasSelecionadas[i + 1] + "T00:00:00");
-      const diffTime = Math.abs(d2.getTime() - d1.getTime());
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays > 1) {
-        temSaltoValido = true;
-        break;
+    // Agrupar datas selecionadas em períodos / fins de semana distintos.
+    // Sábado (6) e Domingo (0) adjacentes do mesmo fim de semana contam como um único período (fim de semana).
+    const periodosSet = new Set<string>();
+    datasSelecionadas.forEach((dStr) => {
+      const [y, m, d] = dStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dow = dateObj.getDay(); // 0 = Dom, 6 = Sáb
+      
+      let periodKey = dStr;
+      if (dow === 6) {
+        const sun = new Date(dateObj);
+        sun.setDate(dateObj.getDate() + 1);
+        periodKey = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}`;
+      } else if (dow === 0) {
+        periodKey = dStr;
       }
-    }
+      periodosSet.add(periodKey);
+    });
 
-    if (!isCoordenador && !temSaltoValido) {
+    if (!isCoordenador && periodosSet.size < minPeriods) {
       return {
         valid: false,
         message:
           regraDisponibilidadeGlobal === "regra3"
-            ? "Selecione datas em períodos diferentes (ex: três sábados ou datas não sequenciais)."
-            : "Selecione datas em períodos diferentes (ex: dois sábados ou datas não sequenciais).",
+            ? "A Regra 3 exige datas em pelo menos 3 fins de semana ou períodos diferentes (ex: Sábado/Domingo 3-4 contam como 1 período; Sábado 10 e Sábado 18 formam os outros períodos)."
+            : "A Regra 2 exige datas em pelo menos 2 fins de semana ou períodos diferentes.",
       };
     }
 
@@ -19566,6 +20382,12 @@ export default function App() {
       targetUser?.excecaoAcessoAte &&
       new Date(targetUser.excecaoAcessoAte) > new Date()
     );
+    if (modoManutencao) {
+      setError("O sistema está em modo de manutenção preventiva. Não é permitido fazer alterações ou inclusões no momento.");
+      setMessage("");
+      return;
+    }
+
     const hasSubmitted = (initialSlotsSelecionados || []).length > 0;
     const isLocked =
       !isUserCoordenador &&
@@ -19945,6 +20767,7 @@ export default function App() {
     return (
       <>
         <CoordenacaoView
+          modoManutencao={modoManutencao}
           onTabChange={setActiveCoordenacaoTab}
           user={viewAsUser || user}
           originalUser={viewAsUser ? user : viewAsMinister ? user : null}
@@ -19991,8 +20814,9 @@ export default function App() {
           ocupacao={ocupacao}
           setOcupacao={setOcupacao}
           setSlotsDisponiveisApp={setSlotsDisponiveis}
-          showPreAberturaMessage={showPreAberturaMessage}
-          mensagemDisponibilidade={mensagemDisponibilidade}
+          showPreAberturaMessage={showPreAberturaMessage || statusDisponibilidadeApp.showPreAbertura}
+          mensagemDisponibilidade={statusDisponibilidadeApp.mensagem}
+          statusDisponibilidade={statusDisponibilidadeApp}
           getChaveOcupacao={getChaveOcupacao}
           getLimiteVagas={getLimiteVagas}
           setViewAsMinister={setViewAsMinister}
@@ -20021,7 +20845,8 @@ export default function App() {
             }
           }}
           setDownloadOptionMode={setDownloadOptionMode}
-
+          selectMinisterModal={selectMinisterModal}
+          setSelectMinisterModal={setSelectMinisterModal}
         />
         {renderModal()}
       </>
@@ -20109,31 +20934,38 @@ export default function App() {
     );
 
     const isLocked =
-      !isCoordenador &&
+      modoManutencao ||
+      (!isCoordenador &&
       !hasException &&
-      (hasSubmitted || !disponibilidadeAberta);
+      (hasSubmitted || !disponibilidadeAberta));
 
     // Se estiver bloqueado (enviado ou fechado), mostra a tela correspondente
     if (isLocked && view === "disponibilidade") {
-      const isReceived = hasSubmitted;
+      const isReceived = hasSubmitted && !modoManutencao;
       return (
         <div className="bg-white min-h-screen w-full flex items-center justify-center p-6 font-sans relative">
           <BackgroundLogo paroquia={targetUser?.paroquia} />
           <div
             className={
-              isReceived
+              modoManutencao
+                ? "bg-rose-50 border border-rose-200 rounded-[2.5rem] p-16 max-w-2xl w-full text-center shadow-sm"
+                : isReceived
                 ? "bg-emerald-50 border border-emerald-200 rounded-[2.5rem] p-16 max-w-2xl w-full text-center shadow-sm"
                 : "bg-[#f0f7ff] border border-[#dce9f9] rounded-[2.5rem] p-16 max-w-2xl w-full text-center shadow-sm"
             }
           >
             <div
               className={
-                isReceived
+                modoManutencao
+                  ? "w-20 h-20 bg-white text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm border border-rose-100"
+                  : isReceived
                   ? "w-20 h-20 bg-white text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm border border-emerald-100"
                   : "w-20 h-20 bg-white text-[#2563eb] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm border border-[#e5effb]"
               }
             >
-              {isReceived ? (
+              {modoManutencao ? (
+                <Lock className="w-10 h-10" />
+              ) : isReceived ? (
                 <CheckCircle2 className="w-10 h-10" />
               ) : (
                 <Lock className="w-10 h-10" />
@@ -20141,23 +20973,31 @@ export default function App() {
             </div>
             <h3
               className={
-                isReceived
+                modoManutencao
+                  ? "text-[28px] font-bold text-rose-800 mb-4 tracking-tight leading-tight"
+                  : isReceived
                   ? "text-[28px] font-bold text-emerald-800 mb-4 tracking-tight leading-tight"
                   : "text-[28px] font-bold text-[#1e40af] mb-4 tracking-tight leading-tight"
               }
             >
-              {isReceived
+              {modoManutencao
+                ? "Sistema em Manutenção Preventiva"
+                : isReceived
                 ? "Agendamento Recebido"
                 : "Agendamento de Disponibilidade Encerrado"}
             </h3>
             <p
               className={
-                isReceived
+                modoManutencao
+                  ? "text-rose-700 text-[15px] leading-relaxed mb-10 max-w-md mx-auto"
+                  : isReceived
                   ? "text-emerald-700 text-[15px] leading-relaxed mb-10 max-w-md mx-auto"
                   : "text-[#64748b] text-[15px] leading-relaxed mb-10 max-w-md mx-auto"
               }
             >
-              {isReceived
+              {modoManutencao
+                ? "O sistema está temporariamente em manutenção preventiva. Não é permitido fazer alterações ou inclusões no momento."
+                : isReceived
                 ? "Sua disponibilidade já foi enviada com sucesso! Veja abaixo as datas e missas que você selecionou para este mês."
                 : "O período para envio do Agendamento Mensal de Disponibilidade foi concluído. Caso precise de suporte, contate a coordenação."}
             </p>
@@ -20248,11 +21088,39 @@ export default function App() {
             </div>
           </div>
 
-          {showPreAberturaMessage && !disponibilidadeAberta && (
+          {(showPreAberturaMessage || statusDisponibilidadeApp.showPreAbertura) && !disponibilidadeAberta && !statusDisponibilidadeApp.mensagem && (
             <div className="mb-6 p-4 bg-liturgy-50 border border-liturgy-200 rounded-xl flex items-center gap-3 text-liturgy-800 shadow-sm animate-bounce">
               <Info className="w-6 h-6 text-liturgy-600 flex-shrink-0" />
               <p className="font-bold text-lg">
                 A disponibilidade será aberta em breve.
+              </p>
+            </div>
+          )}
+
+          {statusDisponibilidadeApp?.mensagem && (
+            <div
+              className={`mb-6 p-4 border rounded-xl flex items-center gap-3 shadow-sm ${
+                statusDisponibilidadeApp.mensagem.tipo === "warning"
+                  ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                  : statusDisponibilidadeApp.mensagem.tipo === "error"
+                    ? "bg-red-50 border-red-200 text-red-800"
+                    : statusDisponibilidadeApp.mensagem.tipo === "success"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : "bg-blue-50 border-blue-200 text-blue-800"
+              }`}
+            >
+              <div className="flex-shrink-0">
+                {statusDisponibilidadeApp.mensagem.tipo === "success" ? (
+                  <Check className="w-6 h-6 text-emerald-600" />
+                ) : statusDisponibilidadeApp.mensagem.tipo === "warning" ||
+                  statusDisponibilidadeApp.mensagem.tipo === "error" ? (
+                  <AlertCircle className="w-6 h-6 text-red-500" />
+                ) : (
+                  <Info className="w-6 h-6 text-blue-600" />
+                )}
+              </div>
+              <p className="font-bold text-base sm:text-lg leading-tight">
+                {statusDisponibilidadeApp.mensagem.texto}
               </p>
             </div>
           )}
@@ -20307,6 +21175,26 @@ export default function App() {
               </div>
             ) : (
               <>
+                {Object.keys(slotsPorDia).length === 0 && (
+                  <div className="py-12 px-4 text-center bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-3 mb-6">
+                    <Clock className="w-8 h-8 text-blue-500 animate-spin" />
+                    <p className="text-base font-bold text-slate-700">Carregando horários de missas do mês...</p>
+                    <p className="text-xs text-slate-500 max-w-md">
+                      Buscando as celebrações e horários disponíveis para o agendamento de {monthNames[mesSelecionado - 1]}.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const s = await getExpectedSlots(targetUser?.paroquia, mesSelecionado, anoSelecionado);
+                        setSlotsDisponiveis(s);
+                      }}
+                      className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm inline-flex items-center gap-2 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Recarregar Horários
+                    </button>
+                  </div>
+                )}
                 {(() => {
                   const diasSemana = Object.keys(slotsPorDia)
                     .filter((data) => {
@@ -20329,7 +21217,7 @@ export default function App() {
                       >
                         <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-100 flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-blue-500" />
-                          <h3 className="font-bold text-blue-900 capitalize text-md">
+                          <h3 className="font-bold text-blue-900 text-md">
                             {slotsPorDia[data].diaFormatado}
                           </h3>
                         </div>
@@ -20353,7 +21241,10 @@ export default function App() {
                               ocupacao[chaveOcupacao],
                             );
                             const ocupadosNoServidorData =
-                              ocupacao[chaveOcupacao] || 0;
+                              ocupacao[chaveOcupacao] ??
+                              ocupacao[`${slot.data}_${slot.horario}_${slot.nome}`] ??
+                              ocupacao[`${slot.data}_${slot.horario}_${slot.nomeMissa}`] ??
+                              0;
                             const ocupadosNoServidor =
                               typeof ocupadosNoServidorData === "object"
                                 ? ocupadosNoServidorData.total || 0
@@ -20561,7 +21452,7 @@ export default function App() {
                       >
                         <div className="bg-emerald-50/50 px-4 py-3 border-b border-emerald-100 flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-emerald-500" />
-                          <h3 className="font-bold text-emerald-900 capitalize text-md">
+                          <h3 className="font-bold text-emerald-900 text-md">
                             {slotsPorDia[data].diaFormatado}
                           </h3>
                         </div>
@@ -20580,7 +21471,10 @@ export default function App() {
                             const chaveOcupacao = getChaveOcupacao(slot);
                             console.log("DEBUG 2:", chaveOcupacao, slot);
                             const ocupadosNoServidorData =
-                              ocupacao[chaveOcupacao] || 0;
+                              ocupacao[chaveOcupacao] ??
+                              ocupacao[`${slot.data}_${slot.horario}_${slot.nome}`] ??
+                              ocupacao[`${slot.data}_${slot.horario}_${slot.nomeMissa}`] ??
+                              0;
                             const ocupadosNoServidor =
                               typeof ocupadosNoServidorData === "object"
                                 ? ocupadosNoServidorData.total || 0
@@ -21026,6 +21920,7 @@ export default function App() {
   return (
     <>
       <CoordenacaoView
+        modoManutencao={modoManutencao}
         onTabChange={setActiveCoordenacaoTab}
         user={viewAsUser || user}
         originalUser={viewAsUser ? user : viewAsMinister ? user : null}
@@ -21072,8 +21967,9 @@ export default function App() {
         ocupacao={ocupacao}
         setOcupacao={setOcupacao}
         setSlotsDisponiveisApp={setSlotsDisponiveis}
-        showPreAberturaMessage={showPreAberturaMessage}
-        mensagemDisponibilidade={mensagemDisponibilidade}
+        showPreAberturaMessage={showPreAberturaMessage || statusDisponibilidadeApp.showPreAbertura}
+        mensagemDisponibilidade={statusDisponibilidadeApp.mensagem}
+        statusDisponibilidade={statusDisponibilidadeApp}
         getChaveOcupacao={getChaveOcupacao}
         getLimiteVagas={getLimiteVagas}
         setViewAsMinister={setViewAsMinister}
@@ -21102,6 +21998,8 @@ export default function App() {
           }
         }}
         setDownloadOptionMode={setDownloadOptionMode}
+        selectMinisterModal={selectMinisterModal}
+        setSelectMinisterModal={setSelectMinisterModal}
       />
       {renderModal()}
     </>

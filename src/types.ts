@@ -29,6 +29,8 @@ export interface User {
   sessionToken?: string;
   sessionTokenConjuge?: string;
   isConjugeLogin?: boolean;
+  loggedInName?: string;
+  loginPhone?: string;
   excecaoAcessoAte?: string;
 }
 

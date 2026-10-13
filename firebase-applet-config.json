@@ -3,9 +3,10 @@
   "appId": "1:1065775416098:web:66b50f40feac6fc81b9b7b",
   "apiKey": "AIzaSyAYvnSsn1ymMq8NcGHaczAn7BidQydiRlw",
   "authDomain": "escala-de-ministros-81967.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "ai-studio-escaladeministro-3af5d63f-0153-45e3-9395-d069594784b4",
   "storageBucket": "escala-de-ministros-81967.firebasestorage.app",
   "messagingSenderId": "1065775416098",
   "measurementId": "",
+  "oAuthClientId": "1065775416098-ohp7bo4plaolru8hgr04vj9hb4tgsqp4.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

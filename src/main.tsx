@@ -1,37 +1,36 @@
 import 'regenerator-runtime/runtime';
 import 'whatwg-fetch';
 
-// Unregister any active service worker to clean up aggressive caching by previous PWA implementations, EXCEPT our push notifications service worker
-if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      const scriptURL = registration.active?.scriptURL || '';
-      if (!scriptURL.includes('service-worker.js')) {
-        registration.unregister().then(() => {
-          console.log('[DEBUG] Stale Service Worker unregister success.');
-        });
-      }
+// Prevenção contra crash de insertBefore / removeChild provocado por ferramentas de tradução de navegadores (ex: Google Tradutor no Chrome)
+if (typeof window !== 'undefined' && typeof Node !== 'undefined') {
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function <T extends Node>(newNode: T, referenceNode: Node | null): T {
+    if (referenceNode && referenceNode.parentNode !== this) {
+      return originalInsertBefore.call(this, newNode, null) as T;
     }
-  });
+    return originalInsertBefore.call(this, newNode, referenceNode) as T;
+  };
 
-  // Register our push service worker
-  navigator.serviceWorker.register('/service-worker.js')
-    .then((reg) => {
-      console.log('[DEBUG] Push Service Worker registered successfully:', reg.scope);
-    })
-    .catch((err) => {
-      console.error('[DEBUG] Push Service Worker registration failed:', err);
-    });
+  const originalRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function <T extends Node>(child: T): T {
+    if (child && child.parentNode !== this) {
+      return child;
+    }
+    return originalRemoveChild.call(this, child) as T;
+  };
 }
 
-// Clear any Cache Storage caches to force asset updates
-if (typeof window !== 'undefined' && 'caches' in window) {
-  caches.keys().then((keys) => {
-    keys.forEach((key) => {
-      caches.delete(key).then(() => {
-        console.log('[DEBUG] Cache Storage clear success:', key);
+// Service Worker Registration for PWA Installability & Push Notifications
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .then((reg) => {
+        console.log('[SW] Service Worker registrado para PWA:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[SW] Aviso no registro do Service Worker:', err);
       });
-    });
   });
 }
 
@@ -53,24 +52,47 @@ const customFetch = async function (input: RequestInfo | URL, init?: RequestInit
   }
 
   if (urlStr.startsWith('/api/') || urlStr.includes('/api/')) {
-    // Inject user identity headers if stored in session to ensure Alexandre and Admin bypass maintenance
+    // Inject user identity headers and query param to ensure Alexandre and Admin bypass maintenance
     try {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        const stored = sessionStorage.getItem('user');
+      if (typeof window !== 'undefined') {
+        const stored = window.sessionStorage?.getItem('user') || window.localStorage?.getItem('user');
         if (stored) {
           const u = JSON.parse(stored);
+          const rawPhone = u.telefone || u.loginPhone || '';
+          const cleanPhone = String(rawPhone).replace(/\D/g, '');
+
+          if (cleanPhone && !urlStr.includes('userPhone=') && !urlStr.includes('telefone=')) {
+            const sep = urlStr.includes('?') ? '&' : '?';
+            urlStr += `${sep}userPhone=${encodeURIComponent(cleanPhone)}`;
+            if (typeof input === 'string') {
+              input = urlStr;
+            } else if (input instanceof URL) {
+              input = new URL(urlStr);
+            }
+          }
+
           if (!init) init = {};
-          const headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
-          if (u.telefone && !headers.has('x-user-phone')) {
-            headers.set('x-user-phone', u.telefone);
+          // Convert headers to plain object to prevent WebKit/Safari IDL validation error: "The string did not match the expected pattern"
+          const plainHeaders: Record<string, string> = {};
+          if (init.headers) {
+            if (typeof (init.headers as any).forEach === 'function') {
+              (init.headers as any).forEach((v: string, k: string) => {
+                plainHeaders[k] = String(v);
+              });
+            } else if (typeof init.headers === 'object' && !Array.isArray(init.headers)) {
+              Object.assign(plainHeaders, init.headers);
+            }
           }
-          if (u.nome && !headers.has('x-user-name')) {
-            headers.set('x-user-name', u.nome);
+          if (cleanPhone && !plainHeaders['x-user-phone']) {
+            plainHeaders['x-user-phone'] = cleanPhone;
           }
-          if (u.sessionToken && !headers.has('x-session-token')) {
-            headers.set('x-session-token', u.sessionToken);
+          if (u.nome && !plainHeaders['x-user-name']) {
+            plainHeaders['x-user-name'] = encodeURIComponent(String(u.nome));
           }
-          init.headers = headers;
+          if (u.sessionToken && !plainHeaders['x-session-token']) {
+            plainHeaders['x-session-token'] = encodeURIComponent(String(u.sessionToken));
+          }
+          init.headers = plainHeaders;
         }
       }
     } catch (e) {
@@ -112,7 +134,19 @@ const customFetch = async function (input: RequestInfo | URL, init?: RequestInit
         }
       }
       return response;
-    } catch (err) {
+    } catch (err: any) {
+      // Se for erro de validação de cabeçalho do Safari/WebKit ("The string did not match the expected pattern"),
+      // refaz a requisição de forma limpa sem os cabeçalhos customizados
+      const errMsg = String(err?.message || '');
+      if (errMsg.includes('match the expected pattern') || errMsg.includes('pattern')) {
+        try {
+          const fallbackInit = init ? { ...init } : undefined;
+          if (fallbackInit && fallbackInit.headers) {
+            delete fallbackInit.headers;
+          }
+          return await nativeFetch(input, fallbackInit);
+        } catch (_) {}
+      }
       throw err;
     }
   }

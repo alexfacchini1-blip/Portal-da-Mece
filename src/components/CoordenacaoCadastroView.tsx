@@ -1003,8 +1003,8 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                 <div key={pendingUser.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-blue-100 transition-all">
                   <div>
                     <p className="font-black text-slate-800">
-                      {pendingUser.nomeExibicao || pendingUser.nome} 
-                      {pendingUser.nomeConjuge ? ` e ${pendingUser.nomeExibicaoConjuge || pendingUser.nomeConjuge}` : ''}
+                      {toTitleCase(pendingUser.nomeExibicao || pendingUser.nome)} 
+                      {pendingUser.nomeConjuge ? ` e ${toTitleCase(pendingUser.nomeExibicaoConjuge || pendingUser.nomeConjuge)}` : ''}
                     </p>
                     <p className="text-xs text-slate-500 font-medium">{pendingUser.telefone}</p>
                     <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mt-1">{pendingUser.paroquia}</p>
@@ -1121,8 +1121,8 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
                   <div className="flex-grow">
                     <div className="flex items-center flex-wrap gap-2">
                       <p className="font-black text-slate-800 text-sm">
-                        {minister.nomeExibicao || minister.nome} 
-                        {minister.nomeConjuge && ` e ${minister.nomeExibicaoConjuge || minister.nomeConjuge}`}
+                        {toTitleCase(minister.nomeExibicao || minister.nome)} 
+                        {minister.nomeConjuge && ` e ${toTitleCase(minister.nomeExibicaoConjuge || minister.nomeConjuge)}`}
                       </p>
                       {minister.role === 'vice_coordenacao' && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 border border-amber-200">

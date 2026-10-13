@@ -18,7 +18,8 @@ import {
   Flag,
   Package,
   Check,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { toTitleCase } from '../utils';
 
@@ -57,9 +58,10 @@ export function CoordenacaoFaltasView({
     );
   }
 
-  const [activeSubTab, setActiveSubTab] = useState<'ranking' | 'lancar' | 'historico'>('ranking');
+  const [activeSubTab, setActiveSubTab] = useState<'ranking' | 'ranking_trocas' | 'lancar' | 'historico'>('ranking');
   const [ministers, setMinisters] = useState<any[]>([]);
   const [faltas, setFaltas] = useState<any[]>([]);
+  const [trocas, setTrocas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -75,7 +77,9 @@ export function CoordenacaoFaltasView({
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('todos'); // 'todos' or YYYY-MM
-  const [rankingFilter, setRankingFilter] = useState<'todos' | 'mes_atual' | 'ano_atual'>('todos');
+  const [selectedRankingMonth, setSelectedRankingMonth] = useState<string>(''); // YYYY-MM or ''
+  const [selectedRankingYear, setSelectedRankingYear] = useState<string>(''); // YYYY or ''
+  const [rankingFilter, setRankingFilter] = useState<'mes_atual' | 'geral'>('mes_atual');
 
   // Helper to determine absence weight (couples count as 2 when both miss, 1 when individual)
   const getFaltaWeight = (f: any): number => {
@@ -99,9 +103,10 @@ export function CoordenacaoFaltasView({
     setError('');
     try {
       const now = Date.now();
-      const [minRes, faltasRes] = await Promise.all([
+      const [minRes, faltasRes, trocasRes] = await Promise.all([
         fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`),
-        fetch(`/api/faltas?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`)
+        fetch(`/api/faltas?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`),
+        fetch(`/api/trocas?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`)
       ]);
 
       if (minRes.ok) {
@@ -118,6 +123,13 @@ export function CoordenacaoFaltasView({
         const faltasData = await faltasRes.json();
         if (Array.isArray(faltasData)) {
           setFaltas(faltasData);
+        }
+      }
+
+      if (trocasRes.ok) {
+        const trocasData = await trocasRes.json();
+        if (Array.isArray(trocasData)) {
+          setTrocas(trocasData);
         }
       }
     } catch (err) {
@@ -267,9 +279,17 @@ export function CoordenacaoFaltasView({
 
     if (rankingFilter === 'mes_atual') {
       relevantFaltas = faltas.filter(f => f.data && f.data.startsWith(currentMonthStr));
-    } else if (rankingFilter === 'ano_atual') {
-      relevantFaltas = faltas.filter(f => f.data && f.data.startsWith(currentYearStr));
+    } else if (rankingFilter === 'geral') {
+      if (selectedRankingMonth) {
+        relevantFaltas = faltas.filter(f => f.data && f.data.startsWith(selectedRankingMonth));
+      } else if (selectedRankingYear) {
+        relevantFaltas = faltas.filter(f => f.data && f.data.startsWith(selectedRankingYear));
+      }
     }
+    
+    // Filtro de itens restritos: não devem aparecer no ranking (ex: "Justificativa")
+    // Assumindo que faltas tem um campo 'restrito' ou similar, ou inferido pela justificativa
+    relevantFaltas = relevantFaltas.filter(f => !f.restrito);
 
     // Group by minister or couple
     const map: { [mId: string]: { id: string; nome: string; isCasal: boolean; total: number; faltas: any[] } } = {};
@@ -330,7 +350,38 @@ export function CoordenacaoFaltasView({
     const list = Object.values(map);
     list.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
     return list;
-  }, [faltas, ministers, rankingFilter, currentMonthStr, currentYearStr]);
+  }, [faltas, ministers, rankingFilter, currentMonthStr, currentYearStr, selectedRankingMonth, selectedRankingYear]);
+
+  // Ranking trocas calculation
+  const rankingTrocas = useMemo(() => {
+    let relevantTrocas = trocas;
+    if (rankingFilter === 'mes_atual') {
+      relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(currentMonthStr));
+    } else if (rankingFilter === 'geral') {
+      if (selectedRankingMonth) {
+        relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(selectedRankingMonth));
+      } else if (selectedRankingYear) {
+        relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(selectedRankingYear));
+      }
+    }
+
+    const map: { [name: string]: { nome: string; total: number; trocas: any[] } } = {};
+
+    relevantTrocas.forEach(t => {
+      const names = [t.solicitanteNome, t.destinatarioNome].filter(Boolean);
+      names.forEach(name => {
+        if (!map[name]) {
+          map[name] = { nome: name, total: 0, trocas: [] };
+        }
+        map[name].total += 1;
+        map[name].trocas.push(t);
+      });
+    });
+
+    const list = Object.values(map);
+    list.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+    return list;
+  }, [trocas, rankingFilter, currentMonthStr, selectedRankingMonth, selectedRankingYear]);
 
   // Unique months available in faltas history for filtering
   const availableMonths = useMemo(() => {
@@ -413,6 +464,18 @@ export function CoordenacaoFaltasView({
         </button>
 
         <button
+          onClick={() => setActiveSubTab('ranking_trocas')}
+          className={`flex-1 sm:flex-none px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+            activeSubTab === 'ranking_trocas'
+              ? 'bg-white text-blue-700 shadow-md border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <RefreshCw className="w-4 h-4 text-blue-600" />
+          Ranking de Trocas
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('lancar')}
           className={`flex-1 sm:flex-none px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
             activeSubTab === 'lancar'
@@ -453,16 +516,6 @@ export function CoordenacaoFaltasView({
                     Filtrar por:
                   </span>
                   <button
-                    onClick={() => setRankingFilter('todos')}
-                    className={`px-3 py-1.5 rounded-xl transition ${
-                      rankingFilter === 'todos'
-                        ? 'bg-blue-600 text-white font-bold shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Geral
-                  </button>
-                  <button
                     onClick={() => setRankingFilter('mes_atual')}
                     className={`px-3 py-1.5 rounded-xl transition ${
                       rankingFilter === 'mes_atual'
@@ -473,15 +526,21 @@ export function CoordenacaoFaltasView({
                     Mês Atual
                   </button>
                   <button
-                    onClick={() => setRankingFilter('ano_atual')}
+                    onClick={() => setRankingFilter('geral')}
                     className={`px-3 py-1.5 rounded-xl transition ${
-                      rankingFilter === 'ano_atual'
+                      rankingFilter === 'geral'
                         ? 'bg-blue-600 text-white font-bold shadow-sm'
                         : 'text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    Ano Atual
+                    Classificação Geral
                   </button>
+                  {rankingFilter === 'geral' && (
+                    <div className="flex gap-1 ml-2">
+                       <input type="month" className="px-2 py-1 rounded-lg border text-xs" onChange={(e) => setSelectedRankingMonth(e.target.value)} />
+                       <input type="number" placeholder="Ano" className="w-16 px-2 py-1 rounded-lg border text-xs" onChange={(e) => setSelectedRankingYear(e.target.value)} />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -490,7 +549,7 @@ export function CoordenacaoFaltasView({
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
                   <h3 className="text-base font-bold text-slate-800">Nenhuma falta registrada</h3>
                   <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
-                    Excelente! Não há registros de ausências para o período selecionado ({rankingFilter === 'mes_atual' ? 'mês atual' : rankingFilter === 'ano_atual' ? 'ano atual' : 'geral'}).
+                    Excelente! Não há registros de ausências para o período selecionado ({rankingFilter === 'mes_atual' ? 'mês atual' : rankingFilter === 'geral' ? 'geral' : 'ano atual'}).
                   </p>
                   <button
                     onClick={() => setActiveSubTab('lancar')}
@@ -577,6 +636,127 @@ export function CoordenacaoFaltasView({
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SUBTAB: RANKING DE TROCAS */}
+          {activeSubTab === 'ranking_trocas' && (
+            <div className="space-y-6">
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-blue-600" />
+                    Classificação dos Ministros por Trocas Realizadas
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ministros e casais ordenados pelo número de trocas e substituições registradas no período.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200 text-xs font-semibold">
+                  <span className="text-slate-500 px-2 font-bold flex items-center gap-1">
+                    <Filter className="w-3.5 h-3.5" />
+                    Filtrar por:
+                  </span>
+                  <button
+                    onClick={() => setRankingFilter('mes_atual')}
+                    className={`px-3 py-1.5 rounded-xl transition ${
+                      rankingFilter === 'mes_atual'
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Mês Atual
+                  </button>
+                  <button
+                    onClick={() => setRankingFilter('geral')}
+                    className={`px-3 py-1.5 rounded-xl transition ${
+                      rankingFilter === 'geral'
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Geral
+                  </button>
+                </div>
+              </div>
+
+              {rankingTrocas.length === 0 ? (
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+                  <RefreshCw className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-slate-700">Nenhuma troca registrada</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Não há registros de trocas de celebração para o período selecionado.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-xs font-black text-slate-600 uppercase tracking-wider">
+                          <th className="py-4 px-6 text-center w-20">Classificação</th>
+                          <th className="py-4 px-6">Ministro / Casal</th>
+                          <th className="py-4 px-6 text-center">Total de Trocas</th>
+                          <th className="py-4 px-6">Histórico de Trocas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-sm font-medium">
+                        {rankingTrocas.map((item, idx) => {
+                          const pos = idx + 1;
+                          const isTop1 = pos === 1;
+                          const isTop2 = pos === 2;
+                          const isTop3 = pos === 3;
+
+                          let posBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+                          if (isTop1) posBadgeClass = "bg-blue-100 text-blue-800 border-blue-300 font-black shadow-sm";
+                          else if (isTop2) posBadgeClass = "bg-indigo-100 text-indigo-800 border-indigo-300 font-bold";
+                          else if (isTop3) posBadgeClass = "bg-sky-50 text-sky-800 border-sky-200 font-bold";
+
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/80 transition">
+                              <td className="py-4 px-6 text-center">
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl border text-xs ${posBadgeClass}`}>
+                                  {pos}º
+                                </span>
+                              </td>
+                              <td className="py-4 px-6">
+                                <div className="font-bold text-slate-900 flex items-center gap-2">
+                                  <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                  <span>{item.nome}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 text-center">
+                                <span className="inline-flex items-center justify-center px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-black">
+                                  {item.total} {item.total === 1 ? 'troca' : 'trocas'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6">
+                                <div className="space-y-1 max-h-32 overflow-y-auto pr-2">
+                                  {item.trocas.map((t: any, tIdx: number) => {
+                                    const tDate = t.data || t.createdAt ? (t.data || t.createdAt).substring(0, 10).split('-').reverse().join('/') : '';
+                                    return (
+                                      <div key={tIdx} className="text-xs flex items-center justify-between gap-2 text-slate-600 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                          <span className="font-semibold text-slate-800">{tDate}</span>
+                                          <span className="text-[10px] font-medium bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded-md">
+                                            {t.tipo || 'Troca'} ({t.status || 'Concluída'})
+                                          </span>
+                                        </div>
                                       </div>
                                     );
                                   })}

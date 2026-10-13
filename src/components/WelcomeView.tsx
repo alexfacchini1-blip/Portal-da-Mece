@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { User, Info, CalendarDays, Calendar, LogOut, Check, CheckCircle2, ChevronLeft, BookOpen, Heart, Sun, Cross, Users, Settings, Lock, Unlock, Clock, Church, RefreshCw, AlertCircle, Activity, Gift, X, Minus, Plus, LayoutDashboard, MessageSquare, HelpCircle, Monitor, Smartphone, HandHeart, DollarSign, UserX, Flag, Sparkles } from 'lucide-react';
+import { User, Info, CalendarDays, Calendar, LogOut, Check, CheckCircle2, ChevronLeft, BookOpen, Heart, Sun, Cross, Users, Settings, Lock, Unlock, Clock, Church, RefreshCw, AlertCircle, Activity, Gift, X, Minus, Plus, LayoutDashboard, MessageSquare, HelpCircle, Monitor, Smartphone, HandHeart, DollarSign, UserX, Flag, Sparkles, Star } from 'lucide-react';
 import { getLiturgicalThemeDynamic, getTodayDateStringForLiturgy } from '../utils/calendario';
-import { hasCoordAccess, isMinisterMatchingUser, isMinisterLiderForUser, safeJson, safeFetchJson } from '../utils';
+import { calcularStatusDisponibilidade, StatusDisponibilidadeInfo } from '../utils/disponibilidade';
+import { getSantoDoDia } from '../utils/santos';
+import { hasCoordAccess, isCoordenadorOrVice, isMinisterMatchingUser, isMinisterLiderForUser, getScheduledWhoForUser, safeJson, safeFetchJson, toTitleCase } from '../utils';
 import LiderMissaCard from './LiderMissaCard';
 
 interface WelcomeViewProps {
@@ -35,6 +37,12 @@ interface WelcomeViewProps {
   onAlert?: (titulo: string, mensagem: string) => void;
   classicWebMode?: boolean;
   onToggleClassicWebMode?: (val: boolean) => void;
+  diaAbertura?: number | '' | null;
+  horaAbertura?: string | null;
+  diaFechamento?: number | '' | null;
+  horaFechamento?: string | null;
+  manualOverride?: boolean;
+  statusDisponibilidade?: StatusDisponibilidadeInfo;
 }
 
 const BIBLE_VERSES = [
@@ -67,8 +75,73 @@ const DEFAULT_GOSPEL = {
   papasText: ''
 };
 
-function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, onVerEscala, onSetView, onSetTab, onUpdateUser, onClearImpersonation, originalUser, slotsDisponiveis, escala, needsPasswordReset, isTab = false, disponibilidadeAberta = false, escalaPublicada = false, paroquiaBloqueada = false, hasSubmitted = false, mesSelecionado, anoSelecionado, unreadCount = 0, showPreAberturaMessage = false, mensagemDisponibilidade = null, onAlert, classicWebMode, onToggleClassicWebMode }: WelcomeViewProps) {
+function WelcomeView({
+  user,
+  birthdayMessage,
+  aniversariantes = [],
+  onLogout,
+  onVerEscala,
+  onSetView,
+  onSetTab,
+  onUpdateUser,
+  onClearImpersonation,
+  originalUser,
+  slotsDisponiveis,
+  escala,
+  needsPasswordReset,
+  isTab = false,
+  disponibilidadeAberta = false,
+  escalaPublicada = false,
+  paroquiaBloqueada = false,
+  hasSubmitted = false,
+  mesSelecionado,
+  anoSelecionado,
+  unreadCount = 0,
+  showPreAberturaMessage = false,
+  mensagemDisponibilidade = null,
+  onAlert,
+  classicWebMode,
+  onToggleClassicWebMode,
+  diaAbertura,
+  horaAbertura,
+  diaFechamento,
+  horaFechamento,
+  manualOverride,
+  statusDisponibilidade,
+}: WelcomeViewProps) {
   const isImpersonating = !!originalUser && originalUser.id !== user.id;
+
+  const computedStatusDisp = useMemo(() => {
+    if (statusDisponibilidade) return statusDisponibilidade;
+    if (diaFechamento !== undefined && diaFechamento !== '') {
+      return calcularStatusDisponibilidade({
+        diaAbertura,
+        horaAbertura,
+        diaFechamento,
+        horaFechamento,
+        disponibilidadeAberta,
+        manualOverride,
+        hasSubmitted,
+        mesAlvo: mesSelecionado,
+        anoAlvo: anoSelecionado,
+      });
+    }
+    return null;
+  }, [
+    statusDisponibilidade,
+    diaAbertura,
+    horaAbertura,
+    diaFechamento,
+    horaFechamento,
+    disponibilidadeAberta,
+    manualOverride,
+    hasSubmitted,
+    mesSelecionado,
+    anoSelecionado,
+  ]);
+
+  const activeMensagemDisp = mensagemDisponibilidade || computedStatusDisp?.mensagem;
+  const activeShowPreAbertura = showPreAberturaMessage || !!computedStatusDisp?.showPreAbertura;
 
   const liturgyColor = useMemo(() => {
     const today = getTodayDateStringForLiturgy();
@@ -149,55 +222,6 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
   const [submittedReportKeys, setSubmittedReportKeys] = useState<string[]>([]);
   const [selectedLiderAssign, setSelectedLiderAssign] = useState<any>(null);
 
-  const myLeaderAssignments = useMemo(() => {
-    return myAssignments.filter((assign) => {
-      const liderName = assign.lider || "";
-      if (!liderName || liderName === "Não definido" || liderName === "Líder da Missa" || liderName === "Coordenação") return false;
-      const ministros = Array.isArray(assign.ministros) ? assign.ministros : [];
-      return isMinisterLiderForUser(assign.lider, user, ministros);
-    });
-  }, [user, myAssignments]);
-
-  const activeLeaderAssignment = useMemo(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    // Filter my leader assignments that are NOT submitted yet
-    const unsubmittedLeaderAssignments = myLeaderAssignments.filter((assign) => {
-      const key = `${assign.date}_${assign.time || assign.horario}`;
-      return !submittedReportKeys.includes(key);
-    });
-
-    const eligibleAssignments = unsubmittedLeaderAssignments.filter((assign) => {
-      const parts = assign.date.split("-");
-      if (parts.length !== 3) return false;
-      const assignDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      assignDate.setHours(0, 0, 0, 0);
-      const diffInDays = Math.round((assignDate.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Appears 2 days before (diffInDays <= 2) and disappears 2 days after (diffInDays >= -2)
-      return diffInDays >= -2 && diffInDays <= 2;
-    });
-
-    // If there is any eligible assignment, we take the earliest one (exactly one!)
-    if (eligibleAssignments.length > 0) {
-      return eligibleAssignments[0];
-    }
-
-    return null;
-  }, [myLeaderAssignments, submittedReportKeys]);
-
-  const isLiderUser = useMemo(() => {
-    if (!user) return false;
-    // 1. Check profile flags - only registered leaders or coordination can be leader users
-    const isLoggedAsConjuge = user.tipo === 'casal' && user.isConjugeLogin;
-    if (isLoggedAsConjuge) {
-      return Boolean(user.isLiderConjuge || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin');
-    } else {
-      return Boolean(user.isLider || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin');
-    }
-  }, [user]);
-
   // Real-time discreet clock state
   const [liveDateTime, setLiveDateTime] = useState({
     weekday: "",
@@ -235,6 +259,115 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
     const intervalId = setInterval(updateClock, 1000);
     return () => clearInterval(intervalId);
   }, []);
+
+  // Verifica se hoje é o dia da festa de algum santo cadastrado
+  const santoDoDiaInfo = useMemo(() => {
+    return getSantoDoDia(new Date());
+  }, [liveDateTime.date]); // Atualiza automaticamente na virada do dia
+
+
+  const myLeaderAssignments = useMemo(() => {
+    return myAssignments.filter((assign) => {
+      const liderName = assign.lider || "";
+      if (!liderName || liderName === "Não definido" || liderName === "Líder da Missa" || liderName === "Coordenação") return false;
+      const ministros = Array.isArray(assign.ministros) ? assign.ministros : [];
+      return isMinisterLiderForUser(assign.lider, user, ministros);
+    });
+  }, [user, myAssignments]);
+
+  // Identifica celebrações de HOJE onde o ministro atual é o Líder/Responsável
+  // A mensagem deve ser exibida durante o dia da celebração e sumir automaticamente às 23:59:59
+  const todayLeaderAssignment = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    // Verifica se ainda não passou das 23:59 do dia de hoje (na virada de dia, todayStr muda e zera)
+    const isToday = (assignDateStr: string) => assignDateStr === todayStr;
+
+    return myLeaderAssignments.find(assign => {
+      if (!isToday(assign.date)) return false;
+      const key = `${assign.date}_${assign.time || assign.horario}`;
+      // REGRA: Uma vez enviado o relatório, o aviso/botão de lançamento some!
+      return !submittedReportKeys.includes(key);
+    });
+  }, [myLeaderAssignments, liveDateTime.date, submittedReportKeys]);
+
+  // REGRA DO USUÁRIO: Identifica relatórios com PENDÊNCIA (celebração de hoje ou do passado cujo relatório NÃO foi enviado)
+  // Não apaga enquanto o líder não enviar o relatório!
+  const pendingLeaderAssignments = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return myLeaderAssignments.filter((assign) => {
+      const parts = assign.date.split("-");
+      if (parts.length !== 3) return false;
+      const assignDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      assignDate.setHours(0, 0, 0, 0);
+
+      const key = `${assign.date}_${assign.time || assign.horario}`;
+      const isSubmitted = submittedReportKeys.includes(key);
+
+      // É pendência se a celebração já ocorreu (passado ou hoje) e ainda NÃO foi enviado
+      return assignDate.getTime() <= today.getTime() && !isSubmitted;
+    });
+  }, [myLeaderAssignments, submittedReportKeys]);
+
+  const hasPendingReport = pendingLeaderAssignments.length > 0;
+
+  const activeLeaderAssignment = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Prioridade 1: Celebração com pendência não enviada
+    if (pendingLeaderAssignments.length > 0) {
+      return pendingLeaderAssignments[0];
+    }
+
+    // Prioridade 2: Celebrações ativas aguardando envio (REGRA: se já enviou, SOME até a próxima celebração como líder)
+    const activeWindowAssignments = myLeaderAssignments.filter((assign) => {
+      const parts = assign.date.split("-");
+      if (parts.length !== 3) return false;
+      const assignDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      assignDate.setHours(0, 0, 0, 0);
+      const diffInDays = Math.round((assignDate.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const key = `${assign.date}_${assign.time || assign.horario}`;
+      const isSubmitted = submittedReportKeys.includes(key);
+
+      // Se ainda não foi enviado, exibe se a missa é hoje, passada ou nos próximos 2 dias:
+      if (!isSubmitted && diffInDays <= 2) {
+        return true;
+      }
+
+      // Uma vez que enviou, não exibe mais para lançamento
+      return false;
+    });
+
+    if (activeWindowAssignments.length === 0) {
+      return null;
+    }
+
+    return activeWindowAssignments[0];
+  }, [myLeaderAssignments, submittedReportKeys, pendingLeaderAssignments]);
+
+  const isLiderUser = useMemo(() => {
+    if (!user) return false;
+    const isLoggedAsConjuge = user.tipo === 'casal' && user.isConjugeLogin;
+    if (isLoggedAsConjuge) {
+      return Boolean(user.isLiderConjuge || user.isLider || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin' || user.isActualCoord || user.isCoordenador);
+    } else {
+      return Boolean(user.isLider || user.isLiderConjuge || user.role === 'coordenacao' || user.role === 'vice_coordenacao' || user.role === 'admin' || user.isActualCoord || user.isCoordenador);
+    }
+  }, [user]);
+
+  // REGRA: Uma vez que envia o relatório, o botão/ícone de lançar relatório volta a sumir até que volte a ser responsável/líder na missa
+  const isAnyLeaderOrResponsible = useMemo(() => {
+    if (hasCoordAccess(user)) return true;
+    return Boolean(
+      pendingLeaderAssignments.length > 0 ||
+      activeLeaderAssignment !== null
+    );
+  }, [user, pendingLeaderAssignments, activeLeaderAssignment]);
 
   const [customEvents, setCustomEvents] = useState<any[]>([]);
   const [readEventIds, setReadEventIds] = useState<string[]>(() => {
@@ -519,29 +652,36 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
       Object.entries(escala).forEach(([dateStr, missas]: [string, any]) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
         if (!missas || typeof missas !== 'object') return;
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const assignDate = new Date(y, m - 1, d);
+        assignDate.setHours(0, 0, 0, 0);
+        const diffFromToday = Math.round((assignDate.getTime() - todayReset.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (dateStr >= todayStr) {
-          Object.entries(missas).forEach(([time, missa]: [string, any]) => {
-            if (!missa || typeof missa !== 'object') return;
-            const ministros = Array.isArray(missa.ministros) ? missa.ministros : [];
-            const matchedMinister = ministros.find((m: any) => isMinisterMatchingUser(m, user));
+        // Include upcoming celebrations as well as any unsubmitted leader celebrations (REGRA: não apagar enquanto não enviar)
+        Object.entries(missas).forEach(([time, missa]: [string, any]) => {
+          if (!missa || typeof missa !== 'object') return;
+          const ministros = Array.isArray(missa.ministros) ? missa.ministros : [];
+          const matchedMinister = ministros.find((m: any) => isMinisterMatchingUser(m, user));
+          const isLeader = isMinisterLiderForUser(missa.lider, user, ministros);
 
-            if (matchedMinister) {
+          const key = `${dateStr}_${time}`;
+          const isSubmitted = submittedReportKeys.includes(key);
+          const shouldInclude = diffFromToday >= -2 || (isLeader && !isSubmitted);
+
+          if ((matchedMinister || isLeader) && shouldInclude) {
               const matchedName = (typeof matchedMinister === 'object' && matchedMinister !== null) 
                 ? (matchedMinister.nome || '') 
-                : matchedMinister;
+                : (matchedMinister || (isLeader ? (user.nomeExibicao || user.nome) : ''));
 
               allFoundAssignments.push({
                 date: dateStr,
                 time: time,
+                horario: time,
                 matchedName: matchedName,
                 ...missa
               });
             }
           });
-        }
       });
 
       // Ordenar todas as escalações
@@ -598,7 +738,7 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
         });
       });
 
-  }, [escala, user.nome, user.paroquia]);
+  }, [escala, user.nome, user.paroquia, submittedReportKeys]);
 
   return (
     <motion.div
@@ -649,11 +789,11 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                 user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-white" : theme.text950
               }`}
             >
-              Olá, {user.isConjugeLogin ? (user.nomeExibicaoConjuge || user.nomeConjuge || '') : (user.nomeExibicao || user.nome || '')}
+              Olá, {toTitleCase(user.isConjugeLogin ? (user.nomeExibicaoConjuge || user.nomeConjuge || '') : (user.nomeExibicao || user.nome || ''))}
               {user.tipo === 'casal' && (user.nomeExibicaoConjuge || user.nomeConjuge) ? (
                 <span className={`${user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-slate-200" : theme.text700} font-medium italic`}>
                   {" "}
-                  & {user.isConjugeLogin ? (user.nomeExibicao || user.nome || '') : (user.nomeExibicaoConjuge || user.nomeConjuge || '')}
+                  & {toTitleCase(user.isConjugeLogin ? (user.nomeExibicao || user.nome || '') : (user.nomeExibicaoConjuge || user.nomeConjuge || ''))}
                 </span>
               ) : (
                 ''
@@ -717,36 +857,162 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
           </div>
         )}
 
-        {/* Pre Abertura Alert */}
-        {showPreAberturaMessage && !disponibilidadeAberta && (
-          <div className="mb-6 p-4 bg-liturgy-50 border border-liturgy-200 rounded-xl flex items-center gap-3 text-liturgy-800 shadow-sm">
-            <Info className="w-6 h-6 text-liturgy-600 flex-shrink-0" />
-            <p className="font-bold text-lg leading-tight">A disponibilidade será aberta em breve.</p>
+        {/* Mensagem Especial do Dia do Santo */}
+        {santoDoDiaInfo.isDiaDeSanto && santoDoDiaInfo.santoDoDia && (
+          <div
+            onClick={() => {
+              if (isTab && onSetTab) {
+                onSetTab("santo");
+              } else {
+                onSetView("santo");
+              }
+            }}
+            className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-yellow-400/20 to-amber-500/15 border-2 border-yellow-400 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-yellow-500/10 cursor-pointer hover:border-yellow-500 transition-all duration-300 hover:scale-[1.008] animate-in fade-in group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/30 border border-yellow-400 flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative group-hover:scale-105 transition-transform duration-300">
+                {santoDoDiaInfo.santoDoDia.imagemUrl ? (
+                  <img
+                    src={santoDoDiaInfo.santoDoDia.imagemUrl}
+                    alt={santoDoDiaInfo.santoDoDia.nome}
+                    className="w-full h-full object-cover scale-110"
+                  />
+                ) : (
+                  <span className="text-2xl">⭐</span>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs flex items-center gap-1">
+                    <span>✨</span>
+                    <span>Dia do Santo • {santoDoDiaInfo.santoDoDia.dataFesta}</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-amber-800">
+                    Festa Litúrgica
+                  </span>
+                </div>
+                <h4 className="text-base sm:text-lg font-black text-amber-950 mt-1 leading-tight">
+                  Hoje celebramos {santoDoDiaInfo.todosSantosDoDia.map((s) => s.nome).join(" e ")}!
+                </h4>
+                <p className="text-xs sm:text-sm font-semibold text-amber-900/90 mt-0.5 leading-snug">
+                  Toque no ícone de Santos abaixo para conhecer sua história, vida e oração especial.
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-bold text-xs shrink-0 shadow-md group-hover:brightness-105 transition-all">
+              <span>Ler História</span>
+              <span>→</span>
+            </div>
           </div>
         )}
 
-        {mensagemDisponibilidade && (
-          <div className={`mb-6 p-4 border rounded-xl flex items-center gap-3 shadow-sm ${
-            mensagemDisponibilidade.tipo === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-            mensagemDisponibilidade.tipo === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-            mensagemDisponibilidade.tipo === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+        {/* Pre Abertura Alert */}
+        {activeShowPreAbertura && !disponibilidadeAberta && !activeMensagemDisp && (
+          <div className="mb-6 p-4 bg-liturgy-50 border border-liturgy-200 rounded-xl flex items-center gap-3 text-liturgy-800 shadow-sm animate-in fade-in">
+            <Info className="w-6 h-6 text-liturgy-600 flex-shrink-0" />
+            <p className="font-bold text-base sm:text-lg leading-tight">A disponibilidade será aberta em breve.</p>
+          </div>
+        )}
+
+        {activeMensagemDisp && !(escalaPublicada && !disponibilidadeAberta) && (
+          <div className={`mb-6 p-4 border rounded-xl flex items-center gap-3 shadow-sm animate-in fade-in ${
+            activeMensagemDisp.tipo === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+            activeMensagemDisp.tipo === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            activeMensagemDisp.tipo === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
             'bg-blue-50 border-blue-200 text-blue-800'
           }`}>
             <div className="flex-shrink-0">
-              {mensagemDisponibilidade.tipo === 'success' ? (
+              {activeMensagemDisp.tipo === 'success' ? (
                 <Check className="w-6 h-6 text-emerald-600" />
-              ) : mensagemDisponibilidade.tipo === 'warning' || mensagemDisponibilidade.tipo === 'error' ? (
+              ) : activeMensagemDisp.tipo === 'warning' || activeMensagemDisp.tipo === 'error' ? (
                 <AlertCircle className="w-6 h-6 text-red-500" />
               ) : (
                 <Info className="w-6 h-6 text-blue-600" />
               )}
             </div>
-            <p className="font-bold text-lg leading-tight">{mensagemDisponibilidade.texto}</p>
+            <p className="font-bold text-base sm:text-lg leading-tight">{activeMensagemDisp.texto}</p>
           </div>
         )}
 
         {/* Alerts Section */}
         <div className="space-y-4">
+          {/* AVISO DE PENDÊNCIA: Não apagar enquanto o líder/responsável não enviar o relatório (com ícone vermelho piscando) */}
+          {hasPendingReport ? (
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-red-950 via-rose-900 to-red-900 text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl border-2 border-red-500 animate-in fade-in slide-in-from-top-3">
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-red-600/30 border border-red-400/60 flex items-center justify-center shrink-0 text-white animate-pulse">
+                  <Flag className="w-6 h-6 text-red-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                      Pendência de Relatório
+                    </span>
+                    <span className="text-red-200 text-xs font-bold">
+                      {pendingLeaderAssignments.length === 1 ? '1 celebração sem envio' : `${pendingLeaderAssignments.length} celebrações sem envio`}
+                    </span>
+                  </div>
+                  <h4 className="text-base sm:text-lg font-black text-white mt-1 leading-tight">
+                    Relatório litúrgico não enviado!
+                  </h4>
+                  <p className="text-xs sm:text-sm text-red-100/90 mt-0.5 leading-relaxed">
+                    {pendingLeaderAssignments.map(p => {
+                      const parts = p.date.split('-');
+                      const fDate = parts.length === 3 ? `${parts[2]}/${parts[1]}` : p.date;
+                      return `${fDate} às ${p.time || p.horario}`;
+                    }).join(', ')} — Este aviso e o ícone permanecerão em vermelho piscando até que o relatório seja enviado.
+                  </p>
+                </div>
+              </div>
+              <div className="w-full sm:w-auto flex sm:flex-col justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onSetView("lider_painel")}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer animate-pulse"
+                >
+                  <Flag className="w-4 h-4 text-white" />
+                  <span>Preencher Pendência</span>
+                </button>
+              </div>
+            </div>
+          ) : todayLeaderAssignment ? (
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md border border-blue-800 animate-in fade-in slide-in-from-top-3">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0 text-amber-300">
+                  <Flag className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-wider">
+                      Celebração de Hoje
+                    </span>
+                    <span className="text-blue-200 text-xs font-semibold flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      {todayLeaderAssignment.time || todayLeaderAssignment.horario}
+                    </span>
+                  </div>
+                  <h4 className="text-base sm:text-lg font-black text-white mt-1 leading-tight">
+                    Você é o(a) Responsável pela Missa de Hoje!
+                  </h4>
+                  <p className="text-xs sm:text-sm text-blue-100/90 mt-0.5 leading-relaxed">
+                    Acompanhe a chegada dos ministros na sacristia e, ao final da celebração, realize o preenchimento do relatório litúrgico.
+                  </p>
+                </div>
+              </div>
+              <div className="w-full sm:w-auto flex sm:flex-col justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onSetView("lider_painel")}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                >
+                  <Flag className="w-4 h-4 text-slate-950" />
+                  <span>Acessar Relatório</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {user.cadastroCompleto === false && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-4 text-blue-900 shadow-sm border-l-4 border-l-blue-500">
               <div className="flex items-center gap-3">
@@ -846,6 +1112,7 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
         <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
           <div className="grid grid-cols-1 gap-8">
             <div className="space-y-6">
+
               
 
               {/* Section for Upcoming Weekend Schedules (3 days before) */}
@@ -860,8 +1127,12 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
-                         <h3 className={`text-sm font-black ${theme.text950} uppercase tracking-widest leading-none`}>Próximos Agendamentos</h3>
-                         <p className={`text-[10px] ${theme.text700}/80 font-bold uppercase mt-1`}>Fique atento à sua escala</p>
+                         <h3 className={`text-sm font-black ${theme.text950} uppercase tracking-widest leading-none`}>
+                           Seus Próximos Agendamentos (Você está escalado!)
+                         </h3>
+                         <p className={`text-[10px] ${theme.text700}/80 font-bold uppercase mt-1`}>
+                           Fique atento à sua atuação na escala
+                         </p>
                       </div>
                     </div>
                     <div className="space-y-2.5 mt-4">
@@ -878,30 +1149,69 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                           'Sábado'
                         ];
                         const fullWeekday = weekdays[dateObj.getDay()];
+                        const whoScheduled = getScheduledWhoForUser(assign, user);
+
+                        const isLiderThisMissa = isMinisterLiderForUser(assign.lider, user, Array.isArray(assign.ministros) ? assign.ministros : []);
 
                         return (
-                          <div key={idx} className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200/80 shadow-sm transition-all hover:bg-white">
-                            <div className={`${theme.bg} ${theme.text700} w-16 h-16 rounded-[1.25rem] flex flex-col items-center justify-center flex-shrink-0 border ${theme.pillBorder} shadow-sm px-2`}>
-                              <span className="text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 opacity-70">Dia</span>
-                              <span className="text-xl font-black leading-none">{dayNum}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className={`text-base font-black ${theme.text950} leading-tight truncate`}>
-                                {fullWeekday}
-                              </h4>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
-                                <span className={`font-black ${theme.text600} bg-stone-100 flex items-center gap-1 px-2 py-0.5 rounded-lg border border-stone-200/30`}>
-                                  <Clock className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
-                                  Horário: {assign.time || assign.horario}
-                                </span>
-                                <span className="text-slate-500 font-medium truncate max-w-[150px] sm:max-w-none">
-                                  {assign.nome || 'Missa'}
-                                </span>
+                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200/80 shadow-sm transition-all hover:bg-white">
+                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                              <div className={`${theme.bg} ${theme.text700} w-16 h-16 rounded-[1.25rem] flex flex-col items-center justify-center flex-shrink-0 border ${theme.pillBorder} shadow-sm px-2`}>
+                                <span className="text-[9px] font-bold uppercase tracking-wider leading-none mb-0.5 opacity-70">Dia</span>
+                                <span className="text-xl font-black leading-none">{dayNum}</span>
                               </div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                {user.paroquia}
-                              </p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className={`text-base font-black ${theme.text950} leading-tight truncate`}>
+                                    {fullWeekday}
+                                  </h4>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
+                                  <span className={`font-black ${theme.text600} bg-stone-100 flex items-center gap-1 px-2 py-0.5 rounded-lg border border-stone-200/30`}>
+                                    <Clock className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+                                    Horário: {assign.time || assign.horario}
+                                  </span>
+                                  <span className="text-slate-500 font-medium truncate max-w-[150px] sm:max-w-none">
+                                    {assign.nome || 'Missa'}
+                                  </span>
+                                </div>
+
+                                {whoScheduled && whoScheduled.label && (
+                                  <div className="mt-2 flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-50 border border-stone-200/80 text-slate-800 shadow-2xs">
+                                      {whoScheduled.type === 'casal' ? (
+                                        <Users className={`w-3.5 h-3.5 ${theme.text600} shrink-0`} />
+                                      ) : (
+                                        <User className={`w-3.5 h-3.5 ${theme.text600} shrink-0`} />
+                                      )}
+                                      <span>{whoScheduled.fullLabel}</span>
+                                    </span>
+                                  </div>
+                                )}
+
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                  {user.paroquia}
+                                </p>
+                              </div>
                             </div>
+
+                            {/* Lado direito: Badge de Responsável da Missa com Estrela */}
+                            {isLiderThisMissa && (
+                              <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-2.5 shrink-0 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-stone-100">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-900 border border-amber-400/40 rounded-xl text-xs font-black uppercase tracking-wider shadow-2xs">
+                                  <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
+                                  <span>Responsável da Missa</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onSetView("lider_painel")}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+                                >
+                                  <Flag className="w-3.5 h-3.5 text-amber-300" />
+                                  <span>Preencher Relatório</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -953,14 +1263,15 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                         {
                           id: "disponibilidade",
                           label: "Disponibilidade",
-                          subtitle: "Enviar datas",
+                          subtitle: computedStatusDisp?.statusCard || (hasSubmitted ? "Enviado ✓" : "Enviar datas"),
                           icon: LayoutDashboard,
-                          badge: 0,
+                          badge: (!hasSubmitted && computedStatusDisp?.encerraHoje) ? 1 : 0,
+                          badgeText: (!hasSubmitted && computedStatusDisp?.badgeCard) ? computedStatusDisp.badgeCard : "",
                         },
                         {
                           id: "escala",
-                          label: "Escalas",
-                          subtitle: "Consultar escala",
+                          label: "Escala Geral",
+                          subtitle: "Visualizar Escala",
                           icon: Calendar,
                           badge: 0,
                         },
@@ -1020,12 +1331,12 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                           icon: RefreshCw,
                           badge: 0,
                         },
-                        ...(isLiderUser ? [{
+                        ...(isAnyLeaderOrResponsible ? [{
                           id: "lider_painel",
                           label: "Responsável pela Missa",
-                          subtitle: "Relatórios",
+                          subtitle: hasPendingReport ? "Pendência" : "Relatório da Missa",
                           icon: Flag,
-                          badge: activeLeaderAssignment ? 1 : 0,
+                          badge: hasPendingReport ? pendingLeaderAssignments.length : (activeLeaderAssignment && !submittedReportKeys.includes(`${activeLeaderAssignment.date}_${activeLeaderAssignment.time || activeLeaderAssignment.horario}`)) ? 1 : 0,
                         }] : []),
                         ...(user.isTesoureiro || hasCoordAccess(user) ? [{
                           id: "financeiro",
@@ -1034,10 +1345,10 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                           icon: DollarSign,
                           badge: 0,
                         }] : []),
-                        ...(hasCoordAccess(user) ? [{
+                        ...(isCoordenadorOrVice(user) ? [{
                           id: "faltas",
-                          label: "Faltas",
-                          subtitle: "Ranking e ausências",
+                          label: "Faltas/Trocas",
+                          subtitle: "Gestão de ausências",
                           icon: UserX,
                           badge: 0,
                         }] : []),
@@ -1069,6 +1380,7 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                       const IconComp = item.icon;
                       const isNiverHoje = item.id === "aniversariantes" && anyBirthdayToday.length > 0;
                       const isEscalado = item.id === "escala" && Array.isArray(weekendAssignments) && weekendAssignments.length > 0;
+                      const isSantoHoje = item.id === "santo" && santoDoDiaInfo.isDiaDeSanto;
 
                       return (
                         <button
@@ -1094,45 +1406,53 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                             }
                           }}
                           className={`group flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-2xl transition-all duration-300 relative border cursor-pointer hover:shadow-lg hover:-translate-y-0.5 aspect-square ${
-                            isNiverHoje
+                            item.id === "lider_painel" && hasPendingReport
+                              ? "bg-red-500/20 backdrop-blur-md border-red-500 ring-2 ring-red-500/50 shadow-[0_4px_16px_rgba(239,68,68,0.3)] animate-pulse hover:bg-red-500/30"
+                              : isNiverHoje
                               ? "bg-red-500/10 backdrop-blur-md border-red-300/70 ring-2 ring-red-500/20 shadow-[0_4px_16px_rgba(239,68,68,0.1),inset_0_1px_1px_rgba(255,255,255,0.7)]"
                               : isEscalado
                                 ? "bg-red-500/15 backdrop-blur-md border-red-400/80 ring-2 ring-red-500/25 shadow-[0_4px_16px_rgba(239,68,68,0.15),inset_0_1px_1px_rgba(255,255,255,0.7)] hover:bg-red-500/25"
-                                : item.id === "versao_web"
-                                  ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                                  : liturgyColor === "purple"
-                                    ? "bg-purple-900/[0.04] backdrop-blur-md border-purple-300/40 hover:bg-purple-900/[0.08] hover:border-purple-400/60 shadow-[0_4px_16px_rgba(147,51,234,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                    : liturgyColor === "rose"
-                                      ? "bg-rose-900/[0.04] backdrop-blur-md border-rose-300/40 hover:bg-rose-900/[0.08] hover:border-rose-400/60 shadow-[0_4px_16px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                      : liturgyColor === "white"
-                                        ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                                        : liturgyColor === "emerald"
-                                          ? "bg-emerald-900/[0.04] backdrop-blur-md border-emerald-300/40 hover:bg-emerald-900/[0.08] hover:border-emerald-400/60 shadow-[0_4px_16px_rgba(16,185,129,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
-                                          : "bg-blue-900/[0.04] backdrop-blur-md border-blue-300/40 hover:bg-blue-900/[0.08] hover:border-blue-400/60 shadow-[0_4px_16px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                : isSantoHoje
+                                  ? "bg-gradient-to-br from-amber-200/90 via-yellow-100/95 to-amber-300/90 border-yellow-400 ring-2 ring-yellow-400/70 shadow-[0_0_22px_rgba(250,204,21,0.75),inset_0_1px_2px_rgba(255,255,255,0.9)] hover:shadow-[0_0_30px_rgba(250,204,21,0.95)] santo-dia-glow"
+                                  : item.id === "versao_web"
+                                    ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                    : liturgyColor === "purple"
+                                      ? "bg-purple-900/[0.04] backdrop-blur-md border-purple-300/40 hover:bg-purple-900/[0.08] hover:border-purple-400/60 shadow-[0_4px_16px_rgba(147,51,234,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                      : liturgyColor === "rose"
+                                        ? "bg-rose-900/[0.04] backdrop-blur-md border-rose-300/40 hover:bg-rose-900/[0.08] hover:border-rose-400/60 shadow-[0_4px_16px_rgba(244,63,94,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                        : liturgyColor === "white"
+                                          ? "bg-white/40 backdrop-blur-md border-slate-200/70 hover:bg-white/60 hover:border-slate-300 shadow-[0_4px_16px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.8)]"
+                                          : liturgyColor === "emerald"
+                                            ? "bg-emerald-900/[0.04] backdrop-blur-md border-emerald-300/40 hover:bg-emerald-900/[0.08] hover:border-emerald-400/60 shadow-[0_4px_16px_rgba(16,185,129,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
+                                            : "bg-blue-900/[0.04] backdrop-blur-md border-blue-300/40 hover:bg-blue-900/[0.08] hover:border-blue-400/60 shadow-[0_4px_16px_rgba(59,130,246,0.06),inset_0_1px_1px_rgba(255,255,255,0.75)]"
                           }`}
                         >
                           <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center mb-1.5 transition-all duration-300 relative border overflow-hidden ${
-                            isNiverHoje
+                            item.id === "lider_painel" && hasPendingReport
+                              ? "bg-gradient-to-b from-red-500/40 to-red-600/20 border-red-500 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.3)] animate-pulse"
+                              : isNiverHoje
                               ? "bg-gradient-to-b from-red-500/20 to-red-500/5 border-red-300/70 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.12)] animate-bounce"
                               : isEscalado
                                 ? "bg-gradient-to-b from-red-500/25 to-red-500/10 border-red-400/80 text-red-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_3px_8px_rgba(239,68,68,0.15)]"
-                                : item.id === "versao_web"
-                                  ? "bg-gradient-to-b from-white/80 to-white/30 border-white/80 text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.9),0_2px_6px_rgba(0,0,0,0.04)]"
-                                  : item.id === "santo"
-                                    ? "bg-transparent border-transparent shadow-none"
-                                    : item.id === "comunhao"
-                                      ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
-                                      : item.id === "financeiro"
+                                : isSantoHoje
+                                  ? "bg-gradient-to-b from-amber-300 to-yellow-400 border-yellow-300 text-amber-950 shadow-[0_0_15px_rgba(250,204,21,0.9),inset_0_1px_2px_rgba(255,255,255,0.95)] ring-2 ring-yellow-400 santo-shimmer-effect"
+                                  : item.id === "versao_web"
+                                    ? "bg-gradient-to-b from-white/80 to-white/30 border-white/80 text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.9),0_2px_6px_rgba(0,0,0,0.04)]"
+                                    : item.id === "santo"
+                                      ? "bg-transparent border-transparent shadow-none"
+                                      : item.id === "comunhao"
                                         ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
-                                        : liturgyColor === "purple"
-                                        ? "bg-gradient-to-b from-purple-500/20 to-purple-500/5 border-purple-200/60 text-purple-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(147,51,234,0.08)]"
-                                        : liturgyColor === "rose"
-                                          ? "bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-200/60 text-rose-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(244,63,94,0.08)]"
-                                          : liturgyColor === "white"
-                                            ? "bg-gradient-to-b from-white/90 to-white/40 border-white text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
-                                            : liturgyColor === "emerald"
-                                              ? "bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-200/60 text-emerald-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(16,185,129,0.08)]"
-                                              : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-200/60 text-blue-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(59,130,246,0.08)]"
+                                        : item.id === "financeiro"
+                                          ? "bg-gradient-to-b from-amber-500/15 to-transparent border-amber-300/40 text-amber-600 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.8),0_2px_6px_rgba(245,158,11,0.08)]"
+                                          : liturgyColor === "purple"
+                                          ? "bg-gradient-to-b from-purple-500/20 to-purple-500/5 border-purple-200/60 text-purple-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(147,51,234,0.08)]"
+                                          : liturgyColor === "rose"
+                                            ? "bg-gradient-to-b from-rose-500/20 to-rose-500/5 border-rose-200/60 text-rose-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(244,63,94,0.08)]"
+                                            : liturgyColor === "white"
+                                              ? "bg-gradient-to-b from-white/90 to-white/40 border-white text-slate-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
+                                              : liturgyColor === "emerald"
+                                                ? "bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 border-emerald-200/60 text-emerald-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(16,185,129,0.08)]"
+                                                : "bg-gradient-to-b from-blue-500/20 to-blue-500/5 border-blue-200/60 text-blue-700 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.85),0_2px_6px_rgba(59,130,246,0.08)]"
                           }`}>
                             {item.id === "santo" ? (
                               <img
@@ -1291,7 +1611,9 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                               <img
                                 src="/relatorios_3d.jpg"
                                 alt="Responsável pela Missa"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
+                                className={`w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl ${
+                                  hasPendingReport ? "brightness-95 contrast-125 drop-shadow-[0_0_10px_rgba(239,68,68,0.95)]" : ""
+                                }`}
                                 loading="lazy"
                                 decoding="async"
                                 referrerPolicy="no-referrer"
@@ -1320,16 +1642,52 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                             </>
                           ) : (
                             <>
-                              <span className={`text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-center line-clamp-2 px-0.5 ${theme.text950}`}>
+                              <span className={`text-[10px] sm:text-[12px] font-black leading-tight tracking-tight text-center line-clamp-2 px-0.5 ${
+                                item.id === 'lider_painel' && hasPendingReport
+                                  ? 'text-red-700 font-black'
+                                  : isSantoHoje
+                                  ? 'text-amber-950 font-black'
+                                  : theme.text950
+                              }`}>
                                 {item.label}
                               </span>
-                              <span className="text-[8px] sm:text-[10px] text-slate-400 font-bold mt-0.5 leading-none">
-                                {item.subtitle}
+                              <span className={`text-[8px] sm:text-[10px] font-bold mt-0.5 leading-none ${
+                                item.id === 'lider_painel' && hasPendingReport
+                                  ? 'text-white bg-red-600 font-black uppercase tracking-wider animate-pulse px-2 py-0.5 rounded-full shadow-xs'
+                                  : isSantoHoje
+                                  ? 'text-amber-900 font-black uppercase tracking-wider bg-amber-400/80 px-1.5 py-0.5 rounded-full border border-amber-500/50 shadow-xs'
+                                  : item.id === 'disponibilidade' && computedStatusDisp?.encerraHoje && !hasSubmitted
+                                  ? 'text-rose-600 font-black animate-pulse'
+                                  : item.id === 'disponibilidade' && hasSubmitted
+                                  ? 'text-emerald-600 font-bold'
+                                  : 'text-slate-400'
+                              }`}>
+                                {item.id === 'lider_painel' && hasPendingReport
+                                  ? 'Pendência'
+                                  : isSantoHoje
+                                  ? 'Festa Hoje'
+                                  : item.subtitle}
                               </span>
                             </>
                           )}
 
-                          {isNiverHoje ? (
+                          {item.id === "lider_painel" && hasPendingReport ? (
+                            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                              </span>
+                              <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse shadow-xs">
+                                Pendência
+                              </span>
+                            </div>
+                          ) : isSantoHoje ? (
+                            <div className="absolute top-2 right-2 flex items-center justify-center z-10 animate-bounce">
+                              <span className="relative inline-flex items-center justify-center bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-md border border-amber-200">
+                                ⭐
+                              </span>
+                            </div>
+                          ) : isNiverHoje ? (
                             <div className="absolute top-3 right-3 flex h-3 w-3">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
@@ -1340,6 +1698,10 @@ function WelcomeView({ user, birthdayMessage, aniversariantes = [], onLogout, on
                                 {weekendAssignments && weekendAssignments.length > 0 ? weekendAssignments.length : "✓"}
                               </span>
                             </div>
+                          ) : item.id === 'disponibilidade' && !hasSubmitted && (item as any).badgeText ? (
+                            <span className="absolute top-2 right-2 bg-rose-600 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center justify-center shadow-xs">
+                              {(item as any).badgeText}
+                            </span>
                           ) : item.badge > 0 ? (
                             <span className="absolute top-3 right-3 bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center justify-center shadow-sm">
                               {item.badge}

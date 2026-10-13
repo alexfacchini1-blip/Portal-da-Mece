@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Sparkles, Heart, Shield, Award, ChevronLeft, Calendar, BookOpen } from "lucide-react";
+import { isFestaSantoHoje, getSantoDoDia } from "../utils/santos";
 
 export interface SantoItem {
   id: string;
@@ -105,6 +106,31 @@ export const SANTOS_DATA: SantoItem[] = [
     oracao: "Ó glorioso São Tarcísio, mártir da Eucaristia e padroeiro dos coroinhas e acólitos, que aos doze anos de idade destes a vida para proteger o Corpo do Senhor com força sobrenatural, dai a nós um amor ardente pelo Santíssimo Sacramento. Concedei a todos os ministros e acólitos a graça da santa coragem, da pureza de coração e do zelo inabalável pelo altar de Deus. Por Nosso Senhor Jesus Cristo, vosso Filho. Amém. São Tarcísio, rogai por nós!",
     curiosidade: "O diálogo de São Tarcísio com o Papa Sisto II aos 12 anos ('Tanto melhor, porque de mim ninguém desconfiará...') e sua resistência sobrenatural ao guardar a caixinha de prata com as hóstias sagradas tornaram-no modelo eterno de zelo eucarístico.",
     corTema: "emerald"
+  },
+  {
+    id: "nossa_senhora_aparecida",
+    nome: "Nossa Senhora Aparecida",
+    subtitulo: "História",
+    tituloHonra: "Rainha e Padroeira do Brasil",
+    dataFesta: "12 de Outubro",
+    imagemUrl: "/nossa_senhora_aparecida.jpg",
+    historiaCurta: "A história de Nossa Senhora Aparecida, Padroeira do Brasil, remonta ao ano de 1717, quando sua imagem foi encontrada por três pescadores nas águas do Rio Paraíba do Sul.",
+    historiaCompleta: [
+      "No ano de 1717, Dom Pedro de Almeida e Portugal, Conde de Assumar, passou na então Vila de Guaratinguetá, no Vale do Paraíba, Estado de São Paulo, com destino a Minas Gerais.",
+      "A Câmara local, empenhada em receber tão grande autoridade, cuidou de preparar um banquete à altura da importante visita. Para tanto, pescadores locais foram convocados a trazer muito peixe para o conde e sua comitiva. A ordem foi prontamente atendida pelos pescadores Domingos Garcia, João Alves e Filipe Pedroso, que lançaram suas redes no porto Itaguaçu (no rio Paraíba). Seus esforços revelaram-se inúteis. Fizeram uma segunda tentativa, próximo a Guaratinguetá. Dessa vez, para surpresa deles, a rede trouxe uma imagem de Nossa Senhora da Conceição, sem a cabeça. Após mais alguns lançamentos da rede, conseguiram a parte que faltava à escultura. Lavaram cuidadosamente a imagem e envolveram-na em panos, prosseguindo a pesca. Tantos peixes vieram à rede que tiveram de finalizar seus trabalhos. Filipe Pedroso, homem piedoso, guardando as redes, levou a imagem para casa. Era, de fato, uma imagem de Nossa Senhora da Conceição, feita de terracota, de cor escura.",
+      "O pescador ficou com essa imagem em seu poder durante 15 anos. Quando mudou-se para Itaguaçu, deixou-a com seu filho Atanásio, que construiu um singelo oratório-capela, local em que amigos e vizinhos se encontravam para rezar o terço. Então, iniciam-se os prodígios. Certa noite, durante a oração do terço, as velas, que iluminavam a imagem, apagaram-se subitamente, sem que houvesse nenhuma corrente de ar que justificasse tal acontecimento. Uma senhora chamada Silvana Rocha dirigiu-se ao altar para acendê-las novamente. Foi então que tudo se aclarou, as velas se acenderam novamente, sem intervenção de ninguém.",
+      "Outro acontecimento que mereceu registro foi o de um escravo, de nome Zacarias, que se dirigiu a Virgem para lhe suplicar que o libertasse do jugo de um senhor cruel. Grande milagre sucede: caem-lhe das mãos as correntes de ferro, sinal de sua condição de escravo. Nossa Senhora atendera seus rogos. Assim, Zacarias tornou-se um homem livre e feliz. As correntes do escravo começaram a enriquecer o acervo dos milagres. E, cada vez mais, foram aumentando as graças concedidas por Nossa Senhora. Era imperioso construir-se uma capela maior num local mais adequado e maior.",
+      "O vigário de Guaratinguetá pediu licença ao então Bispo do Rio de Janeiro e, uma vez escolhido o Morro dos Coqueiros como lugar mais apropriado, em 1743, teve início a construção de uma espaçosa capela, que ficou concluída em 1745. No dia 26 de julho, na Festa de Santana, foi benta e celebrou-se a primeira Santa Missa. E as romarias foram-se multiplicando. A capela foi reformada e aumentada diversas vezes, até que, em 1846, começou a ser substituída pela atual. Aos 8 de dezembro de 1888, o novo santuário foi bento e inaugurado pelo Bispo D. Lino Rodrigues de Carvalho.",
+      "Em 1894, chegam os Missionários Redentoristas, que iniciaram um admirável trabalho de evangelização e acolhida dos peregrinos. E difundiram por todo o País a devoção a Senhora Aparecida.",
+      "No dia 8 de setembro de 1904, Dom José de Camargo Barros colocou sobre a imagem da Virgem uma coroa de ouro e pedras preciosas doada pela Princesa Isabel. O 25º aniversário da coroação da imagem, em setembro de 1929, foi de um brilho inigualável. Grandes romarias, belas celebrações e um Congresso Mariano demonstraram o afeto que a Nação inteira devotava a Virgem Aparecida. Nas sessões deste congresso, os fiéis manifestaram o desejo de que Nossa Senhora Aparecida fosse declarada Padroeira do Brasil. O Papa Pio XI, sensível aos anseios do povo brasileiro, assinou, a 16 de julho de 1930, o decreto em que proclamou Nossa Senhora Aparecida Padroeira da Nação Brasileira. Diz o decreto: 'Declaramos e constituímos a Beatíssima Virgem Maria concebida sem mancha, sob o título de Aparecida, Padroeira de todo o Brasil.'",
+      "Em 1931, a imagem visitou a então Capital Federal, a cidade do Rio de Janeiro, pela iniciativa do Cardeal D. Sebastião Leme.",
+      "Mais de um milhão de fiéis, aclamaram Nossa Senhora Aparecida Padroeira do Brasil.",
+      "Com o passar do tempo, a devoção a Nossa Senhora Aparecida foi aumentando cada vez mais. A primeira Basílica tornou-se pequena. Era necessário a construção de outro templo, bem maior, que pudesse acomodar tantos romeiros. Por iniciativa dos Missionários Redentoristas e dos senhores Bispos, teve início, no dia 11 de novembro de 1955, a construção da atual Basílica Nova, o maior Santuário Mariano do mundo.",
+      "Em 1980, ainda em construção, foi consagrada pelo Papa João Paulo II e recebeu o título de Basílica Menor. Em 1984, a Conferência Nacional dos Bispos do Brasil (CNBB) declarou oficialmente a Basílica de Aparecida Santuário Nacional."
+    ],
+    oracao: "Ó incomparável Senhora da Conceição Aparecida, Mãe de Deus, Rainha dos Anjos, Advogada dos pecadores, refúgio e consolo dos aflitos e desolados, cheia de poderosa confiança em Vós, recorro ao vosso maternal coração, com os vossos santíssimos anjos, para vos suplicar que me alcanceis do vosso amado Filho, Jesus Cristo, o perdão de meus pecados, a graça de bem viver e bem morrer, e a proteção contra todos os perigos que me ameaçam. Amém.\n\nÓ Virgem Santíssima, Padroeira do Brasil, olhai com piedade para o nosso povo, para a nossa Pátria e para as nossas famílias. Derramai sobre nós as vossas bênçãos e protegei-nos de todo o mal. Amém.",
+    curiosidade: "A imagem original é feita de argila (terracota) e foi encontrada por três pescadores em 1717. Em 1904 foi coroada com uma coroa doada pela Princesa Isabel, e em 1930 foi proclamada Padroeira do Brasil pelo Papa Pio XI.",
+    corTema: "blue"
   }
 ];
 
@@ -153,21 +179,81 @@ export const SantosView: React.FC<SantosViewProps> = ({ onBack }) => {
       <div className="flex-1 p-6 overflow-y-auto">
         {!selectedSanto ? (
           <div className="space-y-6">
+            {/* Destaque do Santo do Dia caso hoje seja dia de festa */}
+            {(() => {
+              const santoInfo = getSantoDoDia();
+              if (!santoInfo.isDiaDeSanto || !santoInfo.santoDoDia) return null;
+              return (
+                <div
+                  onClick={() => setSelectedSanto(santoInfo.santoDoDia)}
+                  className="max-w-4xl mx-auto p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-yellow-400/25 to-amber-500/15 border-2 border-yellow-400 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-yellow-500/10 cursor-pointer hover:border-yellow-500 transition-all duration-300 hover:scale-[1.008] animate-in fade-in group"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-400/30 border border-yellow-400 flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative group-hover:scale-105 transition-transform duration-300">
+                      {santoInfo.santoDoDia.imagemUrl ? (
+                        <img
+                          src={santoInfo.santoDoDia.imagemUrl}
+                          alt={santoInfo.santoDoDia.nome}
+                          className="w-full h-full object-cover scale-110"
+                        />
+                      ) : (
+                        <span className="text-2xl">⭐</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs flex items-center gap-1">
+                          <span>✨</span>
+                          <span>Festa Litúrgica Hoje • {santoInfo.santoDoDia.dataFesta}</span>
+                        </span>
+                      </div>
+                      <h4 className="text-base sm:text-lg font-black text-amber-950 mt-1 leading-tight">
+                        Hoje celebramos {santoInfo.todosSantosDoDia.map((s) => s.nome).join(" e ")}!
+                      </h4>
+                      <p className="text-xs sm:text-sm font-semibold text-amber-900/90 mt-0.5 leading-snug">
+                        Toque aqui para ler a biografia completa, vida de fé e oração especial.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-bold text-xs shrink-0 shadow-md group-hover:brightness-105 transition-all">
+                    <span>Ler Biografia</span>
+                    <span>→</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Grade de Ícones conforme o layout padrão de ícones do sistema */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5 max-w-4xl mx-auto">
               {SANTOS_DATA.map((santo) => {
                 const isMoreira = santo.id === "mateus_moreira";
                 const isSoveral = santo.id === "andre_soveral";
+                const isHoje = isFestaSantoHoje(santo);
 
                 return (
                   <button
                     key={santo.id}
                     type="button"
                     onClick={() => setSelectedSanto(santo)}
-                    className="flex flex-col items-center justify-center text-center p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-200 relative border cursor-pointer hover:shadow-md hover:-translate-y-0.5 bg-white border-slate-200/80 shadow-xs group w-full"
+                    className={`flex flex-col items-center justify-center text-center p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl transition-all duration-200 relative border cursor-pointer hover:shadow-md hover:-translate-y-0.5 group w-full ${
+                      isHoje
+                        ? "bg-gradient-to-br from-amber-200/90 via-yellow-100/95 to-amber-300/90 border-yellow-400 ring-2 ring-yellow-400/70 shadow-[0_0_20px_rgba(250,204,21,0.7)] hover:shadow-[0_0_28px_rgba(250,204,21,0.9)] santo-dia-glow"
+                        : "bg-white border-slate-200/80 shadow-xs"
+                    }`}
                   >
+                    {isHoje && (
+                      <div className="absolute top-2.5 right-2.5 flex items-center justify-center z-10 animate-bounce">
+                        <span className="relative inline-flex items-center justify-center bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-md border border-amber-200">
+                          ⭐ Festa Hoje
+                        </span>
+                      </div>
+                    )}
                     {/* Imagem / Ícone em destaque, proporcional ao card e sem cortes */}
-                    <div className="w-24 h-28 sm:w-28 sm:h-32 rounded-2xl bg-slate-50 flex items-center justify-center mb-2.5 transition-transform duration-200 group-hover:scale-105 shadow-xs overflow-hidden border border-slate-100 p-1">
+                    <div className={`w-24 h-28 sm:w-28 sm:h-32 rounded-2xl flex items-center justify-center mb-2.5 transition-transform duration-200 group-hover:scale-105 overflow-hidden p-1 ${
+                      isHoje
+                        ? "bg-gradient-to-b from-amber-300 to-yellow-400 border border-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.9)] ring-2 ring-yellow-400 santo-shimmer-effect"
+                        : "bg-slate-50 border border-slate-100 shadow-xs"
+                    }`}>
                       {santo.imagemUrl ? (
                         <img
                           src={santo.imagemUrl}
@@ -185,13 +271,17 @@ export const SantosView: React.FC<SantosViewProps> = ({ onBack }) => {
                     </div>
 
                     {/* Nome do Santo */}
-                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-tight tracking-tight line-clamp-2 min-h-[32px] flex items-center justify-center px-1">
+                    <span className={`text-xs sm:text-sm font-black leading-tight tracking-tight line-clamp-2 min-h-[32px] flex items-center justify-center px-1 ${
+                      isHoje ? "text-amber-950 font-black" : "text-slate-900"
+                    }`}>
                       {santo.nome}
                     </span>
 
                     {/* Subtítulo HISTÓRIA em caixa alta como nos cards de exemplo */}
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">
-                      {santo.subtitulo}
+                    <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mt-0.5 ${
+                      isHoje ? "text-amber-900 font-black" : "text-slate-400"
+                    }`}>
+                      {isHoje ? "Festa Litúrgica Hoje" : santo.subtitulo}
                     </span>
                   </button>
                 );

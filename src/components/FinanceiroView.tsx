@@ -33,7 +33,7 @@ import {
   Cell
 } from "recharts";
 import type { User as UserType, FinanceiroLancamento } from "../types";
-import { formatPhone } from "../utils";
+import { formatPhone, toTitleCase } from "../utils";
 import { PieChart3D } from "./PieChart3D";
 import { BarChart3D } from "./BarChart3D";
 
@@ -81,11 +81,11 @@ const getMinistroPagoDisplayName = (m: UserType | any) => {
     const p1 = m.nomeExibicao || m.nome || "";
     const p2 = m.nomeExibicaoConjuge || m.nomeConjuge || "";
     if (p1 && p2) {
-      return `${p1} e ${p2}`;
+      return `${toTitleCase(p1)} e ${toTitleCase(p2)}`;
     }
-    return p1 || p2;
+    return toTitleCase(p1 || p2);
   }
-  return m.nomeExibicao || m.nome || "";
+  return toTitleCase(m.nomeExibicao || m.nome || "");
 };
 
 export default function FinanceiroView({ user, onAlert, onCustomConfirm }: FinanceiroViewProps) {

@@ -95,31 +95,70 @@ export class FirestoreAdapter<T> {
     }
   }
 
+  private writeTimeoutId: NodeJS.Timeout | null = null;
+  private pendingWriteData: T | null = null;
+
   async write(data: T): Promise<void> {
     if (!this.docRef) return;
-    let timeoutId: NodeJS.Timeout | undefined;
-    try {
-      // Update cache immediately on write
-      this.cachedData = JSON.parse(JSON.stringify(data)); // Deep copy
-      this.lastReadTime = Date.now();
+    
+    // Update cache immediately on write
+    this.cachedData = JSON.parse(JSON.stringify(data)); // Deep copy
+    this.lastReadTime = Date.now();
+    this.pendingWriteData = data;
 
-      const cleanData = this.sanitizeForFirestore(data);
-      
-      const timeoutPromise = new Promise<void>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Firestore write timeout')), 5000);
-      });
-      
-      await Promise.race([
-        setDoc(this.docRef, cleanData),
-        timeoutPromise
-      ]);
-
-      if (timeoutId) clearTimeout(timeoutId);
-    } catch (error) {
-      if (timeoutId) clearTimeout(timeoutId);
-      console.error("Erro ao escrever no Firestore:", error);
-      throw error;
+    if (this.writeTimeoutId) {
+      clearTimeout(this.writeTimeoutId);
     }
+
+    return new Promise((resolve, reject) => {
+      this.writeTimeoutId = setTimeout(async () => {
+        if (!this.pendingWriteData || !this.docRef) {
+          resolve();
+          return;
+        }
+
+        const dataToWrite = this.pendingWriteData;
+        this.pendingWriteData = null;
+
+        let retries = 3;
+        let delay = 1000;
+
+        while (retries > 0) {
+          let timeoutId: NodeJS.Timeout | undefined;
+          try {
+            const cleanData = this.sanitizeForFirestore(dataToWrite);
+            
+            const timeoutPromise = new Promise<void>((_, rej) => {
+              timeoutId = setTimeout(() => rej(new Error('Firestore write timeout')), 8000);
+            });
+            
+            await Promise.race([
+              setDoc(this.docRef, cleanData),
+              timeoutPromise
+            ]);
+
+            if (timeoutId) clearTimeout(timeoutId);
+            resolve();
+            return;
+          } catch (error: any) {
+            if (timeoutId) clearTimeout(timeoutId);
+            const isResourceExhausted = error?.code === 'resource-exhausted' || error?.message?.includes('RESOURCE_EXHAUSTED');
+            
+            if (isResourceExhausted && retries > 1) {
+              console.warn(`Firestore resource exhausted. Retrying in ${delay}ms... (${retries} retries left)`);
+              await new Promise(res => setTimeout(res, delay));
+              delay *= 2;
+              retries--;
+            } else {
+              console.error("Erro ao escrever no Firestore:", error);
+              reject(error);
+              return;
+            }
+          }
+        }
+        reject(new Error('Firestore write failed after retries due to resource exhaustion'));
+      }, 1500); // 1.5s debounce
+    });
   }
 
   private sanitizeForFirestore(obj: any): any {

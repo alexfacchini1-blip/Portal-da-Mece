@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Trash2, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle, History, X, Info, AlertTriangle, Edit2, Save } from 'lucide-react';
+import { Package, Plus, Trash2, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle, History, X, Info, AlertTriangle, Edit2, Save, CheckCircle2 } from 'lucide-react';
 import { EstoqueItem, EstoqueMovimentacao } from '../types';
 
 const getMinistroDisplayName = (m: any) => {
@@ -82,15 +82,23 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
       const res = await fetch(`/api/estoque/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nivelMinimo: value, nivelMinimoTipo: tipo })
+        body: JSON.stringify({ id, nivelMinimo: value, nivelMinimoTipo: tipo })
       });
       if (res.ok) {
         const updated = await res.json();
         setItems(prev => prev.map(i => i.id === id ? updated : i));
         setEditingThresholdItem(null);
+        setMessage('Alerta mínimo atualizado com sucesso!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || 'Erro ao atualizar alerta mínimo.');
+        setTimeout(() => setError(''), 4000);
       }
     } catch (err) {
       console.error('Erro ao atualizar limite:', err);
+      setError('Erro de conexão ao atualizar alerta.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -101,6 +109,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          id: editingItemDetails.id,
           item: editingItemDetails.item,
           unidadesPorEmbalagem: editingItemDetails.unidadesPorEmbalagem,
           tipoEmbalagem: editingItemDetails.tipoEmbalagem,
@@ -111,11 +120,16 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
         const updated = await res.json();
         setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
         setEditingItemDetails(null);
-        setMessage('Configuração atualizada com sucesso!');
+        setMessage('Configuração do item atualizada com sucesso!');
         setTimeout(() => setMessage(''), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || 'Erro ao atualizar configuração do item.');
+        setTimeout(() => setError(''), 4000);
       }
     } catch (err) {
-      setError('Erro ao atualizar configuração do item.');
+      setError('Erro de conexão ao atualizar configuração do item.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -124,7 +138,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
       const res = await fetch(`/api/estoque/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nivelMinimo: value, nivelMinimoTipo: tipo })
+        body: JSON.stringify({ id, nivelMinimo: value, nivelMinimoTipo: tipo })
       });
       if (res.ok) {
         const updated = await res.json();
@@ -517,19 +531,160 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
             )}
           </div>
 
-          {/* Inventory Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Inventory View (Dual Layout: Responsive Cards on Mobile + Polished Table on Desktop) */}
+          {/* 1. Mobile Cards (< 768px) */}
+          <div className="md:hidden space-y-3">
+            {loading ? (
+              <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-500" />
+                <p className="text-xs font-semibold">Carregando estoque...</p>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+                <Package className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-semibold">Nenhum item em estoque.</p>
+              </div>
+            ) : (
+              filteredItems.map(item => {
+                const unidadesPorEmb = item.unidadesPorEmbalagem || 1;
+                const caixasCompletas = Math.floor(item.quantidade / unidadesPorEmb);
+                const unidadesAvulsas = item.quantidade % unidadesPorEmb;
+                const low = isLowStock(item);
+
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`bg-white rounded-2xl border transition-all p-4 shadow-sm ${
+                      low ? 'border-red-200 bg-red-50/10 ring-1 ring-red-100' : 'border-slate-200'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${low ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                          <h4 className="font-black text-slate-800 text-base">{item.item || 'Item sem nome'}</h4>
+                        </div>
+                        {isGlobalAdmin && item.paroquia && (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">
+                            {item.paroquia}
+                          </span>
+                        )}
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                        low ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {low ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                        {low ? 'Baixo Estoque' : 'Estoque OK'}
+                      </span>
+                    </div>
+
+                    {/* Stock Metrics (2 boxes) */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Saldo Físico</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`text-xl font-black ${low ? 'text-red-700' : 'text-slate-800'}`}>
+                            {item.quantidade}
+                          </span>
+                          <span className="text-xs font-bold text-slate-500">
+                            {item.unidadeMedida || 'unid'}
+                          </span>
+                        </div>
+                        {unidadesPorEmb > 1 && (
+                          <span className="text-[10px] font-bold text-slate-500 block mt-0.5">
+                            {caixasCompletas > 0 ? `${caixasCompletas} cx` : '0 cx'}
+                            {unidadesAvulsas > 0 ? ` + ${unidadesAvulsas} avulsa(s)` : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Embalagem & Mínimo</span>
+                        <div className="text-xs font-bold text-slate-700">
+                          1 {item.tipoEmbalagem} = {unidadesPorEmb} un
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 block mt-0.5">
+                          Alerta: &le; {item.nivelMinimo ?? 2} {item.nivelMinimoTipo === 'unidade' ? 'un' : `${item.tipoEmbalagem}(s)`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                      {isCoordenador && (
+                        <button
+                          onClick={() => {
+                            setMovementType('entrada');
+                            setNewMovement(prev => ({
+                              ...prev,
+                              isEmbalagem: true,
+                              quantidade: 0,
+                              observacao: ''
+                            }));
+                            setShowMovementForm(item.id);
+                          }}
+                          className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                        >
+                          <ArrowUpCircle className="w-4 h-4" />
+                          Entrada
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setMovementType('saida');
+                          setNewMovement(prev => ({
+                            ...prev,
+                            isEmbalagem: false,
+                            quantidade: 0,
+                            observacao: '',
+                            ministroResponsavel: user.role === 'ministro' ? getMinistroDisplayName(user) : ''
+                          }));
+                          setShowMovementForm(item.id);
+                        }}
+                        className="flex-1 py-2 px-3 bg-amber-600 text-white rounded-xl text-xs font-black hover:bg-amber-700 transition-all uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                      >
+                        <ArrowDownCircle className="w-4 h-4" />
+                        Saída
+                      </button>
+
+                      {isCoordenador && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setEditingItemDetails(item)}
+                            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+                            title="Editar Item"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            title="Excluir Item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 2. Desktop Table (>= 768px) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200">
-                    <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-6">Item</th>
-                    <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Unid/Emb</th>
-                    {isGlobalAdmin && <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Paróquia</th>}
-                    <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Emb. Atuais</th>
-                    <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center border-l border-slate-100">Alerta de Estoque</th>
-                    <th className="px-4 py-4 text-[10px] font-bold text-emerald-600 uppercase tracking-widest text-center text-sm font-black">Total (Unid.)</th>
-                    <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Ações</th>
+                  <tr className="bg-slate-50/90 border-b border-slate-200">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider pl-6">Item & Situação</th>
+                    <th className="px-4 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Embalagem Padrão</th>
+                    {isGlobalAdmin && <th className="px-4 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Paróquia</th>}
+                    <th className="px-4 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Saldo em Estoque</th>
+                    <th className="px-4 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center border-l border-slate-100">Alerta Mínimo</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -539,15 +694,20 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                     <tr><td colSpan={10} className="px-6 py-12 text-center text-slate-400 font-medium">Nenhum item em estoque.</td></tr>
                   ) : (
                     filteredItems.map(item => {
-                      const embalagensAtuais = Number(item.quantidade / (item.unidadesPorEmbalagem || 1)).toFixed(1);
+                      const unidadesPorEmb = item.unidadesPorEmbalagem || 1;
+                      const caixasCompletas = Math.floor(item.quantidade / unidadesPorEmb);
+                      const unidadesAvulsas = item.quantidade % unidadesPorEmb;
+                      const low = isLowStock(item);
+
                       return (
-                        <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${isLowStock(item) ? 'bg-red-50/20' : ''}`}>
+                        <tr key={item.id} className={`hover:bg-slate-50/60 transition-colors ${low ? 'bg-red-50/20' : ''}`}>
+                          {/* Coluna 1: Item & Situação */}
                           <td className="px-5 py-4 pl-6">
                             {editingItemDetails?.id === item.id ? (
                               <div className="flex flex-col gap-2">
                                 <input
                                   type="text"
-                                  className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-liturgy-500/20 outline-none"
+                                  className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none"
                                   value={editingItemDetails.item}
                                   onChange={e => setEditingItemDetails({ ...editingItemDetails, item: e.target.value })}
                                 />
@@ -557,32 +717,47 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                 </div>
                               </div>
                             ) : (
-                              <div className="group flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${isLowStock(item) ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-                                <p className="font-bold text-slate-800 text-sm">{item.item || 'Item sem nome'}</p>
-                                {isCoordenador && (
-                                  <button 
-                                    onClick={() => setEditingItemDetails(item)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-liturgy-600 transition-all"
-                                  >
-                                    <Edit2 className="w-3 h-3" />
-                                  </button>
-                                )}
+                              <div className="flex items-center gap-3">
+                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${low ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-black text-slate-800 text-sm">{item.item || 'Item sem nome'}</p>
+                                    {isCoordenador && (
+                                      <button 
+                                        onClick={() => setEditingItemDetails(item)}
+                                        className="text-slate-400 hover:text-blue-600 p-0.5 rounded transition-all"
+                                        title="Editar nome/embalagem"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="mt-1">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      low ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                                    }`}>
+                                      {low ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                                      {low ? 'Abaixo do Mínimo' : 'Estoque Regular'}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </td>
+
+                          {/* Coluna 2: Embalagem Padrão */}
                           <td className="px-4 py-4 text-center">
                             {editingItemDetails?.id === item.id ? (
                               <div className="flex flex-col gap-1.5 items-center">
-                                <div className="flex border rounded overflow-hidden">
+                                <div className="flex border rounded-xl overflow-hidden shadow-sm">
                                   <input
                                     type="number"
-                                    className="w-16 px-1 py-0.5 text-xs text-center border-r"
+                                    className="w-14 px-2 py-1 text-xs text-center border-r outline-none font-bold"
                                     value={editingItemDetails.unidadesPorEmbalagem}
                                     onChange={e => setEditingItemDetails({ ...editingItemDetails, unidadesPorEmbalagem: Number(e.target.value) })}
                                   />
                                   <select 
-                                    className="text-[10px] px-1 bg-slate-50"
+                                    className="text-xs px-2 bg-slate-50 outline-none font-medium"
                                     value={editingItemDetails.tipoEmbalagem}
                                     onChange={e => setEditingItemDetails({ ...editingItemDetails, tipoEmbalagem: e.target.value })}
                                   >
@@ -592,31 +767,64 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                     <option value="Garrafa">Garrafa</option>
                                   </select>
                                 </div>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Por {editingItemDetails.tipoEmbalagem}</span>
+                                <span className="text-[10px] text-slate-400 font-bold">Unidades por {editingItemDetails.tipoEmbalagem}</span>
                               </div>
                             ) : (
-                              <div className={`flex flex-col items-center ${isCoordenador ? 'cursor-pointer hover:bg-slate-100/50 rounded p-1' : ''}`} onClick={() => isCoordenador && setEditingItemDetails(item)}>
-                                <span className="text-sm font-black text-slate-700">{item.unidadesPorEmbalagem}</span>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Unid / {item.tipoEmbalagem}</span>
+                              <div 
+                                className={`inline-flex flex-col items-center px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 ${isCoordenador ? 'cursor-pointer hover:bg-slate-100/80 transition-all' : ''}`}
+                                onClick={() => isCoordenador && setEditingItemDetails(item)}
+                                title={isCoordenador ? 'Clique para alterar embalagem' : ''}
+                              >
+                                <span className="text-xs font-black text-slate-700">
+                                  1 {item.tipoEmbalagem} = {item.unidadesPorEmbalagem} un
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                  {item.unidadeMedida || 'unidades'}
+                                </span>
                               </div>
                             )}
                           </td>
+
+                          {/* Coluna Paróquia (se Admin Global) */}
                           {isGlobalAdmin && (
                             <td className="px-4 py-4 text-center">
-                              <span className="text-[10px] px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg font-bold uppercase">{item.paroquia}</span>
+                              <span className="text-[10px] px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg font-bold uppercase">
+                                {item.paroquia}
+                              </span>
                             </td>
                           )}
+
+                          {/* Coluna 3: Saldo em Estoque (Total + Detalhamento legível) */}
                           <td className="px-4 py-4 text-center">
                             <div className="flex flex-col items-center">
-                              <span className="text-sm font-black text-slate-700">{embalagensAtuais}</span>
-                              <span className="text-[9px] text-slate-400 uppercase font-black">{item.tipoEmbalagem}(s)</span>
+                              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-sm shadow-sm border ${
+                                low ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                <span className="text-base font-black">{item.quantidade}</span>
+                                <span className="text-xs font-bold text-slate-500 uppercase">{item.unidadeMedida || 'unid'}</span>
+                              </div>
+                              {unidadesPorEmb > 1 && (
+                                <span className="text-[11px] font-bold text-slate-500 mt-1">
+                                  {caixasCompletas > 0 ? (
+                                    unidadesAvulsas > 0 ? (
+                                      `${caixasCompletas} cx fechada(s) + ${unidadesAvulsas} avulsa(s)`
+                                    ) : (
+                                      `${caixasCompletas} cx fechada(s)`
+                                    )
+                                  ) : (
+                                    `${unidadesAvulsas} avulsa(s) (0 cx fechada)`
+                                  )}
+                                </span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-center border-l border-slate-100/50 min-w-[140px]">
+
+                          {/* Coluna 4: Alerta Mínimo */}
+                          <td className="px-4 py-4 text-center border-l border-slate-100 min-w-[140px]">
                             <div className="flex flex-col items-center justify-center">
                               {editingThresholdItem?.id === item.id ? (
                                 <div className="flex flex-col items-center gap-1.5 animate-in zoom-in-95 duration-200">
-                                  <div className="flex bg-white border border-liturgy-300 rounded-lg overflow-hidden">
+                                  <div className="flex bg-white border border-blue-300 rounded-xl overflow-hidden shadow-sm">
                                     <input
                                       type="number"
                                       className="w-14 px-2 py-1 text-center text-sm font-black outline-none border-r border-slate-100"
@@ -625,7 +833,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                       onChange={(e) => setEditingThresholdItem({ ...editingThresholdItem, value: Number(e.target.value) })}
                                     />
                                     <select 
-                                      className="text-[9px] font-black uppercase px-2 outline-none bg-slate-50"
+                                      className="text-[10px] font-bold uppercase px-2 outline-none bg-slate-50"
                                       value={editingThresholdItem.tipo}
                                       onChange={(e) => setEditingThresholdItem({ ...editingThresholdItem, tipo: e.target.value as 'embalagem' | 'unidade' })}
                                     >
@@ -634,39 +842,39 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                     </select>
                                   </div>
                                   <div className="flex gap-1.5">
-                                     <button onClick={saveThresholdChanges} className="flex items-center gap-1 px-2 py-1 bg-emerald-600 text-white text-[9px] font-bold rounded-md hover:bg-emerald-700 transition-all">
-                                       <Save className="w-2.5 h-2.5" /> Salvar
+                                     <button onClick={saveThresholdChanges} className="flex items-center gap-1 px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-all">
+                                       <Save className="w-3 h-3" /> Salvar
                                      </button>
-                                     <button onClick={() => setEditingThresholdItem(null)} className="flex items-center gap-1 px-1.5 py-1 bg-slate-200 text-slate-600 text-[9px] font-bold rounded-md hover:bg-slate-300 transition-all">
-                                       <X className="w-2.5 h-2.5" />
+                                     <button onClick={() => setEditingThresholdItem(null)} className="flex items-center gap-1 px-1.5 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-300 transition-all">
+                                       <X className="w-3 h-3" />
                                      </button>
                                   </div>
                                 </div>
                               ) : (
                                 <div 
-                                  className={`flex flex-col items-center gap-0.5 cursor-pointer hover:bg-slate-200/50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-slate-200 ${isCoordenador ? '' : 'pointer-events-none'}`}
+                                  className={`inline-flex flex-col items-center px-3 py-1.5 rounded-xl border transition-all ${
+                                    isCoordenador ? 'cursor-pointer hover:bg-slate-100 hover:border-slate-300' : ''
+                                  } ${low ? 'bg-red-50/60 border-red-200' : 'bg-slate-50 border-slate-100'}`}
                                   onClick={() => isCoordenador && setEditingThresholdItem({ id: item.id, value: item.nivelMinimo ?? 2, tipo: item.nivelMinimoTipo || 'embalagem' })}
+                                  title={isCoordenador ? 'Clique para ajustar nível de alerta' : ''}
                                 >
                                   <div className="flex items-center gap-1.5">
-                                    <span className={`text-sm font-black ${isLowStock(item) ? 'text-red-700 underline underline-offset-4 decoration-red-300 decoration-2' : 'text-slate-700'}`}>
-                                      {item.nivelMinimo ?? 2}
+                                    <span className={`text-xs font-black ${low ? 'text-red-700' : 'text-slate-700'}`}>
+                                      {item.nivelMinimo ?? 2} {item.nivelMinimoTipo === 'unidade' ? 'un' : `${item.tipoEmbalagem}(s)`}
                                     </span>
                                     {isCoordenador && <Edit2 className="w-3 h-3 text-slate-400" />}
                                   </div>
-                                  <span className={`text-[9px] uppercase font-black tracking-widest ${isLowStock(item) ? 'text-red-600' : 'text-slate-400'}`}>
-                                    {item.nivelMinimoTipo === 'unidade' ? 'Unidades' : `${item.tipoEmbalagem}(s)`}
+                                  <span className="text-[10px] text-slate-400 font-bold">
+                                    {item.nivelMinimoTipo !== 'unidade' && unidadesPorEmb > 1 ? (
+                                      `(= ${(item.nivelMinimo ?? 2) * unidadesPorEmb} un)`
+                                    ) : 'Aviso mínimo'}
                                   </span>
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-center">
-                            <div className={`inline-flex items-center justify-center min-w-[70px] h-9 rounded-xl px-2 font-black text-base shadow-sm border ${
-                              isLowStock(item) ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                            }`}>
-                              {item.quantidade}
-                            </div>
-                          </td>
+
+                          {/* Coluna 5: Ações */}
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center justify-center gap-2">
                                {isCoordenador && (
@@ -681,7 +889,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                      }));
                                      setShowMovementForm(item.id); 
                                    }}
-                                   className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all uppercase flex items-center gap-1.5"
+                                   className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all uppercase flex items-center gap-1.5 shadow-sm active:scale-95"
                                  >
                                    <ArrowUpCircle className="w-4 h-4" />
                                    Entrada
@@ -699,7 +907,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                    }));
                                    setShowMovementForm(item.id); 
                                  }}
-                                 className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-xl text-[10px] font-black hover:bg-orange-600 hover:text-white transition-all uppercase flex items-center gap-1.5"
+                                 className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-xl text-xs font-black hover:bg-amber-600 hover:text-white transition-all uppercase flex items-center gap-1.5 shadow-sm active:scale-95"
                                >
                                  <ArrowDownCircle className="w-4 h-4" />
                                  Saída
@@ -707,7 +915,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
                                {isCoordenador && (
                                  <button
                                   onClick={() => handleDeleteItem(item.id)}
-                                  className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                  className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                   title="Excluir item"
                                 >
                                   <Trash2 className="w-4 h-4" />

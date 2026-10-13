@@ -4,3 +4,4 @@
 - **Gospel Consistency:** The Gospel (Evangelho) shown to the 'Coordenação' user must always be consistent with what is shown to the 'Ministro' user, including the Saturday Vigil logic.
 - **Theming:** The 'Dashboard' tab in 'Coordenação' should follow the liturgical calendar colors. All other tabs must use the standard blue tone.
 - **Message Icons:** The "Amém" button in the Gospel modal must be prominent and match the 'WelcomeView' implementation.
+- **App Name:** The application name must ALWAYS remain as "Portal do Mece" in metadata, manifests, and titles.

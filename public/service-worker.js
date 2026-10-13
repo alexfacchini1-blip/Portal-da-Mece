@@ -4,8 +4,18 @@ self.addEventListener('install', function(event) {
 });
 
 self.addEventListener('activate', function(event) {
-  console.log('[Service Worker] Activating Service Worker...');
-  event.waitUntil(clients.claim());
+  console.log('[Service Worker] Activating Service Worker and clearing caches...');
+  event.waitUntil(
+    caches.keys().then(function(names) {
+      return Promise.all(
+        names.map(function(name) {
+          return caches.delete(name);
+        })
+      );
+    }).then(function() {
+      return clients.claim();
+    })
+  );
 });
 
 self.addEventListener('push', function(event) {
