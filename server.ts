@@ -8418,21 +8418,12 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     });
   });
 
-  // Vite middleware for development (Moved to the end of routes)
-  if (process.env.NODE_ENV !== 'production') {
-    logDebug('[SERVER] Iniciando Vite em modo middleware...');
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-    logDebug('[SERVER] Vite configurado.');
-  } else {
-    // Serve static files in production
-    const distPath = path.join(process.cwd(), 'dist');
-    logDebug(`[SERVER] Modo produção. Servindo arquivos de: ${distPath}`);
-    
+  // Serve static files from dist if available, regardless of NODE_ENV
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
+
+  if (hasDist) {
+    logDebug(`[SERVER] Servindo arquivos estáticos de: ${distPath}`);
     app.use(express.static(distPath, {
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
@@ -8447,6 +8438,23 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else if (process.env.NODE_ENV !== 'production') {
+    logDebug('[SERVER] Iniciando Vite em modo middleware...');
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+      logDebug('[SERVER] Vite configurado.');
+    } catch (e) {
+      console.error('[SERVER] Falha ao iniciar Vite middleware:', e);
+    }
+  } else {
+    app.get('*', (req, res) => {
+      res.status(404).send('Page not found');
     });
   }
 

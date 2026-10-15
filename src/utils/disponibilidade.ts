@@ -144,8 +144,8 @@ export function calcularStatusDisponibilidade({
   const msAteFechamento = dataFechamento.getTime() - agora.getTime();
   const msAteAbertura = dataAbertura.getTime() - agora.getTime();
 
-  // Caso: Pré-abertura (dentro de 7 dias antes da abertura)
-  if (msAteAbertura > 0 && msAteAbertura <= 7 * 24 * 60 * 60 * 1000) {
+  // Caso: Pré-abertura (dentro de 3 dias antes da abertura)
+  if (msAteAbertura > 0 && msAteAbertura <= 3 * 24 * 60 * 60 * 1000) {
     const diasParaAbrir = Math.ceil(msAteAbertura / (1000 * 60 * 60 * 24));
     return {
       mensagem: {

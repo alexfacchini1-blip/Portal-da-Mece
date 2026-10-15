@@ -53,7 +53,7 @@ async function restore() {
         senha: "123456",
         paroquia: gm.paroquia || "Paróquia Santa Rita de Cássia",
         role: "ministro",
-        tempoMinisterio: id >= 52 ? "novo" : "antigo",
+        tempoMinisterio: (id >= 52 ? "novo" : "antigo") as "antigo" | "novo",
         acessoCoordenacao: "nao"
       };
       db.data.ministros.push(newMinister);

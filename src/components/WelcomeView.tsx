@@ -793,7 +793,7 @@ function WelcomeView({
               {user.tipo === 'casal' && (user.nomeExibicaoConjuge || user.nomeConjuge) ? (
                 <span className={`${user.paroquia === "Paróquia Santa Rita de Cássia" ? "text-slate-200" : theme.text700} font-medium italic`}>
                   {" "}
-                  & {toTitleCase(user.isConjugeLogin ? (user.nomeExibicao || user.nome || '') : (user.nomeExibicaoConjuge || user.nomeConjuge || ''))}
+                  e {toTitleCase(user.isConjugeLogin ? (user.nomeExibicao || user.nome || '') : (user.nomeExibicaoConjuge || user.nomeConjuge || ''))}
                 </span>
               ) : (
                 ''
@@ -1304,16 +1304,9 @@ function WelcomeView({
                           badge: 0,
                         },
                         {
-                          id: "evangelho",
-                          label: "Evangelho",
-                          subtitle: "Vatican News",
-                          icon: BookOpen,
-                          badge: 0,
-                        },
-                        {
                           id: "liturgia",
                           label: "Liturgia Diária",
-                          subtitle: "Canção Nova",
+                          subtitle: "Vatican & Canção Nova",
                           icon: BookOpen,
                           badge: 0,
                         },
@@ -1490,15 +1483,6 @@ function WelcomeView({
                                 decoding="async"
                                 referrerPolicy="no-referrer"
                               />
-                            ) : item.id === "evangelho" ? (
-                              <img
-                                src="/evangelho_3d.jpg"
-                                alt="Evangelho"
-                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-md transform scale-125 transition-transform duration-200 group-hover:scale-130 rounded-xl"
-                                loading="lazy"
-                                decoding="async"
-                                referrerPolicy="no-referrer"
-                              />
                             ) : item.id === "oracoes" ? (
                               <img
                                 src="/oracoes_3d.jpg"
@@ -1625,7 +1609,7 @@ function WelcomeView({
                           {isNiverHoje ? (
                             <>
                               <span className="text-[10px] sm:text-[11px] font-black leading-tight tracking-tight text-red-700 line-clamp-1 px-1">
-                                Hoje: {anyBirthdayToday.map(a => a.nome.split(' ')[0]).join(' & ')} 🎂
+                                Hoje: {anyBirthdayToday.map(a => a.nome.split(' ')[0]).join(' e ')} 🎂
                               </span>
                               <span className="text-[8px] sm:text-[9px] text-red-500 font-black mt-1 leading-none uppercase tracking-wider bg-red-100/50 px-1 py-0.5 rounded border border-red-200/40">
                                 Parabéns!

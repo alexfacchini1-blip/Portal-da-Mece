@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  CalendarX,
+  AlertCircle,
   AlertTriangle,
   UserX,
   Plus,
@@ -83,6 +83,7 @@ export function CoordenacaoFaltasView({
 
   // Helper to determine absence weight (couples count as 2 when both miss, 1 when individual)
   const getFaltaWeight = (f: any): number => {
+    if (!f) return 0;
     if (typeof f.quantidade === 'number' && f.quantidade > 0) {
       return f.quantidade;
     }
@@ -104,9 +105,9 @@ export function CoordenacaoFaltasView({
     try {
       const now = Date.now();
       const [minRes, faltasRes, trocasRes] = await Promise.all([
-        fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`),
-        fetch(`/api/faltas?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`),
-        fetch(`/api/trocas?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${now}`)
+        fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        fetch(`/api/faltas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        fetch(`/api/trocas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`)
       ]);
 
       if (minRes.ok) {
@@ -141,8 +142,10 @@ export function CoordenacaoFaltasView({
   };
 
   useEffect(() => {
-    fetchData();
-  }, [user.paroquia]);
+    if (user?.paroquia) {
+      fetchData();
+    }
+  }, [user?.paroquia]);
 
   // Handle register new falta
   const handleSubmitFalta = async (e: React.FormEvent) => {
@@ -257,7 +260,8 @@ export function CoordenacaoFaltasView({
 
   const filteredFaltas = useMemo(() => {
     return faltas.filter(f => {
-      if (selectedMonth !== 'todos' && !f.data.startsWith(selectedMonth)) {
+      if (!f) return false;
+      if (selectedMonth !== 'todos' && (!f.data || !String(f.data).startsWith(selectedMonth))) {
         return false;
       }
       if (searchTerm.trim() !== '') {
@@ -295,6 +299,7 @@ export function CoordenacaoFaltasView({
     const map: { [mId: string]: { id: string; nome: string; isCasal: boolean; total: number; faltas: any[] } } = {};
 
     relevantFaltas.forEach(f => {
+      if (!f) return;
       const weight = getFaltaWeight(f);
 
       // Find matching minister profile if any
@@ -347,48 +352,117 @@ export function CoordenacaoFaltasView({
       map[key].faltas.push({ ...f, calculatedWeight: weight });
     });
 
-    const list = Object.values(map);
+    const list = Object.values(map).filter(item => item.nome && !item.nome.toLowerCase().includes('coordena'));
     list.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
     return list;
   }, [faltas, ministers, rankingFilter, currentMonthStr, currentYearStr, selectedRankingMonth, selectedRankingYear]);
 
-  // Ranking trocas calculation
-  const rankingTrocas = useMemo(() => {
-    let relevantTrocas = trocas;
-    if (rankingFilter === 'mes_atual') {
-      relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(currentMonthStr));
-    } else if (rankingFilter === 'geral') {
-      if (selectedRankingMonth) {
-        relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(selectedRankingMonth));
-      } else if (selectedRankingYear) {
-        relevantTrocas = trocas.filter(t => (t.data || t.createdAt || '').startsWith(selectedRankingYear));
+  // Helper para identificar apenas o ministro solicitante (quem pediu ou precisou da troca)
+  // Desconsidera a Coordenação e extrai o ministro real substituído em trocas rápidas
+  const extractSolicitante = useCallback((t: any): { id?: string | number; name: string } | null => {
+    const rawSolicitante = (t.solicitanteNome || '').trim();
+
+    // 1. Se o solicitante for um ministro normal (não é coordenação)
+    if (rawSolicitante && !rawSolicitante.toLowerCase().includes('coordena')) {
+      return { id: t.solicitanteId, name: rawSolicitante };
+    }
+
+    // 2. Se a troca foi registrada pela Coordenação, verificar se foi substituição rápida de um ministro
+    const text = `${t.missaDestinoMissa || ''} ${t.motivo || ''} ${t.observacao || ''}`;
+    const match = text.match(/Substituição:\s*([^por\n\r]+?)\s+por\s+/i);
+    if (match && match[1]) {
+      const extracted = match[1].trim();
+      if (extracted && extracted !== 'undefined' && !extracted.toLowerCase().includes('coordena')) {
+        return { name: extracted };
       }
     }
 
-    const map: { [name: string]: { nome: string; total: number; trocas: any[] } } = {};
+    // Nunca pontuar a Coordenação
+    return null;
+  }, []);
+
+  // Ranking trocas calculation (apenas ministros que solicitaram troca, excluindo coordenação e quem aceitou)
+  const rankingTrocas = useMemo(() => {
+    // Apenas trocas aprovadas/realizadas
+    let relevantTrocas = trocas.filter(t => t.status === 'aprovado');
+    if (rankingFilter === 'mes_atual') {
+      relevantTrocas = relevantTrocas.filter(t => (t.missaOrigemData || t.dataSolicitacao || t.data || t.createdAt || '').startsWith(currentMonthStr));
+    } else if (rankingFilter === 'geral') {
+      if (selectedRankingMonth) {
+        relevantTrocas = relevantTrocas.filter(t => (t.missaOrigemData || t.dataSolicitacao || t.data || t.createdAt || '').startsWith(selectedRankingMonth));
+      } else if (selectedRankingYear) {
+        relevantTrocas = relevantTrocas.filter(t => (t.missaOrigemData || t.dataSolicitacao || t.data || t.createdAt || '').startsWith(selectedRankingYear));
+      }
+    }
+
+    const map: { [key: string]: { id: string; nome: string; isCasal: boolean; total: number; trocas: any[] } } = {};
 
     relevantTrocas.forEach(t => {
-      const names = [t.solicitanteNome, t.destinatarioNome].filter(Boolean);
-      names.forEach(name => {
-        if (!map[name]) {
-          map[name] = { nome: name, total: 0, trocas: [] };
-        }
-        map[name].total += 1;
-        map[name].trocas.push(t);
+      if (!t) return;
+      const sol = extractSolicitante(t);
+      if (!sol || !sol.name) return;
+
+      // Buscar perfil canônico do ministro para evitar duplicidades
+      let canonicalName = sol.name;
+      let key = String(sol.id || sol.name);
+      let isCasal = false;
+
+      const mFound = ministers.find(m => {
+        if (sol.id && String(m.id) === String(sol.id)) return true;
+        const normNome = (m.nome || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const normExib = (m.nomeExibicao || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const normConj = (m.nomeConjuge || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const normExibConj = (m.nomeExibicaoConjuge || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const normSol = (sol.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+        if (normSol === normNome || normSol === normExib) return true;
+        if (normConj && (normSol === normConj || normSol === normExibConj)) return true;
+        if (normConj && normSol === `${normExib || normNome} e ${normExibConj || normConj}`) return true;
+        return false;
       });
+
+      if (mFound) {
+        key = String(mFound.id);
+        const pName = mFound.nomeExibicao || mFound.nome;
+        const cName = mFound.nomeExibicaoConjuge || mFound.nomeConjuge;
+        if (cName) {
+          canonicalName = `${pName} e ${cName}`;
+          isCasal = true;
+        } else {
+          canonicalName = pName;
+        }
+      } else {
+        const normSol = (sol.name || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        if (normSol.includes(' e ') || normSol.includes(' & ') || normSol.includes(' / ')) {
+          isCasal = true;
+        }
+      }
+
+      if (!map[key]) {
+        map[key] = {
+          id: key,
+          nome: canonicalName,
+          isCasal,
+          total: 0,
+          trocas: []
+        };
+      }
+
+      map[key].total += 1;
+      map[key].trocas.push(t);
     });
 
-    const list = Object.values(map);
+    const list = Object.values(map).filter(item => item.nome && !item.nome.toLowerCase().includes('coordena'));
     list.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
     return list;
-  }, [trocas, rankingFilter, currentMonthStr, selectedRankingMonth, selectedRankingYear]);
+  }, [trocas, rankingFilter, currentMonthStr, selectedRankingMonth, selectedRankingYear, ministers, extractSolicitante]);
 
   // Unique months available in faltas history for filtering
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
     faltas.forEach(f => {
-      if (f.data && f.data.length >= 7) {
-        monthsSet.add(f.data.substring(0, 7));
+      if (f?.data && f.data.length >= 7) {
+        monthsSet.add(String(f.data).substring(0, 7));
       }
     });
     return Array.from(monthsSet).sort().reverse();
@@ -407,7 +481,7 @@ export function CoordenacaoFaltasView({
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 flex items-center gap-2.5">
-              <CalendarX className="w-6 h-6 text-red-600" />
+              <AlertCircle className="w-6 h-6 text-red-600" />
               Gestão e Ranking de Faltas
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm mt-1 max-w-2xl font-medium">
@@ -598,31 +672,31 @@ export function CoordenacaoFaltasView({
                               </td>
                               <td className="py-4 px-6 text-center">
                                 <span className="inline-flex items-center justify-center px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-black">
-                                  {item.total} {item.total === 1 ? 'falta' : 'faltas'}
+                                  {(item.total ?? 0)} {Number(item.total ?? 0) === 1 ? 'falta' : 'faltas'}
                                 </span>
                               </td>
                               <td className="py-4 px-6">
                                 <div className="space-y-1 max-h-32 overflow-y-auto pr-2">
                                   {item.faltas.map((f: any, fIdx: number) => {
-                                    const formattedDate = f.data
-                                      ? f.data.split('-').reverse().join('/')
-                                      : f.data;
-                                    const isCoupleAbsence = f.calculatedWeight === 2;
+                                    const formattedDate = f?.data
+                                      ? String(f.data).split('-').reverse().join('/')
+                                      : 'Data inválida';
+                                    const isCoupleAbsence = f?.calculatedWeight === 2;
                                     return (
                                       <div key={fIdx} className="text-xs flex items-center justify-between gap-2 text-slate-600 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100">
                                         <div className="flex items-center gap-2 flex-wrap">
                                           <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                                          <span className="font-semibold text-slate-800">{formattedDate} às {f.horario}</span>
+                                          <span className="font-semibold text-slate-800">{formattedDate} às {f?.horario || 'N/A'}</span>
                                           {isCoupleAbsence ? (
                                             <span className="text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md">
                                               👥 Casal (2 faltas)
                                             </span>
                                           ) : item.isCasal ? (
                                             <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded-md">
-                                              👤 {f.ministroNome || 'Individual'} (1 falta)
+                                              👤 {f?.ministroNome || 'Individual'} (1 falta)
                                             </span>
                                           ) : null}
-                                          {f.justificativa && (
+                                          {f?.justificativa && (
                                             <span className="text-slate-500 italic truncate max-w-[150px]" title={f.justificativa}>
                                               - "{f.justificativa}"
                                             </span>
@@ -630,7 +704,7 @@ export function CoordenacaoFaltasView({
                                         </div>
                                         <button
                                           type="button"
-                                          onClick={() => handleDeleteFalta(f.id, f.ministroNome || item.nome, formattedDate)}
+                                          onClick={() => handleDeleteFalta(f?.id, f?.ministroNome || item.nome, formattedDate)}
                                           className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition shrink-0"
                                           title="Remover falta"
                                         >
@@ -662,7 +736,7 @@ export function CoordenacaoFaltasView({
                     Classificação dos Ministros por Trocas Realizadas
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Ministros e casais ordenados pelo número de trocas e substituições registradas no período.
+                    Classificação dos ministros que solicitaram trocas ou substituições nas celebrações (exclusivo para a Coordenação).
                   </p>
                 </div>
 
@@ -699,7 +773,7 @@ export function CoordenacaoFaltasView({
                   <RefreshCw className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                   <h3 className="text-base font-bold text-slate-700">Nenhuma troca registrada</h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Não há registros de trocas de celebração para o período selecionado.
+                    Não há registros de trocas solicitadas para o período selecionado.
                   </p>
                 </div>
               ) : (
@@ -710,7 +784,7 @@ export function CoordenacaoFaltasView({
                         <tr className="bg-slate-50 border-b border-slate-200 text-xs font-black text-slate-600 uppercase tracking-wider">
                           <th className="py-4 px-6 text-center w-20">Classificação</th>
                           <th className="py-4 px-6">Ministro / Casal</th>
-                          <th className="py-4 px-6 text-center">Total de Trocas</th>
+                          <th className="py-4 px-6 text-center">Total de Trocas Solicitadas</th>
                           <th className="py-4 px-6">Histórico de Trocas</th>
                         </tr>
                       </thead>
@@ -747,14 +821,19 @@ export function CoordenacaoFaltasView({
                               <td className="py-4 px-6">
                                 <div className="space-y-1 max-h-32 overflow-y-auto pr-2">
                                   {item.trocas.map((t: any, tIdx: number) => {
-                                    const tDate = t.data || t.createdAt ? (t.data || t.createdAt).substring(0, 10).split('-').reverse().join('/') : '';
+                                    const rawDate = t.missaOrigemData || t.dataSolicitacao || t.data || t.createdAt || '';
+                                    const tDate = rawDate ? String(rawDate).substring(0, 10).split('-').reverse().join('/') : '';
+                                    const destStr = typeof t.destinatarioNome === 'string' ? t.destinatarioNome : '';
+                                    const subName = destStr && !destStr.toLowerCase().includes('coordena')
+                                      ? `Substituto: ${destStr}`
+                                      : (t.tipo || 'Troca rápida');
                                     return (
                                       <div key={tIdx} className="text-xs flex items-center justify-between gap-2 text-slate-600 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100">
                                         <div className="flex items-center gap-2 flex-wrap">
                                           <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
                                           <span className="font-semibold text-slate-800">{tDate}</span>
                                           <span className="text-[10px] font-medium bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded-md">
-                                            {t.tipo || 'Troca'} ({t.status || 'Concluída'})
+                                            {subName}
                                           </span>
                                         </div>
                                       </div>
@@ -974,8 +1053,13 @@ export function CoordenacaoFaltasView({
                   >
                     <option value="todos">Todos os Meses</option>
                     {availableMonths.map(m => {
+                      if (!m || typeof m !== 'string' || !m.includes('-')) return null;
                       const [yr, mo] = m.split('-');
-                      const dateObj = new Date(Number(yr), Number(mo) - 1, 1);
+                      const yNum = Number(yr);
+                      const mNum = Number(mo);
+                      if (isNaN(yNum) || isNaN(mNum) || mNum < 1 || mNum > 12) return null;
+                      const dateObj = new Date(yNum, mNum - 1, 1);
+                      if (isNaN(dateObj.getTime())) return null;
                       const monthName = dateObj.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
                       return (
                         <option key={m} value={m}>
@@ -989,7 +1073,7 @@ export function CoordenacaoFaltasView({
 
               {filteredFaltas.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200 p-8 shadow-sm">
-                  <CalendarX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                   <h3 className="text-base font-bold text-slate-700">Nenhum registro encontrado</h3>
                   <p className="text-sm text-slate-500 mt-1">
                     Não foram encontradas faltas registradas com os filtros selecionados.
@@ -1010,9 +1094,9 @@ export function CoordenacaoFaltasView({
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filteredFaltas.map(f => {
-                          const formattedDate = f.data
-                            ? f.data.split('-').reverse().join('/')
-                            : f.data;
+                          const formattedDate = f?.data
+                            ? String(f.data).split('-').reverse().join('/')
+                            : 'Data inválida';
                           return (
                             <tr key={f.id} className="hover:bg-slate-50/80 transition">
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -1022,7 +1106,7 @@ export function CoordenacaoFaltasView({
                                 </div>
                                 <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                                   <Clock className="w-3 h-3" />
-                                  {f.horario}
+                                  {f?.horario || 'N/A'}
                                 </div>
                               </td>
 

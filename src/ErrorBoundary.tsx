@@ -20,15 +20,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // Se for erro de insertBefore ou removeChild provocado por tradutor do navegador, recarrega suavemente
-    const msg = error?.message || '';
-    if (msg.includes('insertBefore') || msg.includes('removeChild') || msg.includes('Node')) {
-      const lastReload = sessionStorage.getItem('last_auto_reload_err');
-      const now = Date.now();
-      if (!lastReload || now - Number(lastReload) > 10000) {
-        sessionStorage.setItem('last_auto_reload_err', String(now));
-        window.location.reload();
-      }
+    // Tenta recarregar automaticamente caso ocorra erro em tempo de execução
+    const lastReload = sessionStorage.getItem('last_auto_reload_err');
+    const now = Date.now();
+    if (!lastReload || now - Number(lastReload) > 15000) {
+      sessionStorage.setItem('last_auto_reload_err', String(now));
+      window.location.reload();
     }
   }
 

@@ -1,36 +1,9 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import config from '../firebase-applet-config.json';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || config.apiKey,
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || config.authDomain,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || config.projectId,
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || config.storageBucket,
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || config.messagingSenderId,
-  appId: process.env.VITE_FIREBASE_APP_ID || config.appId
-};
-
-// Verifica se as variáveis de ambiente estão presentes
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  console.error("AVISO: Variáveis de ambiente do Firebase (VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID) não encontradas. O Firestore pode não funcionar corretamente.");
-}
-
-let app: any;
-let firestore: any;
-
-function getFirestoreInstance() {
-  if (!firestore) {
-    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-      console.warn("Configuração do Firebase incompleta. Firestore não será inicializado.");
-      return null;
-    }
-    app = initializeApp(firebaseConfig);
-    firestore = getFirestore(app, config.firestoreDatabaseId || '(default)');
-  }
-  return firestore;
-}
-
+/**
+ * Adaptador para facilitar operações de leitura e escrita no Firestore com cache e debouncing.
+ */
 export class FirestoreAdapter<T> {
   private collectionName: string;
   private docId: string;
@@ -41,25 +14,24 @@ export class FirestoreAdapter<T> {
   }
 
   private get docRef() {
-    const db = getFirestoreInstance();
     if (!db) return null;
     return doc(db, this.collectionName, this.docId);
   }
 
   private cachedData: T | null = null;
   private lastReadTime: number = 0;
-  private CACHE_DURATION = 30000; // 30 seconds cache
+  private CACHE_DURATION = 30000; // 30 segundos de cache
 
   async read(force: boolean = false): Promise<T | null> {
     if (!this.docRef) return null;
     
-    // Return cached data if valid and not forced
+    // Retorna dados do cache se válidos e não forçado
     const now = Date.now();
     if (!force && this.cachedData && (now - this.lastReadTime < this.CACHE_DURATION)) {
       return this.cachedData;
     }
 
-    let timeoutId: NodeJS.Timeout | undefined;
+    let timeoutId: any;
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error('Firestore read timeout')), 10000);
@@ -86,7 +58,7 @@ export class FirestoreAdapter<T> {
         stack: error.stack
       });
       
-      // If we have cached data, return it even if expired, instead of throwing if network is down
+      // Se houver cache, retorna mesmo expirado em caso de erro de rede
       if (this.cachedData) {
         console.warn("Retornando dados cacheados expirados devido a erro no Firestore.");
         return this.cachedData;
@@ -95,14 +67,14 @@ export class FirestoreAdapter<T> {
     }
   }
 
-  private writeTimeoutId: NodeJS.Timeout | null = null;
+  private writeTimeoutId: any = null;
   private pendingWriteData: T | null = null;
 
   async write(data: T): Promise<void> {
     if (!this.docRef) return;
     
-    // Update cache immediately on write
-    this.cachedData = JSON.parse(JSON.stringify(data)); // Deep copy
+    // Atualiza cache imediatamente
+    this.cachedData = JSON.parse(JSON.stringify(data)); // Cópia profunda
     this.lastReadTime = Date.now();
     this.pendingWriteData = data;
 
@@ -124,7 +96,7 @@ export class FirestoreAdapter<T> {
         let delay = 1000;
 
         while (retries > 0) {
-          let timeoutId: NodeJS.Timeout | undefined;
+          let timeoutId: any;
           try {
             const cleanData = this.sanitizeForFirestore(dataToWrite);
             
@@ -145,7 +117,7 @@ export class FirestoreAdapter<T> {
             const isResourceExhausted = error?.code === 'resource-exhausted' || error?.message?.includes('RESOURCE_EXHAUSTED');
             
             if (isResourceExhausted && retries > 1) {
-              console.warn(`Firestore resource exhausted. Retrying in ${delay}ms... (${retries} retries left)`);
+              console.warn(`Firestore resource exhausted. Tentando novamente em ${delay}ms... (${retries} tentativas restantes)`);
               await new Promise(res => setTimeout(res, delay));
               delay *= 2;
               retries--;
@@ -156,19 +128,19 @@ export class FirestoreAdapter<T> {
             }
           }
         }
-        reject(new Error('Firestore write failed after retries due to resource exhaustion'));
+        reject(new Error('Falha na escrita do Firestore após tentativas devido a exaustão de recursos'));
       }, 1500); // 1.5s debounce
     });
   }
 
   private sanitizeForFirestore(obj: any): any {
     if (obj === null || obj === undefined) {
-      return null; // Convert undefined to null or just return null
+      return null;
     }
 
     if (typeof obj === 'number') {
       if (isNaN(obj) || !isFinite(obj)) {
-        return null; // Firestore doesn't support NaN or Infinity
+        return null;
       }
       return obj;
     }
@@ -178,7 +150,6 @@ export class FirestoreAdapter<T> {
     }
 
     if (Array.isArray(obj)) {
-      // Filter out undefined and sanitize elements
       return obj
         .filter(item => item !== undefined)
         .map(item => this.sanitizeForFirestore(item));

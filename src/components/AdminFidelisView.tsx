@@ -239,7 +239,7 @@ export function AdminFidelisView({ user, onCustomConfirm }: AdminFidelisViewProp
 
   const handleCopyCredentials = (coord: FidelisCoordinator) => {
     const isCasal = coord.tipo === 'casal';
-    const nameStr = isCasal && coord.nomeConjuge ? `${coord.nome} & ${coord.nomeConjuge}` : coord.nome;
+    const nameStr = isCasal && coord.nomeConjuge ? `${coord.nome} e ${coord.nomeConjuge}` : coord.nome;
     const phoneStr = isCasal && coord.telefoneConjuge ? `${coord.telefone} / ${coord.telefoneConjuge}` : coord.telefone;
 
     const text = `*Fidelis - Gestão de Coroinhas e Acólitos*\n*Acesso da Coordenação*\n\n*Nome:* ${nameStr}\n*Tipo:* ${

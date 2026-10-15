@@ -58,7 +58,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
   const fetchMissasTemporarias = async () => {
     try {
       const data = await safeFetchJson<any[]>(
-        `/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}`,
+        `/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}&t=${Date.now()}`,
         undefined,
         []
       );

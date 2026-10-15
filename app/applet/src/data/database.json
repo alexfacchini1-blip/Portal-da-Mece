@@ -1,0 +1,28 @@
+{
+  "disponibilidades": [
+    {
+      "paroquia": "Paróquia Santa Rita de Cássia",
+      "id": 236,
+      "horario": "10:00",
+      "nomeMissa": "Missa de Domingo",
+      "data": "2026-10-04",
+      "modo": "casal",
+      "ministro_id": 66
+    }
+  ],
+  "ministros": [],
+  "trocas": [],
+  "paroquias": [],
+  "faltas": [],
+  "estoque": [],
+  "fidelisCoordinators": [],
+  "missasTemporarias": [],
+  "financeiro": [],
+  "mensagens": [],
+  "comunhao": [],
+  "relatoriosLider": [],
+  "eventos": [],
+  "escalaGerada": {},
+  "config": {},
+  "estoqueMovimentacoes": []
+}
