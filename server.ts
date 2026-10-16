@@ -8464,28 +8464,35 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     });
   });
 
-  // Serve static files from dist if available, regardless of NODE_ENV
+  // Serve static files from dist if available, or fallback gracefully
   const distPath = path.join(process.cwd(), 'dist');
   const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
 
-  if (hasDist) {
-    logDebug(`[SERVER] Servindo arquivos estáticos de: ${distPath}`);
-    app.use(express.static(distPath, {
-      setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-          res.setHeader('Pragma', 'no-cache');
-          res.setHeader('Expires', '0');
+  if (hasDist || process.env.NODE_ENV === 'production') {
+    if (hasDist) {
+      logDebug(`[SERVER] Servindo arquivos estáticos de: ${distPath}`);
+      app.use(express.static(distPath, {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          }
         }
-      }
-    }));
+      }));
+    }
     app.get('*', (req, res) => {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(200).send('<!DOCTYPE html><html><head><title>Portal do Mece</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>');
+      }
     });
-  } else if (process.env.NODE_ENV !== 'production') {
+  } else {
     logDebug('[SERVER] Iniciando Vite em modo middleware...');
     try {
       const { createServer: createViteServer } = await import('vite');
@@ -8497,11 +8504,10 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
       logDebug('[SERVER] Vite configurado.');
     } catch (e) {
       console.error('[SERVER] Falha ao iniciar Vite middleware:', e);
+      app.get('*', (req, res) => {
+        res.status(200).send('Portal do Mece carregando...');
+      });
     }
-  } else {
-    app.get('*', (req, res) => {
-      res.status(404).send('Page not found');
-    });
   }
 
   // Marca a inicialização como concluída e libera todas as requisições retidas
