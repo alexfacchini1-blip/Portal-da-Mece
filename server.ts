@@ -950,6 +950,55 @@ async function triggerAllBackgroundReminders() {
 }
 
 async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  let isReady = false;
+  const waitingRequests: Array<() => void> = [];
+
+  // Middleware imediato para aceitar conexões no primeiro milissegundo, evitando que o Nginx mostre tela de warmup/502
+  app.use((req, res, next) => {
+    if (isReady) return next();
+    let done = false;
+    const proceed = () => {
+      if (!done) {
+        done = true;
+        next();
+      }
+    };
+    waitingRequests.push(proceed);
+    setTimeout(proceed, 20000).unref();
+  });
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[SERVER] Instant-Listen ativo na porta ${PORT}`);
+    logDebug(`[SERVER] Servidor ouvindo imediatamente na porta ${PORT}`);
+  });
+
+  server.on('error', (err: any) => {
+    console.error('[SERVER LISTEN ERROR]', err);
+    logDebug(`[SERVER LISTEN ERROR] ${err.message || String(err)}`);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Exiting process...`);
+      process.exit(1);
+    }
+  });
+
+  const handleShutdown = () => {
+    console.log('[SHUTDOWN] Signal received. Closing server gracefully...');
+    server.close(() => {
+      console.log('[SHUTDOWN] Server closed.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.warn('[SHUTDOWN] Force exiting after timeout.');
+      process.exit(0);
+    }, 2000).unref();
+  };
+
+  process.on('SIGTERM', handleShutdown);
+  process.on('SIGINT', handleShutdown);
+
   await setupDatabase();
   await initVapidKeys();
   
@@ -1202,10 +1251,7 @@ async function startServer() {
   // Performance Optimized Migrations
   await runMigrations();
 
-  logDebug('[SERVER] Migrações concluídas. Iniciando Express...');
-  const app = express();
-  logDebug('[SERVER] Express instanciado.');
-  const PORT = 3000;
+  logDebug('[SERVER] Migrações concluídas. Configurando rotas e middlewares...');
 
   // Global Request arrival log (most urgent)
   app.use((req, res, next) => {
@@ -8458,46 +8504,26 @@ function getDisponibilidadeStatus(config: any, ministro: any, paroquia?: string)
     });
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    logDebug(`[SERVER] Servidor ouvindo na porta ${PORT}`);
+  // Marca a inicialização como concluída e libera todas as requisições retidas
+  isReady = true;
+  while (waitingRequests.length > 0) {
+    const nextFn = waitingRequests.shift();
+    if (nextFn) nextFn();
+  }
+  console.log(`[SERVER] Inicialização 100% concluída. Todas as rotas e Vite ativos.`);
+  logDebug(`[SERVER] Inicialização 100% concluída. Todas as rotas e Vite ativos.`);
 
-    // Trigger automatic reminders on startup and then periodically in the background
-    console.log('[BACKGROUND LEMBRETE] Starting background reminder scheduler...');
-    const startupReminderTimer = setTimeout(async () => {
-      await triggerAllBackgroundReminders();
-    }, 5000); // Wait 5 seconds for setup to finish
-    startupReminderTimer.unref();
+  // Trigger automatic reminders on startup and then periodically in the background
+  console.log('[BACKGROUND LEMBRETE] Starting background reminder scheduler...');
+  const startupReminderTimer = setTimeout(async () => {
+    await triggerAllBackgroundReminders();
+  }, 5000); // Wait 5 seconds for setup to finish
+  startupReminderTimer.unref();
 
-    const reminderInterval = setInterval(async () => {
-      await triggerAllBackgroundReminders();
-    }, 1000 * 60 * 15); // Run every 15 minutes
-    reminderInterval.unref();
-  });
-
-  server.on('error', (err: any) => {
-    console.error('[SERVER LISTEN ERROR]', err);
-    logDebug(`[SERVER LISTEN ERROR] ${err.message || String(err)}`);
-    if (err.code === 'EADDRINUSE') {
-      console.error(`Port ${PORT} is already in use. Exiting process...`);
-      process.exit(1);
-    }
-  });
-
-  const handleShutdown = () => {
-    console.log('[SHUTDOWN] Signal received. Closing server gracefully...');
-    server.close(() => {
-      console.log('[SHUTDOWN] Server closed.');
-      process.exit(0);
-    });
-    setTimeout(() => {
-      console.warn('[SHUTDOWN] Force exiting after timeout.');
-      process.exit(0);
-    }, 2000).unref();
-  };
-
-  process.on('SIGTERM', handleShutdown);
-  process.on('SIGINT', handleShutdown);
+  const reminderInterval = setInterval(async () => {
+    await triggerAllBackgroundReminders();
+  }, 1000 * 60 * 15); // Run every 15 minutes
+  reminderInterval.unref();
 
   // Execute one-time fix for existing data
   const autofixTimer = setTimeout(async () => {
