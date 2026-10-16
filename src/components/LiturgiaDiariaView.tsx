@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpen, AlertCircle, Heart, Church, ExternalLink, ChevronLeft, Plus, Minus } from 'lucide-react';
 import { getLiturgicalThemeDynamic } from '../utils/calendario';
@@ -81,7 +82,7 @@ export default function LiturgiaDiariaView({ voltar, initialSource = 'vatican' }
       setLoadingVatican(true);
       setErrorVatican(null);
       const url = `/api/liturgia${isSaturdayVigil ? '?vigilia=true' : ''}`;
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Falha ao carregar a palavra do dia do Vatican News.');
       const data: LiturgiaData = await res.json();
       setVaticanData(data);
@@ -104,7 +105,7 @@ export default function LiturgiaDiariaView({ voltar, initialSource = 'vatican' }
       setLoadingCancao(true);
       setErrorCancao(null);
       const url = `/api/liturgia-diaria${isSaturdayVigil ? '?vigilia=true' : ''}`;
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Falha ao carregar a liturgia diária da Canção Nova.');
       const data: LiturgiaData = await res.json();
       setCancaoData(data);

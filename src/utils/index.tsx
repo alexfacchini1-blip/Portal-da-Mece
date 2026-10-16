@@ -17,9 +17,11 @@ export const safeJson = async <T = any>(res: Response | null | undefined, fallba
   }
 };
 
+import apiFetch from './api';
+
 export const safeFetchJson = async <T = any>(url: string, options?: RequestInit, fallback: T = null as any): Promise<T> => {
   try {
-    const res = await fetch(url, options);
+    const res = await apiFetch(url, options);
     return await safeJson<T>(res, fallback);
   } catch (e) {
     return fallback;
@@ -39,7 +41,7 @@ export const fetchAddressByCep = async (cep: string): Promise<{ logradouro?: str
   const clean = cep.replace(/\D/g, '');
   if (clean.length !== 8) return null;
   try {
-    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+    const res = await apiFetch(`https://viacep.com.br/ws/${clean}/json/`);
     if (res.ok) {
       const data = await res.json();
       if (!data.erro) {
@@ -631,7 +633,7 @@ export const fetchAndCacheMinistros = async (paroquia?: string): Promise<any[]> 
     const url = paroquia 
       ? `/api/ministros?paroquia=${encodeURIComponent(paroquia)}`
       : `/api/ministros`;
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     const data = await safeJson<any[]>(res, null);
     if (Array.isArray(data)) {
       cachedMinistrosList = data;

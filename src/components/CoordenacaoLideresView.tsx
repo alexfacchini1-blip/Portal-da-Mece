@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Flag, 
@@ -137,9 +138,9 @@ export const CoordenacaoLideresView: React.FC<CoordenacaoLideresViewProps> = ({
     try {
       const now = Date.now();
       const [minRes, relRes, escRes] = await Promise.all([
-        fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
-        fetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
-        fetch(`/api/escala?paroquia=${encodeURIComponent(user?.paroquia || '')}&preview=true&t=${now}`)
+        apiFetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        apiFetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        apiFetch(`/api/escala?paroquia=${encodeURIComponent(user?.paroquia || '')}&preview=true&t=${now}`)
       ]);
 
       if (minRes.ok) {
@@ -347,7 +348,7 @@ export const CoordenacaoLideresView: React.FC<CoordenacaoLideresViewProps> = ({
     window.dispatchEvent(new Event('relatorios_lider_updated'));
 
     try {
-      await fetch(`/api/relatorios-lider/${id}/marcar-lido`, {
+      await apiFetch(`/api/relatorios-lider/${id}/marcar-lido`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -373,7 +374,7 @@ export const CoordenacaoLideresView: React.FC<CoordenacaoLideresViewProps> = ({
     window.dispatchEvent(new Event('relatorios_lider_updated'));
 
     try {
-      await fetch('/api/relatorios-lider/marcar-todos-lidos', {
+      await apiFetch('/api/relatorios-lider/marcar-todos-lidos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -595,7 +596,7 @@ export const CoordenacaoLideresView: React.FC<CoordenacaoLideresViewProps> = ({
   const handleDeleteRelatorio = (id: string, info: string) => {
     const doDelete = async () => {
       try {
-        const res = await fetch(`/api/relatorios-lider/${id}?paroquia=${encodeURIComponent(user?.paroquia || '')}`, {
+        const res = await apiFetch(`/api/relatorios-lider/${id}?paroquia=${encodeURIComponent(user?.paroquia || '')}`, {
           method: 'DELETE'
         });
         if (res.ok) {
@@ -869,7 +870,7 @@ export const CoordenacaoLideresView: React.FC<CoordenacaoLideresViewProps> = ({
         semAlteracao: modalSemAlteracao
       };
 
-      const res = await fetch('/api/relatorios-lider', {
+      const res = await apiFetch('/api/relatorios-lider', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

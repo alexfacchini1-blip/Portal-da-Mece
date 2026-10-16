@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   AlertCircle,
@@ -105,9 +106,9 @@ export function CoordenacaoFaltasView({
     try {
       const now = Date.now();
       const [minRes, faltasRes, trocasRes] = await Promise.all([
-        fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
-        fetch(`/api/faltas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
-        fetch(`/api/trocas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`)
+        apiFetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        apiFetch(`/api/faltas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`),
+        apiFetch(`/api/trocas?paroquia=${encodeURIComponent(user?.paroquia || '')}&t=${now}`)
       ]);
 
       if (minRes.ok) {
@@ -192,7 +193,7 @@ export function CoordenacaoFaltasView({
     setError('');
 
     try {
-      const res = await fetch('/api/faltas', {
+      const res = await apiFetch('/api/faltas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -233,7 +234,7 @@ export function CoordenacaoFaltasView({
     
     const executeDelete = async () => {
       try {
-        const res = await fetch(`/api/faltas/${faltaId}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/faltas/${faltaId}`, { method: 'DELETE' });
         if (res.ok) {
           setMessage('Registro de falta removido com sucesso!');
           fetchData();

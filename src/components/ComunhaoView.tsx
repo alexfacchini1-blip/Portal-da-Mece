@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from 'react';
 import { Heart, User, Phone, MapPin, Calendar, ChevronLeft, Clock, Trash2, Edit2, Users, BookOpen, X, Sparkles, Search, Loader2, CheckCircle2, Plus, Save } from 'lucide-react';
 import { toTitleCase, formatPhone, formatCep, fetchAddressByCep } from '../utils';
@@ -138,21 +139,21 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
     try {
       if (user.role === 'ministro') {
         console.log('Fetching communions for ministro:', user.id);
-        const res = await fetch(`/api/comunhao/${user.id}`);
+        const res = await apiFetch(`/api/comunhao/${user.id}`);
         const data = await res.json();
         console.log('Communions fetched for ministro:', data);
         setComunhaoList(Array.isArray(data) ? data : []);
       } else {
         // For coordination, fetch all ministers to populate the dropdown
         console.log('Fetching ministers for paroquia:', user.paroquia);
-        const resMinisters = await fetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia)}`);
+        const resMinisters = await apiFetch(`/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia)}`);
         const dataMinisters = await resMinisters.json();
         console.log('Ministers fetched:', dataMinisters);
         setApprovedMinisters(Array.isArray(dataMinisters) ? dataMinisters : []);
 
         // Also fetch all communions for this parish
         console.log('Fetching communions for paroquia:', user.paroquia);
-        const resComunhao = await fetch(`/api/comunhao/paroquia/${encodeURIComponent(user.paroquia)}`);
+        const resComunhao = await apiFetch(`/api/comunhao/paroquia/${encodeURIComponent(user.paroquia)}`);
         if (resComunhao.ok) {
           const dataComunhao = await resComunhao.json();
           console.log('Communions fetched for paroquia:', dataComunhao);
@@ -264,7 +265,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
     console.log('[DEBUG] Submitting payload:', payload);
 
     try {
-      const response = await fetch('/api/comunhao', {
+      const response = await apiFetch('/api/comunhao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,7 +318,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
     if (onCustomConfirm) {
       onCustomConfirm(msg, async () => {
         try {
-          const response = await fetch(`/api/comunhao/${id}`, { method: 'DELETE' });
+          const response = await apiFetch(`/api/comunhao/${id}`, { method: 'DELETE' });
           if (response.ok) {
             fetchData();
           } else {
@@ -349,7 +350,7 @@ export function ComunhaoView({ user, voltar, isTab = false, onCustomConfirm, onA
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/comunhao/${editingComunhao.id}`, {
+      const response = await apiFetch(`/api/comunhao/${editingComunhao.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingComunhao),

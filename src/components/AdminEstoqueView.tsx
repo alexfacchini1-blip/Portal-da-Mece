@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Trash2, RefreshCw, Search, ArrowUpCircle, ArrowDownCircle, History, X, Info, AlertTriangle, Edit2, Save, CheckCircle2 } from 'lucide-react';
 import { EstoqueItem, EstoqueMovimentacao } from '../types';
@@ -79,7 +80,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
     const { id, value, tipo } = editingThresholdItem;
     
     try {
-      const res = await fetch(`/api/estoque/${id}`, {
+      const res = await apiFetch(`/api/estoque/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, nivelMinimo: value, nivelMinimoTipo: tipo })
@@ -105,7 +106,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
   const saveItemDetailsChanges = async () => {
     if (!editingItemDetails) return;
     try {
-      const res = await fetch(`/api/estoque/${editingItemDetails.id}`, {
+      const res = await apiFetch(`/api/estoque/${editingItemDetails.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -135,7 +136,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
 
   const updateThreshold = async (id: string, value: number, tipo?: 'embalagem' | 'unidade') => {
     try {
-      const res = await fetch(`/api/estoque/${id}`, {
+      const res = await apiFetch(`/api/estoque/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, nivelMinimo: value, nivelMinimoTipo: tipo })
@@ -158,10 +159,10 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
       const queryParams = !isGlobalAdmin ? paroquiaQuery : '';
       
       const responses = await Promise.all([
-        fetch(`/api/estoque${queryParams}`),
-        fetch('/api/paroquias'),
-        fetch(`/api/estoque/movimentacoes${queryParams}`),
-        fetch(`/api/ministros${queryParams}`)
+        apiFetch(`/api/estoque${queryParams}`),
+        apiFetch('/api/paroquias'),
+        apiFetch(`/api/estoque/movimentacoes${queryParams}`),
+        apiFetch(`/api/ministros${queryParams}`)
       ]);
       
       // Check if all responses are OK
@@ -224,7 +225,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
     const totalUnidades = newItem.quantidadeEmbalagens * newItem.unidadesPorEmbalagem;
 
     try {
-      const res = await fetch('/api/estoque', {
+      const res = await apiFetch('/api/estoque', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -271,7 +272,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
       : newMovement.quantidade;
 
     try {
-      const res = await fetch('/api/estoque/movimentar', {
+      const res = await apiFetch('/api/estoque/movimentar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -316,7 +317,7 @@ export function AdminEstoqueView({ user, onCustomConfirm }: AdminEstoqueViewProp
   const handleDeleteItem = (id: string) => {
     onCustomConfirm('Deseja realmente excluir este item do estoque?', async () => {
       try {
-        const res = await fetch(`/api/estoque/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/estoque/${id}`, { method: 'DELETE' });
         if (res.ok) {
           setItems(prev => prev.filter(i => i.id !== id));
           setMovements(prev => prev.filter(m => m.itemId !== id));

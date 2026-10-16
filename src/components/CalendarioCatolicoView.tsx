@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, Plus, X, Trash2, Clock, Calendar, Info } from "lucide-react";
@@ -323,7 +324,7 @@ export default function CalendarioCatolicoView({ voltar, slots, user, escala, my
     if (!newEvent.titulo || !newEvent.data) return;
     try {
       setSubmitting(true);
-      const res = await fetch("/api/eventos", {
+      const res = await apiFetch("/api/eventos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -346,7 +347,7 @@ export default function CalendarioCatolicoView({ voltar, slots, user, escala, my
   const handleDeleteEvent = async (eventId: string) => {
     if (!window.confirm("Deseja realmente remover este evento?")) return;
     try {
-      const res = await fetch(`/api/eventos/${eventId}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/eventos/${eventId}`, { method: "DELETE" });
       if (res.ok) {
         await fetchEvents();
         if (selectedDayEvent) {

@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from "react";
 import { 
   DollarSign, 
@@ -156,7 +157,7 @@ export default function FinanceiroView({ user, onAlert, onCustomConfirm }: Finan
       const paroquiaQuery = user.paroquia ? `?paroquia=${encodeURIComponent(user.paroquia)}` : "";
       
       // Fetch ministers to link in monthly fee
-      const minRes = await fetch(`/api/admin/ministros${paroquiaQuery}`);
+      const minRes = await apiFetch(`/api/admin/ministros${paroquiaQuery}`);
       let fetchedMinisters: UserType[] = [];
       if (minRes.ok) {
         fetchedMinisters = await minRes.json();
@@ -166,7 +167,7 @@ export default function FinanceiroView({ user, onAlert, onCustomConfirm }: Finan
       }
 
       // Fetch financial elements
-      const finRes = await fetch(`/api/financeiro${paroquiaQuery}`);
+      const finRes = await apiFetch(`/api/financeiro${paroquiaQuery}`);
       if (finRes.ok) {
         const data = await finRes.json();
         setLancamentos(data);
@@ -222,7 +223,7 @@ export default function FinanceiroView({ user, onAlert, onCustomConfirm }: Finan
         mesReferencia: formData.categoria === "mensalidade" ? formData.mesReferencia : undefined
       };
 
-      const res = await fetch("/api/financeiro", {
+      const res = await apiFetch("/api/financeiro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyData)
@@ -282,7 +283,7 @@ export default function FinanceiroView({ user, onAlert, onCustomConfirm }: Finan
           mesReferencia: monthStr
         };
 
-        const res = await fetch("/api/financeiro", {
+        const res = await apiFetch("/api/financeiro", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(bodyData)
@@ -307,7 +308,7 @@ export default function FinanceiroView({ user, onAlert, onCustomConfirm }: Finan
     
     onCustomConfirm(`Tem certeza que deseja excluir o lançamento "${detail}"? Essa ação é irreversível.`, async () => {
       try {
-        const res = await fetch(`/api/financeiro/${id}`, { method: "DELETE" });
+        const res = await apiFetch(`/api/financeiro/${id}`, { method: "DELETE" });
         if (res.ok) {
           fetchData();
           onAlert("Sucesso", "Lançamento financeiro excluído com sucesso!");

@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -566,7 +567,7 @@ function WelcomeView({
 
     // Buscar mensagens da paróquia
     if (user && user.paroquia) {
-      fetch(`/api/mensagens?paroquia=${encodeURIComponent(user.paroquia)}&type=broadcast&telefone=${encodeURIComponent(user.telefone || '')}`)
+      apiFetch(`/api/mensagens?paroquia=${encodeURIComponent(user.paroquia)}&type=broadcast&telefone=${encodeURIComponent(user.telefone || '')}`)
         .then(res => {
           if (!res.ok) return [];
           const ct = res.headers.get('content-type');
@@ -584,7 +585,7 @@ function WelcomeView({
     // Buscar pontualidade do ministro
     if (user && user.paroquia) {
       const ministerName = user.isConjugeLogin ? (user.nomeExibicaoConjuge || user.nomeConjuge || user.nome) : (user.nomeExibicao || user.nome);
-      fetch(`/api/ministro/pontualidade?telefone=${encodeURIComponent(user.telefone || '')}&paroquia=${encodeURIComponent(user.paroquia)}&nome=${encodeURIComponent(ministerName || '')}&id=${encodeURIComponent(user.id || '')}`)
+      apiFetch(`/api/ministro/pontualidade?telefone=${encodeURIComponent(user.telefone || '')}&paroquia=${encodeURIComponent(user.paroquia)}&nome=${encodeURIComponent(ministerName || '')}&id=${encodeURIComponent(user.id || '')}`)
         .then(res => {
           if (!res.ok) return null;
           const ct = res.headers.get('content-type');
@@ -599,7 +600,7 @@ function WelcomeView({
         .catch(err => console.error('Erro ao buscar pontualidade do ministro:', err));
     }
     if (user && user.telefone) {
-      fetch(`/api/ministros/${encodeURIComponent(user.telefone)}`)
+      apiFetch(`/api/ministros/${encodeURIComponent(user.telefone)}`)
         .then(res => {
           if (!res.ok) return null;
           const ct = res.headers.get('content-type');
@@ -716,7 +717,7 @@ function WelcomeView({
     const isSaturday = today.getDay() === 6;
 
     // Fetch today's liturgy from Vatican News
-    fetch('/api/liturgia')
+    apiFetch('/api/liturgia')
       .then(res => res.json())
       .then(data => {
         if (data && data.evangelho) {

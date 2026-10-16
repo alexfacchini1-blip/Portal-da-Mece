@@ -1,3 +1,4 @@
+import apiFetch from './utils/api';
 import React, {
   useState,
   useEffect,
@@ -953,7 +954,7 @@ const CadastroView = ({ user, onSave, isTab, voltar, onSetView }: any) => {
   useEffect(() => {
     const fetchParoquias = async () => {
       try {
-        const res = await fetch("/api/paroquias");
+        const res = await apiFetch("/api/paroquias");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         let data = await res.json();
         if (Array.isArray(data)) {
@@ -3172,7 +3173,7 @@ function CoordenacaoView({
         setSlotsSelecionados([]);
         
         try {
-          const response = await fetch(
+          const response = await apiFetch(
             `/api/disponibilidade/${encodeURIComponent(user.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
           );
           const data = await safeJson<any[]>(response, null);
@@ -3334,7 +3335,7 @@ function CoordenacaoView({
     if (!respostaTexto.trim() || !selectedMessage) return;
 
     try {
-      const res = await fetch("/api/mensagens", {
+      const res = await apiFetch("/api/mensagens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3389,7 +3390,7 @@ function CoordenacaoView({
       if (user?.id && !isActualCoord) {
         url += `&ministroId=${user.id}`;
       }
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       if (response.ok) {
         const ct = response.headers.get("content-type");
         if (ct && ct.includes("application/json")) {
@@ -3745,7 +3746,7 @@ function CoordenacaoView({
     resposta: "aceitar" | "rejeitar",
   ) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/trocas/${trocaId}/responder-ministro`,
         {
           method: "POST",
@@ -3781,7 +3782,7 @@ function CoordenacaoView({
     resposta: "aprovar" | "rejeitar",
   ) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/trocas/${trocaId}/responder-coordenador`,
         {
           method: "POST",
@@ -3818,7 +3819,7 @@ function CoordenacaoView({
 
   const handleConfirmarLeitura = async (trocaId: string) => {
     try {
-      const response = await fetch(`/api/trocas/${trocaId}/confirmar-leitura`, {
+      const response = await apiFetch(`/api/trocas/${trocaId}/confirmar-leitura`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ministroId: user.id }),
@@ -3847,7 +3848,7 @@ function CoordenacaoView({
 
     try {
       setIsSubmittingQuickSwap(true);
-      const response = await fetch("/api/trocas/rapida", {
+      const response = await apiFetch("/api/trocas/rapida", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3910,7 +3911,7 @@ function CoordenacaoView({
 
   const handleDefinirLider = async (date: string, horario: string, ministerName: string) => {
     try {
-      const response = await fetch("/api/escala/lider", {
+      const response = await apiFetch("/api/escala/lider", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4058,7 +4059,7 @@ function CoordenacaoView({
             : undefined,
       };
 
-      const response = await fetch("/api/trocas", {
+      const response = await apiFetch("/api/trocas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -4354,7 +4355,7 @@ function CoordenacaoView({
       // formData is already in the primary user's perspective.
       const payload = { ...formData };
 
-      const response = await fetch(`/api/ministros/${user.telefone}`, {
+      const response = await apiFetch(`/api/ministros/${user.telefone}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -4408,32 +4409,32 @@ function CoordenacaoView({
         vagasRes,
         pendingRes,
       ] = await Promise.allSettled([
-        fetch(
+        apiFetch(
           `/api/config?paroquia=${encodeURIComponent(user.paroquia)}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/escala?paroquia=${encodeURIComponent(user.paroquia)}${isActualCoord ? "&preview=true" : ""}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/stats?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/ministros/aniversariantes?paroquia=${encodeURIComponent(user.paroquia)}&mes=${niverFiltroTipo}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/admin/ministros?paroquia=${encodeURIComponent(user.paroquia)}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/mensagens?paroquia=${encodeURIComponent(user.paroquia)}&type=direct&telefone=${encodeURIComponent(user?.telefone || "")}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/disponibilidade?paroquia=${encodeURIComponent(user.paroquia)}&t=${now}`,
         ),
-        fetch(
+        apiFetch(
           `/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesSelecionado}&ano=${anoSelecionado}&t=${now}`,
         ),
         activeTab === "cadastro"
-          ? fetch(
+          ? apiFetch(
               `/api/admin/pending?paroquia=${encodeURIComponent(user.paroquia)}&t=${now}`,
             )
           : Promise.resolve(null),
@@ -4582,7 +4583,7 @@ function CoordenacaoView({
     setDisponibilidadeAberta(newState);
 
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4602,7 +4603,7 @@ function CoordenacaoView({
       setTimeout(() => setMessage(""), 3000);
 
       // Re-fetch to ensure consistency with backend
-      const res = await fetch(`/api/config?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`);
+      const res = await apiFetch(`/api/config?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`);
       if (res.ok) {
         const config = await res.json();
         const isNoPeriodo = checkPeriodoAgendado(config, user.paroquia);
@@ -4626,7 +4627,7 @@ function CoordenacaoView({
   const handleToggleLembreteAutomatico = async () => {
     const newState = !lembreteAutomatico;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4649,7 +4650,7 @@ function CoordenacaoView({
   const handleEnviarLembretesManual = async () => {
     setEnviandoLembretes(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         "/api/escala/enviar-lembretes-fim-de-semana",
         {
           method: "POST",
@@ -4689,7 +4690,7 @@ function CoordenacaoView({
     try {
       const includeSunday = checkLastDayIsSaturday(mesGerar, anoGerar) && incluirDomingoSeguinte;
       const maxEscParam = maxEscalacoes === "libre" ? 99 : maxEscalacoes;
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mesGerar}&ano=${anoGerar}&keep=${keepExisting ? "true" : "false"}&includeNextSunday=${includeSunday ? "true" : "false"}&maxEscalacoes=${maxEscParam}&limiteNovos=${encodeURIComponent(limiteNovos)}&t=${Date.now()}`,
         { method: "POST" },
       );
@@ -4770,7 +4771,7 @@ function CoordenacaoView({
   const fetchEscalaConferencia = async (mes: number, ano: number) => {
     setLoadingConferencia(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/escala?preview=true&paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`,
       );
       if (response.ok) {
@@ -4812,7 +4813,7 @@ function CoordenacaoView({
     try {
       const includeSunday = checkLastDayIsSaturday(mes, ano) && incluirDomingoSeguinte;
       const maxEscParam = maxEscalacoes === "libre" ? 99 : maxEscalacoes;
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/escala/gerar?paroquia=${encodeURIComponent(user.paroquia)}&mes=${mes}&ano=${ano}&keep=${keepExisting ? "true" : "false"}&includeNextSunday=${includeSunday ? "true" : "false"}&maxEscalacoes=${maxEscParam}&limiteNovos=${encodeURIComponent(limiteNovos)}&t=${Date.now()}`,
         { method: "POST" },
       );
@@ -4871,7 +4872,7 @@ function CoordenacaoView({
     const mesStr = `${ano}-${mes.toString().padStart(2, "0")}`;
     try {
       setLoading(true);
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4919,7 +4920,7 @@ function CoordenacaoView({
       : escalaPublicada;
     const newState = !currentStatus;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4952,7 +4953,7 @@ function CoordenacaoView({
         setTimeout(() => setMessage(""), 3000);
 
         // Atualizar a escala localmente após publicar/recolher
-        const escalaRes = await fetch(
+        const escalaRes = await apiFetch(
           `/api/escala?preview=true&paroquia=${encodeURIComponent(user.paroquia)}`,
         );
         if (escalaRes.ok) {
@@ -4976,7 +4977,7 @@ function CoordenacaoView({
         limiteNovos: field === 'limiteNovos' ? (value === "livre" ? "livre" : Number(value)) : (limiteNovos === "livre" ? "livre" : Number(limiteNovos)),
         regraDisponibilidade: field === 'regraDisponibilidade' ? value : regraDisponibilidade,
       };
-      await fetch("/api/config", {
+      await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -5015,7 +5016,7 @@ function CoordenacaoView({
 
   const enviarAdicaoMinistro = async (data: string, horario: string, ministroNome: string) => {
     try {
-      const res = await fetch("/api/escala/adicionar-ministro", {
+      const res = await apiFetch("/api/escala/adicionar-ministro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -5041,7 +5042,7 @@ function CoordenacaoView({
 
   const handleSaveAgendamento = async () => {
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -5073,7 +5074,7 @@ function CoordenacaoView({
 
   const handleResetAgendamento = async () => {
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -5096,7 +5097,7 @@ function CoordenacaoView({
 
   const handleApprove = async (id) => {
     try {
-      const response = await fetch(`/api/admin/approve/${id}`, {
+      const response = await apiFetch(`/api/admin/approve/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: "ministro" }),
@@ -5117,7 +5118,7 @@ function CoordenacaoView({
       "Tem certeza que deseja recusar este cadastro?",
       async () => {
         try {
-          const response = await fetch(`/api/admin/reject/${id}`, {
+          const response = await apiFetch(`/api/admin/reject/${id}`, {
             method: "POST",
           });
           if (response.ok) {
@@ -5142,7 +5143,7 @@ function CoordenacaoView({
     setMensagemError("");
 
     try {
-      const response = await fetch("/api/mensagens", {
+      const response = await apiFetch("/api/mensagens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -12237,7 +12238,7 @@ function CoordenacaoView({
                             setMensagemError("");
 
                             try {
-                              const response = await fetch("/api/mensagens", {
+                              const response = await apiFetch("/api/mensagens", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
@@ -13461,7 +13462,7 @@ function AdminView({
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch("/api/eventos");
+      const res = await apiFetch("/api/eventos");
       if (res.ok) {
         const data = await res.json();
         setCustomEvents(Array.isArray(data) ? data : []);
@@ -13479,7 +13480,7 @@ function AdminView({
     }
     try {
       setSubmittingAgenda(true);
-      const res = await fetch("/api/eventos", {
+      const res = await apiFetch("/api/eventos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -13518,7 +13519,7 @@ function AdminView({
   const handleDeleteAgendaEvent = async (eventId: string) => {
     if (!window.confirm("Deseja realmente remover este compromisso da Agenda?")) return;
     try {
-      const res = await fetch(`/api/eventos/${eventId}?isAdmin=true`, { method: "DELETE" });
+      const res = await apiFetch(`/api/eventos/${eventId}?isAdmin=true`, { method: "DELETE" });
       if (res.ok) {
         onAlert("Sucesso", "Compromisso removido com sucesso.");
         await fetchEvents();
@@ -13636,12 +13637,12 @@ function AdminView({
         : "";
       const tParam = paroquiaQuery ? `&t=${now}` : `?t=${now}`;
       const responses = await Promise.all([
-        fetch(`/api/config${paroquiaQuery}${tParam}`),
-        fetch(`/api/admin/pending${paroquiaQuery}${tParam}`),
-        fetch(`/api/admin/coordinators${paroquiaQuery}${tParam}`),
-        fetch(`/api/admin/ministros${paroquiaQuery}${tParam}`),
-        fetch(`/api/paroquias?t=${now}`),
-        fetch(`/api/eventos?t=${now}`),
+        apiFetch(`/api/config${paroquiaQuery}${tParam}`),
+        apiFetch(`/api/admin/pending${paroquiaQuery}${tParam}`),
+        apiFetch(`/api/admin/coordinators${paroquiaQuery}${tParam}`),
+        apiFetch(`/api/admin/ministros${paroquiaQuery}${tParam}`),
+        apiFetch(`/api/paroquias?t=${now}`),
+        apiFetch(`/api/eventos?t=${now}`),
       ]);
 
       const [
@@ -13705,7 +13706,7 @@ function AdminView({
         : "/api/paroquias";
       const method = editingParoquia ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(paroquiaFormData),
@@ -13753,7 +13754,7 @@ function AdminView({
   const handleDeleteParoquia = (id) => {
     onCustomConfirm("Deseja excluir esta paróquia?", async () => {
       try {
-        const response = await fetch(`/api/paroquias/${id}`, {
+        const response = await apiFetch(`/api/paroquias/${id}`, {
           method: "DELETE",
         });
         if (response.ok) {
@@ -13794,7 +13795,7 @@ function AdminView({
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/admin/coordinators/${editingCoordinator.id}`,
         {
           method: "PUT",
@@ -13821,7 +13822,7 @@ function AdminView({
   const handleToggle = async () => {
     const newState = !coordinatorEnabled;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ coordinatorEnabled: newState }),
@@ -13841,7 +13842,7 @@ function AdminView({
   const handleToggleManutencao = async () => {
     const newState = !modoManutencao;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ modoManutencao: newState }),
@@ -13861,7 +13862,7 @@ function AdminView({
   const handleToggleLembreteAutomatico = async () => {
     const newState = !lembreteAutomatico;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -13884,7 +13885,7 @@ function AdminView({
   const handleEnviarLembretesManual = async () => {
     setEnviandoLembretes(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         "/api/escala/enviar-lembretes-fim-de-semana",
         {
           method: "POST",
@@ -13914,7 +13915,7 @@ function AdminView({
 
   const handleApprove = async (id, role = "coordenacao") => {
     try {
-      const response = await fetch(`/api/admin/approve/${id}`, {
+      const response = await apiFetch(`/api/admin/approve/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
@@ -13965,7 +13966,7 @@ function AdminView({
       "Tem certeza que deseja excluir este coordenador?",
       async () => {
         try {
-          const response = await fetch(`/api/admin/coordinators/${id}`, {
+          const response = await apiFetch(`/api/admin/coordinators/${id}`, {
             method: "DELETE",
           });
           if (response.ok) {
@@ -13985,7 +13986,7 @@ function AdminView({
       "Tem certeza que deseja excluir este ministro?",
       async () => {
         try {
-          const response = await fetch(`/api/admin/coordinators/${id}`, {
+          const response = await apiFetch(`/api/admin/coordinators/${id}`, {
             method: "DELETE",
           }); // Using same delete endpoint as it handles all users by ID
           if (response.ok) {
@@ -14005,7 +14006,7 @@ function AdminView({
       "Tem certeza que deseja rejeitar este cadastro?",
       async () => {
         try {
-          const response = await fetch(`/api/admin/reject/${id}`, {
+          const response = await apiFetch(`/api/admin/reject/${id}`, {
             method: "POST",
           });
           if (response.ok) {
@@ -14033,7 +14034,7 @@ function AdminView({
       return;
     }
     try {
-      const response = await fetch("/api/admin/change-password", {
+      const response = await apiFetch("/api/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ novaSenha: newAdminPassword }),
@@ -14097,7 +14098,7 @@ function AdminView({
 
     const fetchLocalParoquias = () => {
       setLoading(true);
-      fetch("/api/paroquias")
+      apiFetch("/api/paroquias")
         .then((res) => {
           if (!res.ok) throw new Error("Erro na rede");
           return res.json();
@@ -14220,7 +14221,7 @@ function AdminView({
             : "/api/paroquias";
         const method = modalMode === "edit" ? "PUT" : "POST";
 
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
           method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
@@ -14250,7 +14251,7 @@ function AdminView({
         `Deseja realmente excluir a paróquia "${name}"? Esta ação não pode ser desfeita e pode afetar os usuários vinculados.`,
         async () => {
           try {
-            const response = await fetch(`/api/paroquias/${id}`, {
+            const response = await apiFetch(`/api/paroquias/${id}`, {
               method: "DELETE",
             });
             if (!response.ok) throw new Error("Erro ao excluir paróquia");
@@ -16544,8 +16545,8 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
     const fetchParoquiasAndConfig = async () => {
       try {
         const [resParoquias, resConfig] = await Promise.all([
-          fetch("/api/paroquias"),
-          fetch(`/api/config?t=${Date.now()}`)
+          apiFetch("/api/paroquias"),
+          apiFetch(`/api/config?t=${Date.now()}`)
         ]);
 
         if (resParoquias.ok) {
@@ -16612,7 +16613,7 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
           name: trimmedLocalNome,
           senha: trimmedSenha,
         });
-        const response = await fetch("/api/admin/login", {
+        const response = await apiFetch("/api/admin/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ senha: trimmedSenha }),
@@ -16675,7 +16676,7 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
         nome: trimmedLocalNome,
         telefone: trimmedLocalTelefone,
       });
-      const response = await fetch("/api/login", {
+      const response = await apiFetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -16730,7 +16731,7 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
     }
 
     try {
-      const response = await fetch("/api/reset-password", {
+      const response = await apiFetch("/api/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefone: localTelefone }),
@@ -16808,7 +16809,7 @@ function LoginView({ onLogin, setView, modoManutencao: initialModoManutencao }) 
     }
 
     try {
-      const response = await fetch("/api/ministros", {
+      const response = await apiFetch("/api/ministros", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -18396,7 +18397,7 @@ export default function App() {
     try {
       // Start of data fetching block
       // 1. Buscar dados do ministro (incluindo aniversário)
-      const ministroResponse = await fetch(
+      const ministroResponse = await apiFetch(
         `/api/ministros/${encodeURIComponent(userData.loginPhone || userData.telefone)}`,
       );
       const ministroData = await safeJson(ministroResponse, null);
@@ -18410,7 +18411,7 @@ export default function App() {
       }
 
       // 2. Buscar disponibilidade para o mês e ano selecionados
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/disponibilidade/${encodeURIComponent(userData.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
       );
       const data = await safeJson<any[]>(response, null);
@@ -18424,7 +18425,7 @@ export default function App() {
       }
 
       // 3. Buscar escala (para verificar se já foi gerada e mostrar lembretes)
-      const escalaResponse = await fetch(
+      const escalaResponse = await apiFetch(
         `/api/escala?paroquia=${encodeURIComponent(userData.paroquia)}`,
       );
       const escalaData = await safeJson(escalaResponse, null);
@@ -18434,7 +18435,7 @@ export default function App() {
 
       // 4. Buscar config da paróquia (horários e datas de disponibilidade)
       if (userData.paroquia) {
-        const configResponse = await fetch(
+        const configResponse = await apiFetch(
           `/api/config?paroquia=${encodeURIComponent(userData.paroquia)}&t=${Date.now()}`,
         );
         const configData = await safeJson<any>(configResponse, null);
@@ -18472,7 +18473,7 @@ export default function App() {
         telefoneConjuge: formData.telefoneConjuge || "", // Ensure telefoneConjuge is always sent
       };
 
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/ministros/${encodeURIComponent(user.loginPhone || user.telefone)}`,
         {
           method: "PUT",
@@ -18524,7 +18525,7 @@ export default function App() {
       : escalaPublicada;
     const newState = !currentStatus;
     try {
-      const response = await fetch("/api/config", {
+      const response = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -18561,7 +18562,7 @@ export default function App() {
   const handleVerEscala = async () => {
     try {
       const isPreview = isCoordenador;
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/escala?paroquia=${encodeURIComponent(user.paroquia)}${isPreview ? "&preview=true" : ""}`,
       );
 
@@ -18631,7 +18632,7 @@ export default function App() {
     const fetchGlobalConfig = async () => {
       try {
         const paroquiaQuery = user?.paroquia ? `&paroquia=${encodeURIComponent(user.paroquia)}` : "";
-        const res = await fetch(`/api/config?t=${Date.now()}${paroquiaQuery}`);
+        const res = await apiFetch(`/api/config?t=${Date.now()}${paroquiaQuery}`);
         if (res.ok) {
           const text = await res.text();
           try {
@@ -18684,7 +18685,7 @@ export default function App() {
 
   const handleDownloadBackup = async () => {
     try {
-      const response = await fetch("/api/admin/backup");
+      const response = await apiFetch("/api/admin/backup");
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -18718,7 +18719,7 @@ export default function App() {
             const result = e.target?.result;
             if (typeof result !== "string") return;
             const json = JSON.parse(result);
-            const response = await fetch("/api/admin/restore", {
+            const response = await apiFetch("/api/admin/restore", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(json),
@@ -18762,7 +18763,7 @@ export default function App() {
     const targetAno = anoSelecionado;
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/vagas?paroquia=${encodeURIComponent(user.paroquia)}&mes=${targetMes}&ano=${targetAno}`,
       );
       if (response.ok) {
@@ -18798,7 +18799,7 @@ export default function App() {
 
     const checkException = async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/ministros/${encodeURIComponent(targetUser.telefone || "")}`,
         );
         const data = await safeJson(res, null);
@@ -18846,7 +18847,7 @@ export default function App() {
     if (targetUser?.telefone) {
       const fetchMinisterAvailability = async () => {
         try {
-          const response = await fetch(
+          const response = await apiFetch(
             `/api/disponibilidade/${encodeURIComponent(targetUser.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`,
           );
           const data = await safeJson<any[]>(response, null);
@@ -19100,7 +19101,7 @@ export default function App() {
     };
 
     try {
-      const response = await fetch("/api/disponibilidade", {
+      const response = await apiFetch("/api/disponibilidade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -20392,7 +20393,7 @@ export default function App() {
     if (!targetTelefone) return;
     try {
       const payload = { ...formData };
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/ministros/${encodeURIComponent(targetTelefone)}`,
         {
           method: "PUT",

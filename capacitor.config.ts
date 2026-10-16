@@ -5,9 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Portal do Mece',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    url: 'https://ais-dev-grqsbc4wilkaedjlus7wy3-45519709393.us-east1.run.app',
-    cleartext: true
+    androidScheme: 'https'
   }
 };
 

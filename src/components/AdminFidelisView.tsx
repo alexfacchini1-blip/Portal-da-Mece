@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import {
   Users,
@@ -82,8 +83,8 @@ export function AdminFidelisView({ user, onCustomConfirm }: AdminFidelisViewProp
     setError('');
     try {
       const [resCoords, resPar] = await Promise.all([
-        fetch('/api/fidelis/coordenadores'),
-        fetch('/api/paroquias')
+        apiFetch('/api/fidelis/coordenadores'),
+        apiFetch('/api/paroquias')
       ]);
 
       if (resCoords.ok) {
@@ -156,7 +157,7 @@ export function AdminFidelisView({ user, onCustomConfirm }: AdminFidelisViewProp
         : '/api/fidelis/coordenadores';
       const method = editingId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -184,7 +185,7 @@ export function AdminFidelisView({ user, onCustomConfirm }: AdminFidelisViewProp
   const handleToggleStatus = async (coord: FidelisCoordinator) => {
     const nextStatus = coord.status === 'ativo' ? 'inativo' : 'ativo';
     try {
-      const res = await fetch(`/api/fidelis/coordenadores/${coord.id}`, {
+      const res = await apiFetch(`/api/fidelis/coordenadores/${coord.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -205,7 +206,7 @@ export function AdminFidelisView({ user, onCustomConfirm }: AdminFidelisViewProp
   const handleDelete = (coord: FidelisCoordinator) => {
     const confirmAction = async () => {
       try {
-        const res = await fetch(`/api/fidelis/coordenadores/${coord.id}`, {
+        const res = await apiFetch(`/api/fidelis/coordenadores/${coord.id}`, {
           method: 'DELETE'
         });
         if (res.ok) {

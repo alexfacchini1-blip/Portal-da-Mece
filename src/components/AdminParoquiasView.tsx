@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Info, Search } from 'lucide-react';
 
@@ -29,7 +30,7 @@ export function AdminParoquiasView({ user, onCustomConfirm }: AdminParoquiasView
 
   const fetchParoquias = async () => {
     try {
-      const res = await fetch('/api/paroquias');
+      const res = await apiFetch('/api/paroquias');
       const text = await res.text();
       let data;
       try {
@@ -210,7 +211,7 @@ export function AdminParoquiasView({ user, onCustomConfirm }: AdminParoquiasView
                         const date = e.target.value;
                         if (date) {
                           try {
-                            await fetch(`/api/paroquias/${p.id}`, {
+                            await apiFetch(`/api/paroquias/${p.id}`, {
                               method: 'PUT',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ dataBloqueio: date })
@@ -229,7 +230,7 @@ export function AdminParoquiasView({ user, onCustomConfirm }: AdminParoquiasView
                     onChange={async (e) => {
                       const newStatus = e.target.value;
                       try {
-                        const res = await fetch(`/api/paroquias/${p.id}`, {
+                        const res = await apiFetch(`/api/paroquias/${p.id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status: newStatus })

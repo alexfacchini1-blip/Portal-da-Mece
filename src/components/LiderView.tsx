@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, Flag, AlertCircle } from "lucide-react";
 import LiderMissaCard from "./LiderMissaCard";
@@ -22,7 +23,7 @@ export const LiderView: React.FC<LiderViewProps> = ({
 
   useEffect(() => {
     if (user?.paroquia) {
-      fetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user.paroquia)}`)
+      apiFetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user.paroquia)}`)
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
@@ -35,7 +36,7 @@ export const LiderView: React.FC<LiderViewProps> = ({
         );
 
       // Also fetch escala to ensure all leader assignments and complete minister lists are present
-      fetch(`/api/escala?paroquia=${encodeURIComponent(user.paroquia)}&preview=true`)
+      apiFetch(`/api/escala?paroquia=${encodeURIComponent(user.paroquia)}&preview=true`)
         .then((res) => res.json())
         .then((escalaData) => {
           if (escalaData && typeof escalaData === "object") {

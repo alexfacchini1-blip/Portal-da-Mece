@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect } from "react";
 import { Flag, Check, X, Package, MessageSquare, Send, ShieldCheck, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { 
@@ -169,7 +170,7 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
 
     // Fetch existing report if any
     if (user.paroquia && dateStr && timeStr) {
-      fetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user.paroquia)}&data=${encodeURIComponent(dateStr)}&horario=${encodeURIComponent(timeStr)}`)
+      apiFetch(`/api/relatorios-lider?paroquia=${encodeURIComponent(user.paroquia)}&data=${encodeURIComponent(dateStr)}&horario=${encodeURIComponent(timeStr)}`)
         .then((res) => {
           if (!res.ok) return [];
           const ct = res.headers.get("content-type");
@@ -383,7 +384,7 @@ export const LiderMissaCard: React.FC<LiderMissaCardProps> = ({ user, assign, on
         observacoes,
       };
 
-      const res = await fetch("/api/relatorios-lider", {
+      const res = await apiFetch("/api/relatorios-lider", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

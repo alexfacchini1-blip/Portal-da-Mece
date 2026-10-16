@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
@@ -150,7 +151,7 @@ export const EditarDisponibilidadeView: React.FC<EditarDisponibilidadeViewProps>
       try {
         let fetchedSlots: any[] = [];
         if (selectedMinister.telefone) {
-          const res = await fetch(
+          const res = await apiFetch(
             `/api/disponibilidade/${encodeURIComponent(selectedMinister.telefone)}?mes=${mesSelecionado}&ano=${anoSelecionado}`
           );
           if (res.ok) {
@@ -278,7 +279,7 @@ export const EditarDisponibilidadeView: React.FC<EditarDisponibilidadeViewProps>
     };
 
     try {
-      const res = await fetch("/api/disponibilidade", {
+      const res = await apiFetch("/api/disponibilidade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

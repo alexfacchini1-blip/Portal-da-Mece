@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { CalendarPlus, Trash2, AlertTriangle, Plus, Minus, Settings2, Edit2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { safeFetchJson } from '../utils';
@@ -108,7 +109,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
     setError('');
 
     try {
-      const res = await fetch('/api/missas-temporarias', {
+      const res = await apiFetch('/api/missas-temporarias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...novaMissa, paroquia: user.paroquia })
@@ -148,7 +149,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
         paroquia: editingMissa.paroquia || user.paroquia
       };
 
-      const res = await fetch(`/api/missas-temporarias/${encodeURIComponent(editingMissa.id)}`, {
+      const res = await apiFetch(`/api/missas-temporarias/${encodeURIComponent(editingMissa.id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -178,7 +179,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
         paroquia: user.paroquia || ''
       }).toString();
       
-      const res = await fetch(`/api/missas-temporarias/${missa.id}?${queryParams}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/missas-temporarias/${missa.id}?${queryParams}`, { method: 'DELETE' });
       if (res.ok) {
         setMissasTemporarias(prev => prev.filter((m: any) => m.id !== missa.id));
         setMessage('Missa excluída com sucesso!');
@@ -211,7 +212,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
     });
 
     try {
-      const res = await fetch(`/api/missas-temporarias/${id}`, {
+      const res = await apiFetch(`/api/missas-temporarias/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantidade: qtdNum, ...extraData })
@@ -256,7 +257,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
 
   const handleToggleInactiveDate = async (id: string, date: string) => {
     try {
-      const res = await fetch(`/api/missas-temporarias/${id}/toggle-data`, {
+      const res = await apiFetch(`/api/missas-temporarias/${id}/toggle-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: date })
@@ -346,7 +347,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
       });
     } else {
       try {
-        const res = await fetch('/api/missas-temporarias', {
+        const res = await apiFetch('/api/missas-temporarias', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -990,7 +991,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
                     confirmText: 'Sim, excluir todas',
                     onConfirm: async () => {
                       try {
-                        const res = await fetch(`/api/missas-temporarias/fixas?paroquia=${encodeURIComponent(user.paroquia || '')}`, { method: 'DELETE' });
+                        const res = await apiFetch(`/api/missas-temporarias/fixas?paroquia=${encodeURIComponent(user.paroquia || '')}`, { method: 'DELETE' });
                         if (res.ok) {
                           setMessage('Todas as missas fixas foram excluídas com sucesso!');
                           fetchMissasTemporarias();
@@ -1017,7 +1018,7 @@ function CoordenacaoMissasView({ user, mesSelecionado, anoSelecionado, onUpdate 
                     confirmText: 'Sim, excluir todas',
                     onConfirm: async () => {
                       try {
-                        const res = await fetch(`/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}`, { method: 'DELETE' });
+                        const res = await apiFetch(`/api/missas-temporarias?paroquia=${encodeURIComponent(user.paroquia || '')}`, { method: 'DELETE' });
                         if (res.ok) {
                           setMessage('Todas as missas foram excluídas com sucesso!');
                           fetchMissasTemporarias();

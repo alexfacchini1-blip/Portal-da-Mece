@@ -1,3 +1,4 @@
+import apiFetch from '../utils/api';
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { User, Phone, Lock, BookOpen, Heart, UserPlus, Check, Cross, Unlock, MessageCircle, Trash2, Award, Eye, EyeOff, UserMinus, Flag, ShieldCheck } from 'lucide-react';
 import type { User as UserType } from '../types';
@@ -46,7 +47,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
 
   const fetchParoquias = async () => {
     try {
-      const res = await fetch('/api/paroquias');
+      const res = await apiFetch('/api/paroquias');
       if (res.ok) {
         let data = await res.json();
         if (user.role !== 'admin' && user.paroquia) {
@@ -73,7 +74,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     try {
       const query = user.role === 'admin' ? `?t=${Date.now()}` : `?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`;
       const url = `/api/admin/ministros${query}`;
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (res.ok) {
         const data = await res.json();
         setApprovedMinisters(data);
@@ -88,7 +89,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     try {
       const query = user.role === 'admin' ? `?t=${Date.now()}` : `?paroquia=${encodeURIComponent(user.paroquia)}&t=${Date.now()}`;
       const url = `/api/admin/pending${query}`;
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (res.ok) {
         const data = await res.json();
         // Show all pending users, regardless of role
@@ -102,7 +103,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
 
   const handleApprove = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/approve/${id}`, { method: 'POST' });
+      const res = await apiFetch(`/api/admin/approve/${id}`, { method: 'POST' });
       if (res.ok) {
         setPendingUsers(prev => prev.filter(u => String(u.id) !== String(id)));
         setMessage('Usuário aprovado com sucesso!');
@@ -121,7 +122,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
 
   const handleReject = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/reject/${id}`, { method: 'POST' });
+      const res = await apiFetch(`/api/admin/reject/${id}`, { method: 'POST' });
       if (res.ok) {
         setPendingUsers(prev => prev.filter(u => String(u.id) !== String(id)));
         setMessage('Usuário rejeitado com sucesso!');
@@ -148,7 +149,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     if (!excecaoHoras) return;
 
     try {
-      const res = await fetch('/api/admin/conceder-excecao', {
+      const res = await apiFetch('/api/admin/conceder-excecao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telefone: excecaoTelefone, horas: excecaoHoras })
@@ -233,7 +234,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
 
   const handleToggleAlterarEscala = async (minister: UserType) => {
     try {
-      const res = await fetch(`/api/ministros/${minister.telefone}`, {
+      const res = await apiFetch(`/api/ministros/${minister.telefone}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ podeAlterarEscala: !minister.podeAlterarEscala })
@@ -266,7 +267,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
   const handleToggleTempo = async (minister: UserType) => {
     const novoStatus = minister.tempoMinisterio === 'novo' ? 'antigo' : 'novo';
     try {
-      const res = await fetch(`/api/ministros/${minister.telefone}`, {
+      const res = await apiFetch(`/api/ministros/${minister.telefone}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -317,7 +318,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     }
 
     try {
-      const res = await fetch(`/api/ministros/${minister.telefone}`, {
+      const res = await apiFetch(`/api/ministros/${minister.telefone}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -385,7 +386,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
     if (onCustomConfirm) {
       onCustomConfirm(msg, async () => {
         try {
-          const res = await fetch(`/api/admin/coordinators/${id}`, { method: 'DELETE' });
+          const res = await apiFetch(`/api/admin/coordinators/${id}`, { method: 'DELETE' });
           if (res.ok) {
             setMessage(`${role?.toLowerCase().includes('coordena') ? 'Coordenador' : 'Ministro'} excluído com sucesso!`);
             fetchApprovedMinisters();
@@ -443,7 +444,7 @@ function CoordenacaoCadastroView({ user, onNewUserRegistered, onSetView, onCusto
       const url = editingMinister ? `/api/ministros/${editingMinister.telefone}` : '/api/ministros';
       const method = editingMinister ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...novoCadastro, aprovado: editingMinister ? editingMinister.aprovado : true })
