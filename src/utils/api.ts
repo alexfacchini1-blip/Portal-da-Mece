@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://ais-pre-grqsbc4wilkaedjlus7wy3-45519709393.us-east1.run.app';
 
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   let url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
